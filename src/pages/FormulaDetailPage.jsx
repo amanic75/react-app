@@ -1,0 +1,539 @@
+import React, { useState, useRef } from 'react';
+import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import DashboardLayout from '../layouts/DashboardLayout';
+import Button from '../components/ui/Button';
+
+const FormulaDetailPage = () => {
+  const navigate = useNavigate();
+  const { formulaId } = useParams();
+  const [isEditing, setIsEditing] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+  const [editableFormula, setEditableFormula] = useState(null);
+
+  // Simple mock data for the formula
+  const formulaData = {
+    'HDST001': {
+      id: 'HDST001',
+      name: 'Heavy Duty Steam Title Placeholder',
+      totalCost: 245.67,
+      finalSalePriceDrum: 589.99,
+      finalSalePriceTote: 1249.99,
+      ingredients: [
+        { name: 'Sodium Hydroxide', percentage: 35.2, cost: 87.45 },
+        { name: 'Calcium Carbonate', percentage: 25.8, cost: 56.23 },
+        { name: 'Ethylene Glycol', percentage: 20.1, cost: 78.12 },
+        { name: 'Surfactant Blend', percentage: 12.4, cost: 23.87 },
+        { name: 'Corrosion Inhibitor', percentage: 6.5, cost: 0.00 }
+      ]
+    },
+    'MDCL002': {
+      id: 'MDCL002',
+      name: 'Multi-Purpose Degreaser Compound',
+      totalCost: 156.34,
+      finalSalePriceDrum: 389.99,
+      finalSalePriceTote: 799.99,
+      ingredients: [
+        { name: 'Isopropyl Alcohol', percentage: 45.0, cost: 78.90 },
+        { name: 'Sodium Carbonate', percentage: 25.0, cost: 34.12 },
+        { name: 'Citric Acid', percentage: 15.0, cost: 23.45 },
+        { name: 'Non-ionic Surfactant', percentage: 10.0, cost: 19.87 },
+        { name: 'Water', percentage: 5.0, cost: 0.00 }
+      ]
+    },
+    'INDL003': {
+      id: 'INDL003',
+      name: 'Industrial Solvent Formula XP',
+      totalCost: 334.12,
+      finalSalePriceDrum: 789.99,
+      finalSalePriceTote: 1549.99,
+      ingredients: [
+        { name: 'Methylene Chloride', percentage: 40.0, cost: 145.67 },
+        { name: 'Acetone', percentage: 30.0, cost: 89.34 },
+        { name: 'Toluene', percentage: 20.0, cost: 67.23 },
+        { name: 'Stabilizer Blend', percentage: 8.0, cost: 31.88 },
+        { name: 'Antioxidant', percentage: 2.0, cost: 0.00 }
+      ]
+    }
+  };
+
+  const formula = formulaData[formulaId] || formulaData['HDST001'];
+
+
+
+  // Mock existing documents for each formula
+  const getExistingDocuments = (formulaId) => {
+    const mockDocuments = {
+      'HDST001': [
+        { id: 1, name: 'HDST001_Safety_Data_Sheet.pdf', size: 2451232, type: 'application/pdf', uploadDate: new Date('2024-01-15'), uploader: 'Safety Team' },
+        { id: 2, name: 'Heavy_Duty_Steam_Formula_Specs.docx', size: 1024567, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploadDate: new Date('2024-01-10'), uploader: 'R&D Team' },
+        { id: 3, name: 'Manufacturing_Instructions_HDST001.pdf', size: 876543, type: 'application/pdf', uploadDate: new Date('2024-01-08'), uploader: 'Production Team' },
+        { id: 4, name: 'Quality_Control_Certificate.pdf', size: 345678, type: 'application/pdf', uploadDate: new Date('2024-01-05'), uploader: 'QC Lab' }
+      ],
+      'MDCL002': [
+        { id: 5, name: 'MDCL002_Safety_Data_Sheet.pdf', size: 1876543, type: 'application/pdf', uploadDate: new Date('2024-01-12'), uploader: 'Safety Team' },
+        { id: 6, name: 'Degreaser_Performance_Analysis.xlsx', size: 567890, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', uploadDate: new Date('2024-01-08'), uploader: 'Lab Team' },
+        { id: 7, name: 'EPA_Compliance_Certificate.pdf', size: 234567, type: 'application/pdf', uploadDate: new Date('2024-01-06'), uploader: 'Compliance Team' },
+        { id: 8, name: 'Customer_Usage_Guidelines.docx', size: 456789, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploadDate: new Date('2024-01-04'), uploader: 'Technical Support' }
+      ],
+      'INDL003': [
+        { id: 9, name: 'INDL003_Safety_Data_Sheet.pdf', size: 3245612, type: 'application/pdf', uploadDate: new Date('2024-01-05'), uploader: 'Safety Team' },
+        { id: 10, name: 'Industrial_Solvent_Safety_Protocol.docx', size: 987654, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploadDate: new Date('2024-01-03'), uploader: 'Safety Team' },
+        { id: 11, name: 'Lab_Test_Results_Batch_2024_001.xlsx', size: 234567, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', uploadDate: new Date('2024-01-01'), uploader: 'Lab Team' },
+        { id: 12, name: 'Hazmat_Transportation_Guide.pdf', size: 1234567, type: 'application/pdf', uploadDate: new Date('2023-12-28'), uploader: 'Logistics Team' },
+        { id: 13, name: 'Solvent_Storage_Requirements.pdf', size: 654321, type: 'application/pdf', uploadDate: new Date('2023-12-25'), uploader: 'Facilities Team' }
+      ]
+    };
+    return mockDocuments[formulaId] || [];
+  };
+
+  const existingDocuments = getExistingDocuments(formulaId);
+  const [deletedDocuments, setDeletedDocuments] = useState([]);
+
+  const handleDeleteDocument = (documentId) => {
+    setDeletedDocuments(prev => [...prev, documentId]);
+    console.log('Deleted document ID:', documentId);
+  };
+
+  const filteredExistingDocuments = existingDocuments.filter(doc => !deletedDocuments.includes(doc.id));
+
+  // File upload handlers
+  const handleFileUpload = (files) => {
+    const newFiles = Array.from(files).map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadDate: new Date(),
+      formulaId: formulaId
+    }));
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+    console.log('Uploading files for formula:', formulaId, newFiles);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileUpload(files);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
+    if (e.target.files.length > 0) {
+      handleFileUpload(e.target.files);
+    }
+  };
+
+  const removeFile = (fileId) => {
+    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileType) => {
+    if (fileType.startsWith('image/')) {
+      return <Image className="h-5 w-5 text-blue-400" />;
+    }
+    return <File className="h-5 w-5 text-slate-400" />;
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Save changes logic would go here
+      console.log('Saving formula changes:', editableFormula);
+      console.log('Deleted documents:', deletedDocuments);
+      setIsEditing(false);
+      // Keep deleted documents after save - they are permanently removed
+    } else {
+      // Reset to current values when starting edit
+      setEditableFormula({
+        name: formula.name,
+        totalCost: formula.totalCost,
+        finalSalePriceDrum: formula.finalSalePriceDrum,
+        finalSalePriceTote: formula.finalSalePriceTote,
+        ingredients: [...formula.ingredients]
+      });
+      setDeletedDocuments([]); // Reset deleted documents when starting edit
+      setIsEditing(true);
+    }
+  };
+
+  const handleFieldChange = (field, value) => {
+    console.log('Field change:', field, value);
+    setEditableFormula(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleIngredientChange = (index, field, value) => {
+    setEditableFormula(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.map((ingredient, i) =>
+        i === index ? { ...ingredient, [field]: value } : ingredient
+      )
+    }));
+  };
+
+  // Debug logging for navigation and initialize state
+  React.useEffect(() => {
+    console.log('FormulaDetailPage rendered with formulaId:', formulaId);
+    
+    // Reset edit state when navigating to different formula
+    setIsEditing(false);
+    setUploadedFiles([]);
+    setDeletedDocuments([]);
+    
+    // Initialize editable formula state
+    const currentFormula = formulaData[formulaId] || formulaData['HDST001'];
+    setEditableFormula({
+      name: currentFormula.name,
+      totalCost: currentFormula.totalCost,
+      finalSalePriceDrum: currentFormula.finalSalePriceDrum,
+      finalSalePriceTote: currentFormula.finalSalePriceTote,
+      ingredients: [...currentFormula.ingredients]
+    });
+    
+    return () => {
+      console.log('FormulaDetailPage cleanup');
+    };
+  }, [formulaId]);
+
+  return (
+    <DashboardLayout key={`formula-${formulaId}`}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button
+              onClick={() => navigate('/formulas')}
+              className="bg-slate-700 hover:bg-slate-600 p-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center space-x-3">
+              <FolderOpen className="h-8 w-8 text-blue-500" />
+              <h1 className="text-3xl font-bold text-slate-100">Formula Details</h1>
+            </div>
+          </div>
+          
+          <Button
+            onClick={handleEditToggle}
+            className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+          >
+            <Edit3 className="h-4 w-4 mr-2" />
+            {isEditing ? 'Save Changes' : 'Edit Formula'}
+          </Button>
+        </div>
+
+        {/* Formula Info Card */}
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          {isEditing && editableFormula ? (
+            <input
+              type="text"
+              value={editableFormula.name}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
+              className="text-2xl font-semibold text-slate-100 mb-6 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          ) : (
+            <h2 className="text-2xl font-semibold text-slate-100 mb-6">{editableFormula?.name || formula.name}</h2>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Formula ID</label>
+              <div className="text-slate-200 font-medium">{formula.id}</div>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Total Cost</label>
+              {isEditing && editableFormula ? (
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editableFormula.totalCost}
+                  onChange={(e) => handleFieldChange('totalCost', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="text-slate-200 font-medium">${(editableFormula?.totalCost || formula.totalCost).toFixed(2)}</div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Final Sale Price (Drum)</label>
+              {isEditing && editableFormula ? (
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editableFormula.finalSalePriceDrum}
+                  onChange={(e) => handleFieldChange('finalSalePriceDrum', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="text-slate-200 font-medium">${(editableFormula?.finalSalePriceDrum || formula.finalSalePriceDrum).toFixed(2)}</div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Final Sale Price (Tote)</label>
+              {isEditing && editableFormula ? (
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editableFormula.finalSalePriceTote}
+                  onChange={(e) => handleFieldChange('finalSalePriceTote', parseFloat(e.target.value) || 0)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <div className="text-slate-200 font-medium">${(editableFormula?.finalSalePriceTote || formula.finalSalePriceTote).toFixed(2)}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Ingredients Horizontal Scroll */}
+          <div className="border-t border-slate-700 pt-6">
+            <h3 className="text-lg font-medium text-slate-200 mb-4">Ingredients</h3>
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+              <div className="flex space-x-4 pb-2 min-w-max">
+                {(editableFormula?.ingredients || formula.ingredients).map((ingredient, index) => (
+                  <div key={index} className="flex-shrink-0 bg-slate-700 rounded-lg border border-slate-600 p-4 w-64">
+                    <div className="space-y-3">
+                      {/* Ingredient Name */}
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Ingredient</label>
+                        {isEditing && editableFormula ? (
+                          <input
+                            type="text"
+                            value={ingredient.name}
+                            onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
+                            className="w-full bg-slate-600 border border-slate-500 rounded-md px-3 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Ingredient name"
+                          />
+                        ) : (
+                          <div className="text-slate-200 font-medium text-sm">{ingredient.name}</div>
+                        )}
+                      </div>
+                      
+                      {/* Percentage and Cost Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Percentage */}
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Percentage</label>
+                          {isEditing && editableFormula ? (
+                            <div className="flex items-center">
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={ingredient.percentage}
+                                onChange={(e) => handleIngredientChange(index, 'percentage', parseFloat(e.target.value) || 0)}
+                                className="w-full bg-slate-600 border border-slate-500 rounded-md px-2 py-1 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              <span className="text-slate-300 ml-1 text-sm">%</span>
+                            </div>
+                          ) : (
+                            <div className="text-slate-300 font-medium text-sm">{ingredient.percentage}%</div>
+                          )}
+                        </div>
+                        
+                        {/* Cost */}
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Cost</label>
+                          {isEditing && editableFormula ? (
+                            <div className="flex items-center">
+                              <span className="text-slate-300 mr-1 text-sm">$</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={ingredient.cost}
+                                onChange={(e) => handleIngredientChange(index, 'cost', parseFloat(e.target.value) || 0)}
+                                className="w-full bg-slate-600 border border-slate-500 rounded-md px-2 py-1 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          ) : (
+                            <div className="text-slate-300 font-medium text-sm">${ingredient.cost.toFixed(2)}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Scroll Hint */}
+            <div className="text-xs text-slate-500 mt-2 text-center">
+              ← Scroll horizontally to view all ingredients →
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-4">
+          <Button className="bg-slate-700 hover:bg-slate-600">
+            Export Data
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700">
+            Generate Report
+          </Button>
+          <Button className="bg-orange-600 hover:bg-orange-700">
+            Duplicate Formula
+          </Button>
+        </div>
+
+        {/* File Upload Section */}
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+          <h3 className="text-lg font-medium text-slate-200 mb-6">Documents & Files</h3>
+          
+          {/* Existing Documents */}
+          {filteredExistingDocuments.length > 0 && (
+            <div className="mb-8">
+              <h4 className="text-md font-medium text-slate-200 mb-4">Existing Documents ({filteredExistingDocuments.length})</h4>
+              <div className="space-y-2">
+                {filteredExistingDocuments.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg border border-slate-600">
+                    <div className="flex items-center space-x-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <div className="text-sm font-medium text-slate-200">{file.name}</div>
+                        <div className="text-xs text-slate-400">
+                          {formatFileSize(file.size)} • Uploaded {file.uploadDate.toLocaleDateString()} by {file.uploader}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isEditing) {
+                            handleDeleteDocument(file.id);
+                          } else {
+                            console.log('Download existing file:', file.name);
+                          }
+                        }}
+                        className={`p-1 transition-colors ${
+                          isEditing 
+                            ? 'text-slate-400 hover:text-red-400' 
+                            : 'text-slate-400 hover:text-blue-400'
+                        }`}
+                        title={isEditing ? 'Delete' : 'Download'}
+                      >
+                        {isEditing ? (
+                          <X className="h-4 w-4" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-slate-600 my-6"></div>
+            </div>
+          )}
+          
+          {/* Upload New Files Section */}
+          <div>
+            <h4 className="text-md font-medium text-slate-200 mb-4">Upload New Files</h4>
+            
+            {/* File Upload Area */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
+              isDragOver 
+                ? 'border-blue-400 bg-blue-400/10' 
+                : 'border-slate-600 hover:border-slate-500 hover:bg-slate-700/50'
+            }`}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileInputChange}
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.gif"
+              className="hidden"
+            />
+            <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-slate-200 mb-2">
+              {isDragOver ? 'Drop files here' : 'Drag & drop files here'}
+            </h4>
+            <p className="text-slate-400 mb-4">
+              or click to browse files
+            </p>
+            <p className="text-sm text-slate-500">
+              Supports: PDF, DOC, DOCX, TXT, CSV, XLSX, XLS, PNG, JPG, JPEG, GIF
+            </p>
+          </div>
+
+          {/* Uploaded Files List */}
+          {uploadedFiles.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-md font-medium text-slate-200 mb-3">Uploaded Files ({uploadedFiles.length})</h4>
+              <div className="space-y-2">
+                {uploadedFiles.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg border border-slate-600">
+                    <div className="flex items-center space-x-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <div className="text-sm font-medium text-slate-200">{file.name}</div>
+                        <div className="text-xs text-slate-400">
+                          {formatFileSize(file.size)} • Uploaded {file.uploadDate.toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Download file:', file.name);
+                        }}
+                        className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(file.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                        title="Remove"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+                         </div>
+           )}
+           </div>
+         </div>
+       </div>
+    </DashboardLayout>
+  );
+};
+
+export default FormulaDetailPage; 

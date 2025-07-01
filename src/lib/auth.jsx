@@ -57,7 +57,7 @@ export const useAuth = () => {
 };
 
 // Helper functions for persistent login
-const saveAuthState = (user, role, userData, keepSignedIn) => {
+const saveAuthState = (user, role, userData, keepSignedIn = true) => {
   const authData = { user, role, userData };
   if (keepSignedIn) {
     localStorage.setItem('capacity-auth', JSON.stringify(authData));
@@ -89,15 +89,18 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load saved auth state on app start
   useEffect(() => {
     const savedAuth = loadAuthState();
     if (savedAuth) {
+      console.log('Restoring auth state from storage:', savedAuth.user);
       setUser(savedAuth.user);
       setRole(savedAuth.role);
       setUserData(savedAuth.userData);
     }
+    setIsLoading(false);
   }, []);
 
   // Refresh credentials when component mounts and periodically
@@ -110,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const login = (email, password, keepSignedIn = false) => {
+  const login = (email, password, keepSignedIn = true) => {
     // Refresh credentials to get latest user data
     refreshCredentials();
     
@@ -199,7 +202,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     createAccount,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    isLoading
   };
 
   return (

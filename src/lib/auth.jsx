@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { addUser, getUsers } from './data';
+import { recordActivity, ACTIVITY_TYPES } from './loginActivity';
 
 // Function to generate authentication credentials from user database
 const generateAuthCredentials = () => {
@@ -126,6 +127,10 @@ export const AuthProvider = ({ children }) => {
         setRole(credential.role);
         setUserData(credential.userData);
         saveAuthState(email, credential.role, credential.userData, keepSignedIn);
+        
+        // Record login activity
+        recordActivity(ACTIVITY_TYPES.LOGIN, email, credential.userData);
+        
         return { success: true };
       } else {
         console.log('Password mismatch');
@@ -138,6 +143,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Record logout activity before clearing state
+    if (user && userData) {
+      recordActivity(ACTIVITY_TYPES.LOGOUT, user, userData);
+    }
+    
     setUser(null);
     setRole(null);
     setUserData(null);

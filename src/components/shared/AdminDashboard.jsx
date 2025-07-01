@@ -3,6 +3,7 @@ import { Search, FolderOpen, FlaskConical, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import UserManagementTable from './UserManagementTable';
+import LoginActivityPanel from './LoginActivityPanel';
 import { getUsers } from '../../lib/data';
 
 const AdminDashboard = ({ userData }) => {
@@ -216,6 +217,9 @@ const AdminDashboard = ({ userData }) => {
           );
         })}
       </div>
+      
+      {/* Login Activity Panel - Full Width Above User Management */}
+      <LoginActivityPanel />
       
       {/* Admin Only - User Management Table */}
       <UserManagementTable />

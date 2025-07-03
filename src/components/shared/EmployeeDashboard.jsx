@@ -34,13 +34,7 @@ const EmployeeDashboard = ({ userData }) => {
   }, []);
 
   // Get users who have access to a specific app
-  const getUsersWithAccess = (appName) => {
-    const appMap = {
-      'Formulas': 'formulas',
-      'Raw Materials': 'raw-materials', 
-      'Suppliers': 'suppliers'
-    };
-    const appKey = appMap[appName];
+  const getUsersWithAccess = (appKey) => {
     return users.filter(user => user.appAccess && user.appAccess.includes(appKey));
   };
 
@@ -82,6 +76,17 @@ const EmployeeDashboard = ({ userData }) => {
     ? allApplications.filter(app => userData.appAccess.includes(app.appKey))
     : allApplications;
 
+  // Get dynamic grid classes based on number of accessible apps
+  const getGridClasses = (appCount) => {
+    if (appCount === 1) {
+      return "flex justify-center gap-6"; // Single app centered
+    } else if (appCount === 2) {
+      return "flex justify-center gap-6 flex-wrap"; // Two apps centered with fixed width
+    } else {
+      return "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"; // Three or more apps normal grid
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -113,8 +118,8 @@ const EmployeeDashboard = ({ userData }) => {
       </div>
 
       {/* Search and Controls */}
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex justify-center">
+        <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
           <input
             type="text"
@@ -124,12 +129,10 @@ const EmployeeDashboard = ({ userData }) => {
             className="w-full pl-10 pr-4 py-2 border border-slate-600 rounded-md bg-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        
-
       </div>
 
       {/* Applications Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={getGridClasses(applications.length)}>
         {applications.map((app) => {
           const IconComponent = app.icon;
           return (
@@ -142,7 +145,7 @@ const EmployeeDashboard = ({ userData }) => {
                 setMousePosition({ x: 50, y: 50 }); // Reset to center
               }}
               onMouseMove={(e) => handleMouseMove(e, app.id)}
-              className="relative cursor-pointer"
+              className={`relative cursor-pointer ${applications.length <= 2 ? 'w-80' : ''}`}
               style={{
                 transform: hoveredCard === app.id ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
                 transformOrigin: hoveredCard === app.id 
@@ -151,12 +154,12 @@ const EmployeeDashboard = ({ userData }) => {
                 transition: hoveredCard === app.id ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
               }}
               onClick={() => {
-                if (app.title === 'Formulas') {
+                if (app.appKey === 'formulas') {
                   navigate('/formulas');
-                } else if (app.title === 'Raw Materials') {
+                } else if (app.appKey === 'raw-materials') {
                   navigate('/raw-materials');
-                        } else if (app.title === 'Suppliers') {
-          navigate('/suppliers');
+                } else if (app.appKey === 'suppliers') {
+                  navigate('/suppliers');
                 }
               }}
             >
@@ -188,7 +191,7 @@ const EmployeeDashboard = ({ userData }) => {
                   <div className="space-y-3">
                     <p className="text-sm text-slate-300">Request Access</p>
                     <div className="flex flex-col items-center space-y-2">
-                      {getUsersWithAccess(app.title).slice(0, 3).map((user, index) => (
+                      {getUsersWithAccess(app.appKey).slice(0, 3).map((user, index) => (
                         <div
                           key={user.id}
                           className="flex items-center space-x-2 text-xs text-slate-400 transition-transform duration-300"
@@ -198,19 +201,19 @@ const EmployeeDashboard = ({ userData }) => {
                           }}
                         >
                           <div className={`w-2 h-2 rounded-full ${
-                            app.title === 'Formulas' ? 'bg-blue-500' :
-                            app.title === 'Raw Materials' ? 'bg-orange-500' :
+                            app.appKey === 'formulas' ? 'bg-blue-500' :
+                            app.appKey === 'raw-materials' ? 'bg-orange-500' :
                             'bg-fuchsia-500'
                           }`}></div>
                           <span>{user.name}</span>
                         </div>
                       ))}
-                      {getUsersWithAccess(app.title).length > 3 && (
+                      {getUsersWithAccess(app.appKey).length > 3 && (
                         <div className="text-xs text-slate-500">
-                          +{getUsersWithAccess(app.title).length - 3} more
+                          +{getUsersWithAccess(app.appKey).length - 3} more
                         </div>
                       )}
-                      {getUsersWithAccess(app.title).length === 0 && (
+                      {getUsersWithAccess(app.appKey).length === 0 && (
                         <div className="text-xs text-slate-500">
                           No users assigned
                         </div>

@@ -112,23 +112,24 @@ const SuppliersPage = () => {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-slate-900">
-        {/* Header */}
-        <div className="bg-slate-800 border-b border-slate-700">
-          <div className="flex items-center justify-between p-6">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 text-slate-400" />
-              </button>
-              <div className="flex items-center space-x-3">
-                <Users className="h-8 w-8 text-blue-500" />
-                <h1 className="text-2xl font-semibold text-slate-100">Suppliers</h1>
-              </div>
+        <div className="p-6 space-y-8">
+          {/* Header with Back Button and Title */}
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-slate-400" />
+            </button>
+            <div className="flex items-center space-x-3">
+              <Users className="h-8 w-8 text-blue-500" />
+              <h1 className="text-3xl font-bold text-slate-100">Suppliers</h1>
             </div>
-            
-            <div className="flex items-center space-x-4">
+          </div>
+
+          {/* Search Controls */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center justify-between">
               <input
                 type="text"
                 placeholder="Search by Name"
@@ -137,70 +138,69 @@ const SuppliersPage = () => {
                 className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
               />
               
-              <button className="p-3 bg-red-600 rounded-full hover:bg-red-500 transition-colors">
-                <ChemformationLogo className="w-6 h-6" />
-              </button>
-              
-              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                <SlidersHorizontal className="w-4 h-4 text-slate-300" />
-              </button>
-              
-              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                <ArrowUpDown className="w-4 h-4 text-slate-300" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs and Controls */}
-        <div className="bg-slate-800 px-6 py-4 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-0">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  ref={(el) => (tabRefs.current[tab.id] = el)}
-                  onClick={() => setActiveTab(tab.id)}
-                  onMouseEnter={() => setHoveredTab(tab.id)}
-                  onMouseLeave={() => setHoveredTab(null)}
-                  onMouseMove={(e) => handleMouseMove(e, tab.id)}
-                  className={`relative px-6 py-2 transition-all duration-300 ease-out ${
-                    activeTab === tab.id
-                      ? 'bg-slate-600 text-slate-100'
-                      : 'bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-650'
-                  } ${tab.id === 'all' ? 'rounded-l-lg' : tab.id === 'created' ? 'rounded-r-lg' : ''}`}
-                  style={{
-                    transform: hoveredTab === tab.id ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'transform 0.2s ease-out'
-                  }}
-                >
-                  <span className="relative z-10 font-medium">{tab.label}</span>
-                  {hoveredTab === tab.id && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-md -z-0"
-                      style={{
-                        background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.15), transparent 50%)`
-                      }}
-                    />
-                  )}
+              <div className="flex items-center space-x-4">
+                <button className="p-3 bg-red-600 rounded-full hover:bg-red-500 transition-colors">
+                  <ChemformationLogo className="w-6 h-6" />
                 </button>
-              ))}
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={handleAddSupplier}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
-              >
-                <Plus className="w-4 h-4 text-white" />
-                <span className="text-sm text-white font-medium">Add Supplier</span>
-              </button>
+                
+                <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                  <SlidersHorizontal className="w-4 h-4 text-slate-300" />
+                </button>
+                
+                <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                  <ArrowUpDown className="w-4 h-4 text-slate-300" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-6">
+          {/* Tabs and Controls */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center justify-between">
+              <div className="flex space-x-0">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    ref={(el) => (tabRefs.current[tab.id] = el)}
+                    onClick={() => setActiveTab(tab.id)}
+                    onMouseEnter={() => setHoveredTab(tab.id)}
+                    onMouseLeave={() => setHoveredTab(null)}
+                    onMouseMove={(e) => handleMouseMove(e, tab.id)}
+                    className={`relative px-6 py-2 transition-all duration-300 ease-out ${
+                      activeTab === tab.id
+                        ? 'bg-slate-600 text-slate-100'
+                        : 'bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-650'
+                    } ${tab.id === 'all' ? 'rounded-l-lg' : tab.id === 'created' ? 'rounded-r-lg' : ''}`}
+                    style={{
+                      transform: hoveredTab === tab.id ? 'scale(1.05)' : 'scale(1)',
+                      transition: 'transform 0.2s ease-out'
+                    }}
+                  >
+                    <span className="relative z-10 font-medium">{tab.label}</span>
+                    {hoveredTab === tab.id && (
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-md -z-0"
+                        style={{
+                          background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.15), transparent 50%)`
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={handleAddSupplier}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                  <span className="text-sm text-white font-medium">Add Supplier</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Table */}
           <div className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
             <table className="w-full">

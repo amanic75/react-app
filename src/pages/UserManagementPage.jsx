@@ -162,9 +162,9 @@ const UserManagementPage = () => {
       case 'suppliers':
         return <Users className="w-4 h-4 text-blue-500" />;
       case 'developer-mode':
-        return <Code className="w-4 h-4 text-indigo-500" />;
+        return <Code className="w-4 h-4 text-blue-500" />;
       case 'existing-company-mode':
-        return <Building2 className="w-4 h-4 text-indigo-500" />;
+        return <Building2 className="w-4 h-4 text-green-500" />;
       default:
         return null;
     }

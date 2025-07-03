@@ -14,22 +14,42 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
   const credentialOptions = [
     'user/temporary pass',
     'admin/secure pass',
+    'nsight-admin/enterprise pass',
     'unknown/restricted access'
   ];
 
-  const appOptions = [
-    { id: 'formulas', name: 'Formulas', icon: FolderOpen },
-    { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
-    { id: 'suppliers', name: 'Suppliers', icon: Users },
-    { id: 'developer-mode', name: 'Developer Mode', icon: Code },
-    { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
-  ];
+  const getAppOptions = (credentials) => {
+    if (credentials === 'nsight-admin/enterprise pass') {
+      return [
+        { id: 'developer-mode', name: 'Developer Mode', icon: Code },
+        { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
+      ];
+    } else {
+      return [
+        { id: 'formulas', name: 'Formulas', icon: FolderOpen },
+        { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
+        { id: 'suppliers', name: 'Suppliers', icon: Users }
+      ];
+    }
+  };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // Auto-set app access based on credentials
+      if (field === 'credentials') {
+        if (value === 'nsight-admin/enterprise pass') {
+          newData.appAccess = ['developer-mode', 'existing-company-mode'];
+        } else if (value === 'admin/secure pass') {
+          newData.appAccess = ['formulas', 'suppliers', 'raw-materials'];
+        } else {
+          newData.appAccess = ['formulas'];
+        }
+      }
+      
+      return newData;
+    });
   };
 
   const toggleAppAccess = (appId) => {
@@ -54,7 +74,8 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       contact: formData.contact.trim(),
       credentials: formData.credentials,
       appAccess: formData.appAccess,
-      role: formData.credentials.includes('admin') ? 'Admin' : 'Employee',
+      role: formData.credentials === 'nsight-admin/enterprise pass' ? 'NSight Admin' : 
+            formData.credentials === 'admin/secure pass' ? 'Admin' : 'Employee',
       status: 'Active',
       lastLogin: 'Never'
     };
@@ -176,7 +197,7 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
               App Access
             </label>
             <div className="space-y-3">
-              {appOptions.map(app => {
+              {getAppOptions(formData.credentials).map(app => {
                 const IconComponent = app.icon;
                 const isSelected = formData.appAccess.includes(app.id);
                 

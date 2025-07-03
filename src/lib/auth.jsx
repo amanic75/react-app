@@ -183,7 +183,7 @@ export const AuthProvider = ({ children }) => {
       status: 'Active',
       lastLogin: 'Never',
       contact: '',
-      appAccess: role === 'admin' || role === 'nsight-admin' ? ['formulas', 'suppliers', 'raw-materials'] : ['formulas'],
+      appAccess: role === 'admin' ? ['formulas', 'suppliers', 'raw-materials'] : role === 'nsight-admin' ? ['developer-mode', 'existing-company-mode'] : ['formulas'],
       credentials: role === 'admin' ? 'admin/secure pass' : role === 'nsight-admin' ? 'nsight-admin/enterprise pass' : 'user/temporary pass'
     };
 

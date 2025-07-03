@@ -18,13 +18,20 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
     'nsight-admin/enterprise pass'
   ];
 
-  const appOptions = [
-    { id: 'formulas', name: 'Formulas', icon: FolderOpen },
-    { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
-    { id: 'suppliers', name: 'Suppliers', icon: Users },
-    { id: 'developer-mode', name: 'Developer Mode', icon: Code },
-    { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
-  ];
+  const getAppOptions = (userRole) => {
+    if (userRole === 'NSight Admin') {
+      return [
+        { id: 'developer-mode', name: 'Developer Mode', icon: Code },
+        { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
+      ];
+    } else {
+      return [
+        { id: 'formulas', name: 'Formulas', icon: FolderOpen },
+        { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
+        { id: 'suppliers', name: 'Suppliers', icon: Users }
+      ];
+    }
+  };
 
   const getDefaultCredentials = (userRole) => {
     switch (userRole) {
@@ -173,7 +180,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
               App Access
             </label>
             <div className="space-y-3">
-              {appOptions.map(app => {
+              {getAppOptions(user?.role).map(app => {
                 const IconComponent = app.icon;
                 const isSelected = formData.appAccess.includes(app.id);
                 

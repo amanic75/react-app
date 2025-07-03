@@ -287,296 +287,301 @@ const UserManagementPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-slate-900">
-      {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700">
-        <div className="flex items-center justify-between p-4">
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/dashboard')}
               className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <ArrowLeft className="h-5 w-5 text-slate-300" />
+              <ArrowLeft className="h-5 w-5 text-slate-400" />
             </button>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <div className="grid grid-cols-3 gap-1 p-2">
                 {[...Array(9)].map((_, i) => (
                   <div key={i} className="w-2 h-2 bg-slate-400 rounded-sm"></div>
                 ))}
               </div>
-              <h1 className="text-xl font-semibold text-slate-100">User Management</h1>
+              <h1 className="text-3xl font-bold text-slate-100">User Management</h1>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <input
-              type="text"
-              placeholder="Search by Name"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
-            />
-            
-            <div className="relative">
-              <button 
-                onClick={toggleFilter}
-                className="flex items-center space-x-2 p-2 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                <Filter className="h-5 w-5 text-slate-300" />
-                <span className="text-sm text-slate-300">Filter & Sort</span>
-                <ChevronDown className="h-4 w-4 text-slate-300" />
-              </button>
+        </div>
 
-              {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
-                  <div className="p-4">
-                    {/* Sort Section */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-slate-200">Sort By</h3>
-                        <button
-                          onClick={toggleSortOrder}
-                          className="flex items-center space-x-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300 transition-colors"
-                        >
-                          <span>{tempSortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
-                          <span>{tempSortOrder === 'asc' ? '↑' : '↓'}</span>
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { key: 'name', label: 'Name' },
-                          { key: 'role', label: 'Role' },
-                          { key: 'lastLogin', label: 'Last Login' },
-                          { key: 'email', label: 'Email' },
-                          { key: 'id', label: 'ID' },
-                          { key: 'domain', label: 'Domain' },
-                          { key: 'appAccess', label: 'App Count' },
-                          { key: 'status', label: 'Status' }
-                        ].map((option) => (
+        {/* Search and Filter Controls */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                placeholder="Search by Name"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+              />
+              
+              <div className="relative">
+                <button 
+                  onClick={toggleFilter}
+                  className="flex items-center space-x-2 p-2 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  <Filter className="h-5 w-5 text-slate-300" />
+                  <span className="text-sm text-slate-300">Filter & Sort</span>
+                  <ChevronDown className="h-4 w-4 text-slate-300" />
+                </button>
+
+                {isFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
+                    <div className="p-4">
+                      {/* Sort Section */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-medium text-slate-200">Sort By</h3>
                           <button
-                            key={option.key}
-                            onClick={() => handleSortChange(option.key)}
-                            className={`text-left px-3 py-2 rounded text-sm transition-colors ${
-                              tempSortBy === option.key 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                            }`}
+                            onClick={toggleSortOrder}
+                            className="flex items-center space-x-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300 transition-colors"
                           >
-                            {option.label}
+                            <span>{tempSortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
+                            <span>{tempSortOrder === 'asc' ? '↑' : '↓'}</span>
                           </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Filter Section */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Role Filter */}
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Role</h3>
-                          <select
-                            value={tempFilterRole}
-                            onChange={(e) => setTempFilterRole(e.target.value)}
-                            className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
-                          >
-                            <option value="all">All Roles</option>
-                            <option value="Employee">Employee</option>
-                            <option value="Admin">Admin</option>
-                            <option value="NSight Admin">NSight Admin</option>
-                          </select>
                         </div>
-
-                        {/* Status Filter */}
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Status</h3>
-                          <select
-                            value={tempFilterStatus}
-                            onChange={(e) => setTempFilterStatus(e.target.value)}
-                            className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
-                          >
-                            <option value="all">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                          </select>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { key: 'name', label: 'Name' },
+                            { key: 'role', label: 'Role' },
+                            { key: 'lastLogin', label: 'Last Login' },
+                            { key: 'email', label: 'Email' },
+                            { key: 'id', label: 'ID' },
+                            { key: 'domain', label: 'Domain' },
+                            { key: 'appAccess', label: 'App Count' },
+                            { key: 'status', label: 'Status' }
+                          ].map((option) => (
+                            <button
+                              key={option.key}
+                              onClick={() => handleSortChange(option.key)}
+                              className={`text-left px-3 py-2 rounded text-sm transition-colors ${
+                                tempSortBy === option.key 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Domain Filter */}
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Domain</h3>
-                          <select
-                            value={tempFilterDomain}
-                            onChange={(e) => setTempFilterDomain(e.target.value)}
-                            className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
-                          >
-                            <option value="all">All Domains</option>
-                            <option value="capacity.com">@capacity.com</option>
-                            <option value="nsight-inc.com">@nsight-inc.com</option>
-                            <option value="other">Other Domains</option>
-                          </select>
+                      {/* Filter Section */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Role Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Role</h3>
+                            <select
+                              value={tempFilterRole}
+                              onChange={(e) => setTempFilterRole(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Roles</option>
+                              <option value="Employee">Employee</option>
+                              <option value="Admin">Admin</option>
+                              <option value="NSight Admin">NSight Admin</option>
+                            </select>
+                          </div>
+
+                          {/* Status Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Status</h3>
+                            <select
+                              value={tempFilterStatus}
+                              onChange={(e) => setTempFilterStatus(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Status</option>
+                              <option value="Active">Active</option>
+                              <option value="Inactive">Inactive</option>
+                            </select>
+                          </div>
                         </div>
 
-                        {/* App Filter */}
-                        <div>
-                          <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by App Access</h3>
-                          <select
-                            value={tempFilterApp}
-                            onChange={(e) => setTempFilterApp(e.target.value)}
-                            className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
-                          >
-                            <option value="all">All Apps</option>
-                            <option value="formulas">Has Formulas Access</option>
-                            <option value="suppliers">Has Suppliers Access</option>
-                            <option value="raw-materials">Has Raw Materials Access</option>
-                            <option value="developer-mode">Has Developer Mode Access</option>
-                            <option value="existing-company-mode">Has Existing Company Mode Access</option>
-                          </select>
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Domain Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Domain</h3>
+                            <select
+                              value={tempFilterDomain}
+                              onChange={(e) => setTempFilterDomain(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Domains</option>
+                              <option value="capacity.com">@capacity.com</option>
+                              <option value="nsight-inc.com">@nsight-inc.com</option>
+                              <option value="other">Other Domains</option>
+                            </select>
+                          </div>
+
+                          {/* App Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by App Access</h3>
+                            <select
+                              value={tempFilterApp}
+                              onChange={(e) => setTempFilterApp(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Apps</option>
+                              <option value="formulas">Has Formulas Access</option>
+                              <option value="suppliers">Has Suppliers Access</option>
+                              <option value="raw-materials">Has Raw Materials Access</option>
+                              <option value="developer-mode">Has Developer Mode Access</option>
+                              <option value="existing-company-mode">Has Existing Company Mode Access</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="mt-6 pt-4 border-t border-slate-600 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
+                      {/* Action Buttons */}
+                      <div className="mt-6 pt-4 border-t border-slate-600 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={cancelFilters}
+                            className="px-3 py-2 bg-slate-600 text-white rounded text-sm hover:bg-slate-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={applyFilters}
+                            className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors font-medium"
+                          >
+                            Apply Filters
+                          </button>
+                        </div>
                         <button
-                          onClick={cancelFilters}
-                          className="px-3 py-2 bg-slate-600 text-white rounded text-sm hover:bg-slate-700 transition-colors"
+                          onClick={clearAllFilters}
+                          className="w-full px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
                         >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={applyFilters}
-                          className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors font-medium"
-                        >
-                          Apply Filters
+                          Clear All Filters
                         </button>
                       </div>
-                      <button
-                        onClick={clearAllFilters}
-                        className="w-full px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
-                      >
-                        Clear All Filters
-                      </button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+
+            <button
+              onClick={handleAddUser}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add User</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-100">User Access Management</h2>
-            <div className="flex items-center space-x-4 mt-2">
-              <p className="text-sm text-slate-400">
-                Showing {sortedUsers.length} of {users.length} users
-              </p>
-              {(filterRole !== 'all' || filterStatus !== 'all' || filterDomain !== 'all' || filterApp !== 'all' || sortBy !== 'name') && (
-                <div className="flex items-center space-x-2 flex-wrap">
-                  <span className="text-xs text-slate-500">Active filters:</span>
-                  {filterRole !== 'all' && (
-                    <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
-                      Role: {filterRole}
-                    </span>
-                  )}
-                  {filterStatus !== 'all' && (
-                    <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">
-                      Status: {filterStatus}
-                    </span>
-                  )}
-                  {filterDomain !== 'all' && (
-                    <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
-                      Domain: {filterDomain}
-                    </span>
-                  )}
-                  {filterApp !== 'all' && (
-                    <span className="px-2 py-1 bg-cyan-600 text-white text-xs rounded">
-                      App: {filterApp.replace('-', ' ')}
-                    </span>
-                  )}
-                  {sortBy !== 'name' && (
-                    <span className="px-2 py-1 bg-orange-600 text-white text-xs rounded">
-                      Sort: {sortBy} {sortOrder === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </div>
-              )}
+        {/* Content */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-100">User Access Management</h2>
+              <div className="flex items-center space-x-4 mt-2">
+                <p className="text-sm text-slate-400">
+                  Showing {sortedUsers.length} of {users.length} users
+                </p>
+                {(filterRole !== 'all' || filterStatus !== 'all' || filterDomain !== 'all' || filterApp !== 'all' || sortBy !== 'name') && (
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <span className="text-xs text-slate-500">Active filters:</span>
+                    {filterRole !== 'all' && (
+                      <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded">
+                        Role: {filterRole}
+                      </span>
+                    )}
+                    {filterStatus !== 'all' && (
+                      <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">
+                        Status: {filterStatus}
+                      </span>
+                    )}
+                    {filterDomain !== 'all' && (
+                      <span className="px-2 py-1 bg-orange-600 text-white text-xs rounded">
+                        Domain: {filterDomain}
+                      </span>
+                    )}
+                    {filterApp !== 'all' && (
+                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                        App: {filterApp}
+                      </span>
+                    )}
+                    {sortBy !== 'name' && (
+                      <span className="px-2 py-1 bg-slate-600 text-white text-xs rounded">
+                        Sort: {sortBy} ({sortOrder})
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          <button 
-            onClick={handleAddUser}
-            className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors shadow-lg"
-            title="Add New User"
-          >
-            <Plus className="h-6 w-6 text-white" />
-          </button>
-        </div>
 
-        {/* Table */}
-        <div className="bg-slate-800 rounded-lg shadow-sm overflow-hidden border border-slate-700">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700 bg-slate-750">
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Name</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">ID</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Email</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Role</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Contact</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">App Access</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Credentials</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-slate-300"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedUsers.map((employee, index) => (
-                <tr 
-                  key={employee.id} 
-                  className="border-b border-slate-700 hover:bg-slate-700 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm text-slate-100 font-medium">{employee.name}</td>
-                  <td className="px-6 py-4 text-sm text-slate-300">{employee.id}</td>
-                  <td className="px-6 py-4 text-sm text-slate-300">
-                    <a href={`mailto:${employee.email}`} className="text-blue-400 hover:text-blue-300 underline">
-                      {employee.email}
-                    </a>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(employee.role)}`}>
-                      {employee.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-300">{employee.contact || ''}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      {employee.appAccess.map((app, appIndex) => (
-                        <div
-                          key={app}
-                          className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors"
-                          title={app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        >
-                          {getAppIcon(app)}
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-300">{employee.credentials}</td>
-                  <td className="px-6 py-4">
-                    <button 
-                      onClick={() => handleEditUser(employee)}
-                      className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-600 rounded-md transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                  </td>
+          {/* Table */}
+          <div className="bg-slate-800 rounded-lg shadow-sm overflow-hidden border border-slate-700">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-750">
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Name</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">ID</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Email</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Role</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Contact</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">App Access</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Credentials</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedUsers.map((employee, index) => (
+                  <tr 
+                    key={employee.id} 
+                    className="border-b border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    <td className="px-6 py-4 text-sm text-slate-100 font-medium">{employee.name}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{employee.id}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">
+                      <a href={`mailto:${employee.email}`} className="text-blue-400 hover:text-blue-300 underline">
+                        {employee.email}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(employee.role)}`}>
+                        {employee.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{employee.contact || ''}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        {employee.appAccess.map((app, appIndex) => (
+                          <div
+                            key={app}
+                            className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors"
+                            title={app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          >
+                            {getAppIcon(app)}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{employee.credentials}</td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => handleEditUser(employee)}
+                        className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-600 rounded-md transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -597,7 +602,6 @@ const UserManagementPage = () => {
         onClose={handleCloseAddModal}
         onSave={handleSaveNewUser}
       />
-    </div>
     </DashboardLayout>
   );
 };

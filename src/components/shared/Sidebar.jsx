@@ -121,9 +121,9 @@ const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
       <div className="border-t border-slate-600">
         {/* Settings */}
         <div className="p-4 pb-2">
-          <a
-            href="#"
-            className="flex items-center px-3 py-2 text-slate-200 hover:bg-slate-700 
+          <button
+            onClick={() => handleNavigation('/settings')}
+            className="flex items-center w-full px-3 py-2 text-slate-200 hover:bg-slate-700 
                      rounded-md transition-colors duration-200 group relative"
             title={isCollapsed ? 'Settings' : ''}
           >
@@ -139,7 +139,7 @@ const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
                 Settings
               </div>
             )}
-          </a>
+          </button>
         </div>
         
         {/* Logout */}

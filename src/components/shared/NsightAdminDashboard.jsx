@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
   Plus, 
@@ -9,13 +10,19 @@ import {
   Code, 
   Database,
   UserPlus,
-  Edit3
+  Edit3,
+  ArrowLeft
 } from 'lucide-react';
 import Card from '../ui/Card';
 
 const NsightAdminDashboard = ({ userData }) => {
-  const [selectedMode, setSelectedMode] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedCompany, setSelectedCompany] = useState(null);
+
+  // Get current mode from URL query parameters
+  const searchParams = new URLSearchParams(location.search);
+  const currentMode = searchParams.get('mode');
 
   // Mock companies data
   const companies = [
@@ -32,9 +39,17 @@ const NsightAdminDashboard = ({ userData }) => {
     { id: 'analytics', name: 'Analytics', icon: Settings, description: 'Data analytics and reporting' }
   ];
 
-  const handleModeSelection = (mode) => {
-    setSelectedMode(mode);
+  // Reset selected company when mode changes
+  useEffect(() => {
     setSelectedCompany(null);
+  }, [currentMode]);
+
+  const handleModeSelection = (mode) => {
+    navigate(`/dashboard?mode=${mode}`);
+  };
+
+  const handleBackToModeSelection = () => {
+    navigate('/dashboard');
   };
 
   const handleCompanySelection = (company) => {
@@ -106,17 +121,17 @@ const NsightAdminDashboard = ({ userData }) => {
 
   const renderDeveloperMode = () => (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={handleBackToModeSelection}
+          className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-400" />
+        </button>
         <div>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Developer Mode</h1>
           <p className="text-slate-400">Create and configure new companies and applications</p>
         </div>
-        <button
-          onClick={() => setSelectedMode(null)}
-          className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
-        >
-          Back to Mode Selection
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -176,17 +191,17 @@ const NsightAdminDashboard = ({ userData }) => {
 
   const renderExistingCompanyMode = () => (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={handleBackToModeSelection}
+          className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-400" />
+        </button>
         <div>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Existing Company Mode</h1>
           <p className="text-slate-400">Manage existing companies and their configurations</p>
         </div>
-        <button
-          onClick={() => setSelectedMode(null)}
-          className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
-        >
-          Back to Mode Selection
-        </button>
       </div>
 
       {!selectedCompany ? (
@@ -303,13 +318,14 @@ const NsightAdminDashboard = ({ userData }) => {
     </div>
   );
 
-  return (
-    <div className="space-y-8">
-      {!selectedMode && renderModeSelection()}
-      {selectedMode === 'developer' && renderDeveloperMode()}
-      {selectedMode === 'existing' && renderExistingCompanyMode()}
-    </div>
-  );
+  // Determine which view to render based on URL mode
+  if (currentMode === 'developer') {
+    return renderDeveloperMode();
+  } else if (currentMode === 'existing') {
+    return renderExistingCompanyMode();
+  } else {
+    return renderModeSelection();
+  }
 };
 
 export default NsightAdminDashboard; 

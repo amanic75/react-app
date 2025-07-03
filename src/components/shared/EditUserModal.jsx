@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, FolderOpen, FlaskConical, Users, Check, Trash2, Code, Building2 } from 'lucide-react';
+import { X, FolderOpen, FlaskConical, Users, Check, Trash2, Code, Building2, Lock } from 'lucide-react';
 import Button from '../ui/Button';
 import { deleteUser } from '../../lib/data';
+import ChangePasswordModal from './ChangePasswordModal';
 
-const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
+const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRole, onChangePassword }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,6 +12,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
     credentials: '',
     appAccess: []
   });
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   const credentialOptions = [
     'user/temporary pass',
@@ -91,6 +93,29 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
     }
   };
 
+  const handleChangePassword = () => {
+    setIsChangePasswordModalOpen(true);
+  };
+
+  const handleCloseChangePasswordModal = () => {
+    setIsChangePasswordModalOpen(false);
+  };
+
+  const handleSavePassword = (passwordData) => {
+    const result = onChangePassword({
+      email: user.email,
+      newPassword: passwordData.newPassword,
+      isAdminReset: true // Flag to indicate this is an admin reset
+    });
+    
+    if (result.success) {
+      alert(`Password changed successfully for ${user.name}!`);
+      setIsChangePasswordModalOpen(false);
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -102,7 +127,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
       ></div>
       
       {/* Modal */}
-      <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-md mx-4 border border-slate-700">
+      <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-lg mx-4 border border-slate-700">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <h2 className="text-xl font-semibold text-slate-100">Edit User</h2>
@@ -116,6 +141,19 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
 
         {/* Content */}
         <div className="p-6 space-y-4">
+          {/* Change Password Button - Only for Admins */}
+          {currentUserRole === 'admin' && (
+            <div className="pb-4 border-b border-slate-700">
+              <Button
+                onClick={handleChangePassword}
+                className="w-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center space-x-2 py-3"
+              >
+                <Lock className="w-4 h-4" />
+                <span>Change Password for {user?.name}</span>
+              </Button>
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">
@@ -239,6 +277,16 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={handleCloseChangePasswordModal}
+        onSave={handleSavePassword}
+        currentUserEmail={user?.email}
+        isAdminReset={true}
+        targetUserName={user?.name}
+      />
     </div>
   );
 };

@@ -16,10 +16,14 @@ const generateAuthCredentials = () => {
     'NSight Admin': 'nsight-admin'
   };
   
-  // Generate credentials for all users with password "password"
+  // Load saved passwords from localStorage
+  const savedPasswords = localStorage.getItem('capacity-passwords');
+  const customPasswords = savedPasswords ? JSON.parse(savedPasswords) : {};
+
+  // Generate credentials for all users
   users.forEach(user => {
     credentials[user.email] = {
-      password: 'password',
+      password: customPasswords[user.email] || 'password', // Use saved password or default
       role: roleMapping[user.role] || 'employee',
       userData: user // Store full user data for dashboard personalization
     };
@@ -195,6 +199,36 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
+  const changePassword = ({ email, oldPassword, newPassword, isAdminReset = false }) => {
+    console.log('Change password attempt for:', email, isAdminReset ? '(admin reset)' : '');
+    
+    // Refresh credentials to get latest data
+    refreshCredentials();
+    
+    const credential = MOCK_CREDENTIALS[email];
+    
+    if (!credential) {
+      return { success: false, error: 'User not found' };
+    }
+    
+    // Only verify old password if not an admin reset
+    if (!isAdminReset && credential.password !== oldPassword) {
+      return { success: false, error: 'Current password is incorrect' };
+    }
+    
+    // Store new password in localStorage for persistence
+    const savedPasswords = localStorage.getItem('capacity-passwords');
+    const passwords = savedPasswords ? JSON.parse(savedPasswords) : {};
+    passwords[email] = newPassword;
+    localStorage.setItem('capacity-passwords', JSON.stringify(passwords));
+    
+    // Update the in-memory credentials
+    MOCK_CREDENTIALS[email].password = newPassword;
+    
+    console.log('Password changed successfully for:', email);
+    return { success: true };
+  };
+
   const value = {
     user,
     role,
@@ -202,6 +236,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     createAccount,
+    changePassword,
     isAuthenticated: !!user,
     isLoading
   };

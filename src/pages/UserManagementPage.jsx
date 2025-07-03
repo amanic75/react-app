@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Filter, ArrowUpDown, Plus, FolderOpen, FlaskConical, Users, Edit, ChevronDown, Check, Code, Building2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getUsers, updateUser, addUser } from '../lib/data';
+import { useAuth } from '../lib/auth';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditUserModal from '../components/shared/EditUserModal';
 import AddUserModal from '../components/shared/AddUserModal';
@@ -9,6 +10,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, role, changePassword } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -509,6 +511,7 @@ const UserManagementPage = () => {
           <button 
             onClick={handleAddUser}
             className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors shadow-lg"
+            title="Add New User"
           >
             <Plus className="h-6 w-6 text-white" />
           </button>
@@ -584,6 +587,8 @@ const UserManagementPage = () => {
         user={selectedUser}
         onSave={handleSaveUser}
         onDelete={handleDeleteUser}
+        currentUserRole={role}
+        onChangePassword={changePassword}
       />
 
       {/* Add User Modal */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FolderOpen, FlaskConical, Users, Check, Trash2 } from 'lucide-react';
+import { X, FolderOpen, FlaskConical, Users, Check, Trash2, Code, Building2 } from 'lucide-react';
 import Button from '../ui/Button';
 import { deleteUser } from '../../lib/data';
 
@@ -21,7 +21,9 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete }) => {
   const appOptions = [
     { id: 'formulas', name: 'Formulas', icon: FolderOpen },
     { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
-    { id: 'suppliers', name: 'Suppliers', icon: Users }
+    { id: 'suppliers', name: 'Suppliers', icon: Users },
+    { id: 'developer-mode', name: 'Developer Mode', icon: Code },
+    { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
   ];
 
   const getDefaultCredentials = (userRole) => {

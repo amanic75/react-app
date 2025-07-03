@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Filter, ArrowUpDown, Plus, FolderOpen, FlaskConical, Users, Edit, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, Search, Filter, ArrowUpDown, Plus, FolderOpen, FlaskConical, Users, Edit, ChevronDown, Check, Code, Building2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getUsers, updateUser, addUser } from '../lib/data';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -161,6 +161,10 @@ const UserManagementPage = () => {
         return <FlaskConical className="w-4 h-4 text-blue-500" />;
       case 'suppliers':
         return <Users className="w-4 h-4 text-blue-500" />;
+      case 'developer-mode':
+        return <Code className="w-4 h-4 text-indigo-500" />;
+      case 'existing-company-mode':
+        return <Building2 className="w-4 h-4 text-indigo-500" />;
       default:
         return null;
     }
@@ -423,6 +427,8 @@ const UserManagementPage = () => {
                             <option value="formulas">Has Formulas Access</option>
                             <option value="suppliers">Has Suppliers Access</option>
                             <option value="raw-materials">Has Raw Materials Access</option>
+                            <option value="developer-mode">Has Developer Mode Access</option>
+                            <option value="existing-company-mode">Has Existing Company Mode Access</option>
                           </select>
                         </div>
                       </div>

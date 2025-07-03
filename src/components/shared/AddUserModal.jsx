@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FolderOpen, FlaskConical, Users, Check } from 'lucide-react';
+import { X, FolderOpen, FlaskConical, Users, Check, Code, Building2 } from 'lucide-react';
 import Button from '../ui/Button';
 
 const AddUserModal = ({ isOpen, onClose, onSave }) => {
@@ -20,7 +20,9 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
   const appOptions = [
     { id: 'formulas', name: 'Formulas', icon: FolderOpen },
     { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
-    { id: 'suppliers', name: 'Suppliers', icon: Users }
+    { id: 'suppliers', name: 'Suppliers', icon: Users },
+    { id: 'developer-mode', name: 'Developer Mode', icon: Code },
+    { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
   ];
 
   const handleInputChange = (field, value) => {

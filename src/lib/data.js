@@ -80,7 +80,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -812,7 +812,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -823,7 +823,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -834,7 +834,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -845,7 +845,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -856,7 +856,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -867,7 +867,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -878,7 +878,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -889,7 +889,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -900,7 +900,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -911,7 +911,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -922,7 +922,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -933,7 +933,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -944,7 +944,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -955,7 +955,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   },
   {
@@ -966,7 +966,7 @@ const defaultUserData = [
     status: 'Active',
     lastLogin: getRandomDate(),
     contact: '',
-    appAccess: ['formulas', 'suppliers', 'raw-materials'],
+    appAccess: ['developer-mode', 'existing-company-mode'],
     credentials: 'nsight-admin/enterprise pass'
   }
 ];

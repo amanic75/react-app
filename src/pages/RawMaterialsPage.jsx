@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X } from 'lucide-react';
+import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
+import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -22,6 +23,8 @@ const RawMaterialsPage = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isDropboxModalOpen, setIsDropboxModalOpen] = useState(false);
   const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const tabRefs = useRef({});
 
@@ -191,6 +194,18 @@ const RawMaterialsPage = () => {
     setIsAddMaterialModalOpen(true);
   };
 
+  // Handle editing material
+  const handleEditMaterial = (material) => {
+    setSelectedMaterial(material);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle closing edit modal
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedMaterial(null);
+  };
+
   // Handle showing confirmation dialog
   const handleShowConfirm = () => {
     setShowConfirmDialog(true);
@@ -349,13 +364,14 @@ const RawMaterialsPage = () => {
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Density</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Supplier Cost</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Country</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMaterials.map((material, index) => (
                   <tr 
                     key={`${material.materialName}-${index}`}
-                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer"
+                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
                   >
                     <td className="px-6 py-4 text-sm text-slate-300">{material.materialName}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.casNumber}</td>
@@ -365,11 +381,24 @@ const RawMaterialsPage = () => {
                       $ {material.supplierCost.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.country}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditMaterial(material);
+                        }}
+                        className="p-1 hover:bg-slate-600 rounded transition-colors"
+                        title="Edit material"
+                      >
+                        <Edit className="h-4 w-4 text-slate-400 hover:text-slate-200" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {/* Add empty rows to fill space like in reference */}
                 {Array.from({ length: 15 }, (_, index) => (
                   <tr key={`empty-${index}`} className="border-b border-slate-700">
+                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
@@ -395,6 +424,13 @@ const RawMaterialsPage = () => {
         <DropboxUploadModal
           isOpen={isDropboxModalOpen}
           onClose={() => setIsDropboxModalOpen(false)}
+        />
+
+        {/* Edit Material Modal */}
+        <EditRawMaterialModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          material={selectedMaterial}
         />
 
         {/* Add Material Modal */}

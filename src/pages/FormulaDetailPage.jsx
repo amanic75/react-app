@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
-import { getFormulaById, updateFormula, getAllFormulas } from '../lib/data';
+import { getFormulaById, updateFormula, getAllFormulas } from '../lib/supabaseData';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -15,36 +15,46 @@ const FormulaDetailPage = () => {
   const [editableFormula, setEditableFormula] = useState(null);
   const [formula, setFormula] = useState(null);
   const [deletedDocuments, setDeletedDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Get formula from shared data source
-  React.useEffect(() => {
-    console.log('Loading formula with ID:', formulaId);
-    
-    // Debug: Check all available formulas
-    const allFormulas = getAllFormulas();
-    console.log('All available formulas:', allFormulas);
-    console.log('Available formula IDs:', allFormulas.map(f => f.id));
-    
-    const foundFormula = getFormulaById(formulaId);
-    console.log('Found formula:', foundFormula);
-    
-    if (foundFormula) {
-      setFormula(foundFormula);
-      setEditableFormula({
-        name: foundFormula.name,
-        totalCost: foundFormula.totalCost,
-        finalSalePriceDrum: foundFormula.finalSalePriceDrum,
-        finalSalePriceTote: foundFormula.finalSalePriceTote,
-        ingredients: [...foundFormula.ingredients]
-      });
-      console.log('Formula state set successfully');
-    } else {
-      console.log('No formula found for ID:', formulaId);
-    }
+  // Get formula from Supabase
+  useEffect(() => {
+    const loadFormula = async () => {
+      try {
+        setLoading(true);
+        console.log('Loading formula with ID:', formulaId);
+        
+        const foundFormula = await getFormulaById(formulaId);
+        console.log('Found formula:', foundFormula);
+        
+        if (foundFormula) {
+          setFormula(foundFormula);
+          setEditableFormula({
+            name: foundFormula.name,
+            totalCost: foundFormula.totalCost,
+            finalSalePriceDrum: foundFormula.finalSalePriceDrum,
+            finalSalePriceTote: foundFormula.finalSalePriceTote,
+            ingredients: [...foundFormula.ingredients]
+          });
+          console.log('Formula state set successfully');
+        } else {
+          console.log('No formula found for ID:', formulaId);
+          setError('Formula not found');
+        }
+      } catch (err) {
+        console.error('Error loading formula:', err);
+        setError('Failed to load formula');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFormula();
   }, [formulaId]);
 
   // Reset edit state when navigating to different formula
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('FormulaDetailPage rendered with formulaId:', formulaId);
     
     // Reset edit state when navigating to different formula
@@ -60,13 +70,29 @@ const FormulaDetailPage = () => {
   console.log('Current formula state:', formula);
   console.log('Current editableFormula state:', editableFormula);
 
-  if (!formula) {
+  // Show loading state
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-slate-400">Loading formula...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error or not found state
+  if (error || !formula) {
     console.log('Rendering Formula Not Found page');
     return (
       <DashboardLayout>
         <div className="min-h-screen bg-slate-900 flex items-center justify-center">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-100 mb-4">Formula Not Found</h2>
+            <h2 className="text-2xl font-bold text-slate-100 mb-4">
+              {error || 'Formula Not Found'}
+            </h2>
             <p className="text-slate-400 mb-4">Formula ID: {formulaId}</p>
             <button
               onClick={() => navigate('/formulas')}
@@ -79,8 +105,6 @@ const FormulaDetailPage = () => {
       </DashboardLayout>
     );
   }
-
-
 
   // Mock existing documents for each formula
   const getExistingDocuments = (formulaId) => {
@@ -176,19 +200,24 @@ const FormulaDetailPage = () => {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
-      // Save changes to shared data source
-      if (editableFormula) {
-        const updatedFormula = updateFormula(formula.id, editableFormula);
-        if (updatedFormula) {
-          setFormula(updatedFormula);
-          console.log('Formula saved successfully:', updatedFormula);
+      try {
+        // Save changes to Supabase
+        if (editableFormula) {
+          const updatedFormula = await updateFormula(formula.id, editableFormula);
+          if (updatedFormula) {
+            setFormula(updatedFormula);
+            console.log('Formula saved successfully:', updatedFormula);
+          }
         }
+        console.log('Deleted documents:', deletedDocuments);
+        setIsEditing(false);
+        // Keep deleted documents after save - they are permanently removed
+      } catch (err) {
+        console.error('Error saving formula:', err);
+        // You might want to show an error message to the user here
       }
-      console.log('Deleted documents:', deletedDocuments);
-      setIsEditing(false);
-      // Keep deleted documents after save - they are permanently removed
     } else {
       // Reset to current values when starting edit
       setEditableFormula({
@@ -198,7 +227,6 @@ const FormulaDetailPage = () => {
         finalSalePriceTote: formula.finalSalePriceTote,
         ingredients: [...formula.ingredients]
       });
-      setDeletedDocuments([]); // Reset deleted documents when starting edit
       setIsEditing(true);
     }
   };

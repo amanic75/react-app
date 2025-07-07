@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import { getAllFormulas } from '../lib/data';
+import { getAllFormulas } from '../lib/supabaseData';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -22,7 +22,29 @@ const FormulasPage = () => {
   const [hoveredTab, setHoveredTab] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isDropboxModalOpen, setIsDropboxModalOpen] = useState(false);
+  const [formulas, setFormulas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const tabRefs = useRef({});
+
+  // Load formulas from Supabase on component mount
+  useEffect(() => {
+    const loadFormulas = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllFormulas();
+        setFormulas(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading formulas:', err);
+        setError('Failed to load formulas');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFormulas();
+  }, []);
 
   // Add CSS to hide scrollbars for webkit browsers
   useEffect(() => {
@@ -38,9 +60,6 @@ const FormulasPage = () => {
       document.head.removeChild(style);
     };
   }, []);
-
-  // Get formulas data from shared source
-  const formulas = getAllFormulas();
 
   const filteredFormulas = formulas.filter(formula => 
     formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,6 +81,56 @@ const FormulasPage = () => {
     { id: 'assigned', label: 'Assigned to me' },
     { id: 'created', label: 'Created by Me' }
   ];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-slate-400" />
+            </button>
+            <div className="flex items-center space-x-3">
+              <FolderOpen className="h-8 w-8 text-blue-500" />
+              <h1 className="text-3xl font-bold text-slate-100">Formulas</h1>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-slate-400">Loading formulas...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-slate-400" />
+            </button>
+            <div className="flex items-center space-x-3">
+              <FolderOpen className="h-8 w-8 text-blue-500" />
+              <h1 className="text-3xl font-bold text-slate-100">Formulas</h1>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-400">{error}</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -197,36 +266,20 @@ const FormulasPage = () => {
                         }}
                       >
                         <div className="flex space-x-2 min-w-max">
-                          {formula.ingredients.map((ingredient, idx) => (
+                          {formula.ingredients && formula.ingredients.map((ingredient, idx) => (
                             <div 
-                              key={idx} 
-                              className="flex-shrink-0 bg-slate-700 rounded-md px-2 py-1 border border-slate-600"
+                              key={idx}
+                              className="flex-shrink-0 bg-slate-700 rounded-full px-3 py-1 text-xs text-slate-300 border border-slate-600"
                             >
-                              <div className="text-xs text-slate-200 font-medium truncate max-w-20">
-                                {ingredient.name}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                {ingredient.percentage}%
-                              </div>
+                              {ingredient.name} ({ingredient.percentage}%)
                             </div>
                           ))}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.totalCost.toFixed(3)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePriceDrum.toFixed(3)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePriceTote.toFixed(3)}</td>
-                  </tr>
-                ))}
-                {/* Add empty rows to fill space like in reference */}
-                {Array.from({ length: 15 }, (_, index) => (
-                  <tr key={`empty-${index}`} className="border-b border-slate-700">
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">${formula.totalCost ? formula.totalCost.toFixed(2) : '0.00'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">${formula.finalSalePriceDrum ? formula.finalSalePriceDrum.toFixed(2) : '0.00'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">${formula.finalSalePriceTote ? formula.finalSalePriceTote.toFixed(2) : '0.00'}</td>
                   </tr>
                 ))}
               </tbody>

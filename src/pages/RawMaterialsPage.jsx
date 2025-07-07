@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import { getAllMaterials, generateMaterialId } from '../lib/data';
+import { getAllMaterials, generateMaterialId } from '../lib/supabaseData';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -24,6 +24,9 @@ const RawMaterialsPage = () => {
   const [isDropboxModalOpen, setIsDropboxModalOpen] = useState(false);
   const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [rawMaterials, setRawMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const tabRefs = useRef({});
 
   // Form state for new material
@@ -40,14 +43,30 @@ const RawMaterialsPage = () => {
     supplierCost: ''
   });
 
+  // Load raw materials from Supabase on component mount
+  useEffect(() => {
+    const loadMaterials = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllMaterials();
+        setRawMaterials(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading materials:', err);
+        setError('Failed to load raw materials');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMaterials();
+  }, []);
+
   // Handle clicking on a material name to navigate to detail page
   const handleMaterialClick = (material) => {
     const materialId = generateMaterialId(material.materialName);
     navigate(`/raw-materials/${materialId}`);
   };
-
-  // Get raw materials data from shared source
-  const rawMaterials = getAllMaterials();
 
   const filteredMaterials = rawMaterials.filter(material => 
     material.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -132,11 +151,11 @@ const RawMaterialsPage = () => {
     });
   };
 
-  return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-slate-900">
-        <div className="p-6 space-y-8">
-          {/* Header with Back Button and Title */}
+  // Show loading state
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/dashboard')}
@@ -149,10 +168,60 @@ const RawMaterialsPage = () => {
               <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
             </div>
           </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-slate-400">Loading raw materials...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-          {/* Search Controls */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center justify-between">
+  // Show error state
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-slate-400" />
+            </button>
+            <div className="flex items-center space-x-3">
+              <FlaskConical className="h-8 w-8 text-blue-500" />
+              <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-400">{error}</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-8">
+        {/* Header with Back Button and Title */}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-slate-400" />
+          </button>
+          <div className="flex items-center space-x-3">
+            <FlaskConical className="h-8 w-8 text-blue-500" />
+            <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
+          </div>
+        </div>
+
+        {/* Search Controls */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
               <input
                 type="text"
                 placeholder="Search by Txn Id, Material Name, CAS Nu..."
@@ -160,135 +229,119 @@ const RawMaterialsPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
               />
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <button className="p-3 bg-red-600 rounded-full hover:bg-red-500 transition-colors">
+                <ChemformationLogo className="w-6 h-6" />
+              </button>
               
-              <div className="flex items-center space-x-4">
-                <button className="p-3 bg-red-600 rounded-full hover:bg-red-500 transition-colors">
-                  <ChemformationLogo className="w-6 h-6" />
-                </button>
-                
-                <button 
-                  onClick={() => setIsDropboxModalOpen(true)}
-                  className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
-                  title="Upload to Dropbox"
-                >
-                  <svg className="w-5 h-5 text-slate-300" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 2L12 6L6 10L0 6L6 2ZM18 2L24 6L18 10L12 6L18 2ZM0 14L6 10L12 14L6 18L0 14ZM18 10L24 14L18 18L12 14L18 10ZM6 21L12 17L18 21L12 24L6 21Z"/>
-                  </svg>
-                </button>
-              </div>
+              <button 
+                onClick={() => setIsDropboxModalOpen(true)}
+                className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                title="Upload to Dropbox"
+              >
+                <svg className="w-5 h-5 text-slate-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 2L12 6L6 10L0 6L6 2ZM18 2L24 6L18 10L12 6L18 2ZM0 14L6 10L12 14L6 18L0 14ZM18 10L24 14L18 18L12 14L18 10ZM6 21L12 17L18 21L12 24L6 21Z"/>
+                </svg>
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Tabs and Controls */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-0">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    ref={(el) => (tabRefs.current[tab.id] = el)}
-                    onClick={() => setActiveTab(tab.id)}
-                    onMouseEnter={() => setHoveredTab(tab.id)}
-                    onMouseLeave={() => setHoveredTab(null)}
-                    onMouseMove={(e) => handleMouseMove(e, tab.id)}
-                    className={`relative px-6 py-2 transition-all duration-300 ease-out ${
-                      activeTab === tab.id
-                        ? 'bg-slate-600 text-slate-100'
-                        : 'bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-650'
-                    } ${tab.id === 'all' ? 'rounded-l-lg' : tab.id === 'created' ? 'rounded-r-lg' : ''}`}
-                    style={{
-                      transform: hoveredTab === tab.id ? 'scale(1.05)' : 'scale(1)',
-                      transition: 'transform 0.2s ease-out'
-                    }}
-                  >
-                    <span className="relative z-10 font-medium">{tab.label}</span>
-                    {hoveredTab === tab.id && (
-                      <div 
-                        className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-md -z-0"
-                        style={{
-                          background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.15), transparent 50%)`
-                        }}
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                  <List className="w-4 h-4 text-slate-300" />
-                  <span className="text-sm text-slate-300">Filter</span>
-                </button>
-                <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                  <ArrowUpDown className="w-4 h-4 text-slate-300" />
-                  <span className="text-sm text-slate-300">Sort</span>
-                </button>
-                <button 
-                  onClick={handleAddMaterial}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+        {/* Tabs and Controls */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  ref={(el) => (tabRefs.current[tab.id] = el)}
+                  onClick={() => setActiveTab(tab.id)}
+                  onMouseEnter={() => setHoveredTab(tab.id)}
+                  onMouseLeave={() => setHoveredTab(null)}
+                  onMouseMove={(e) => handleMouseMove(e, tab.id)}
+                  className={`relative px-6 py-2 transition-all duration-300 ease-out ${
+                    activeTab === tab.id
+                      ? 'bg-slate-600 text-slate-100'
+                      : 'bg-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-650'
+                  } ${tab.id === 'all' ? 'rounded-l-lg' : tab.id === 'created' ? 'rounded-r-lg' : ''}`}
+                  style={{
+                    transform: hoveredTab === tab.id ? 'scale(1.05)' : 'scale(1)',
+                    transition: 'transform 0.2s ease-out'
+                  }}
                 >
-                  <Plus className="w-4 h-4 text-white" />
-                  <span className="text-sm text-white font-medium">Add Material</span>
+                  <span className="relative z-10 font-medium">{tab.label}</span>
+                  {hoveredTab === tab.id && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-md -z-0"
+                      style={{
+                        background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.15), transparent 50%)`
+                      }}
+                    />
+                  )}
                 </button>
-              </div>
+              ))}
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                <List className="w-4 h-4 text-slate-300" />
+                <span className="text-sm text-slate-300">Filter</span>
+              </button>
+              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
+                <ArrowUpDown className="w-4 h-4 text-slate-300" />
+                <span className="text-sm text-slate-300">Sort</span>
+              </button>
+              <button 
+                onClick={handleAddMaterial}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+              >
+                <Plus className="w-4 h-4 text-white" />
+                <span className="text-sm text-white font-medium">Add Raw Material</span>
+              </button>
             </div>
           </div>
+        </div>
 
+        {/* Content */}
+        <div className="space-y-6">
           {/* Table */}
           <div className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-750 border-b border-slate-700">
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Material Name</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Supplier Name</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Trade Name</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">CAS Number</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Weight/Volume (lbs/gallon)</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Density</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Supplier Cost</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Manufacture</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Country</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Supplier Cost</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMaterials.map((material, index) => (
                   <tr 
-                    key={`${material.materialName}-${index}`}
-                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer"
+                    key={`${material.id}-${index}`}
                     onClick={() => handleMaterialClick(material)}
+                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer"
                   >
-                    <td className="px-6 py-4 text-sm text-blue-400 hover:text-blue-300 font-medium">
+                    <td className="px-6 py-4 text-sm text-blue-400 hover:text-blue-300 cursor-pointer">
                       {material.materialName}
                     </td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{material.supplierName}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{material.tradeName}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.casNumber}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">{material.weightVolume}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">{material.density}</td>
-                    <td className="px-6 py-4 text-sm text-green-500 font-medium">
-                      $ {material.supplierCost.toFixed(2)}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{material.manufacture}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.country}</td>
-                  </tr>
-                ))}
-                {/* Add empty rows to fill space like in reference */}
-                {Array.from({ length: 15 }, (_, index) => (
-                  <tr key={`empty-${index}`} className="border-b border-slate-700">
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">${material.supplierCost ? material.supplierCost.toFixed(2) : '0.00'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Floating Action Button */}
-        <button 
-          onClick={handleAddMaterial}
-          className="fixed bottom-6 right-6 p-4 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors shadow-lg"
-        >
-          <Plus className="h-6 w-6 text-white" />
-        </button>
 
         {/* Dropbox Upload Modal */}
         <DropboxUploadModal

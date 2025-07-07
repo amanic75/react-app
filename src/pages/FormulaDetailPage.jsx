@@ -220,6 +220,13 @@ const FormulaDetailPage = () => {
     }));
   };
 
+  const handleDeleteIngredient = (index) => {
+    setEditableFormula(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index)
+    }));
+  };
+
   return (
     <DashboardLayout key={`formula-${formulaId}`}>
       <div className="space-y-6">
@@ -315,7 +322,18 @@ const FormulaDetailPage = () => {
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
               <div className="flex space-x-4 pb-2 min-w-max">
                 {(editableFormula?.ingredients || formula.ingredients).map((ingredient, index) => (
-                  <div key={index} className="flex-shrink-0 bg-slate-700 rounded-lg border border-slate-600 p-4 w-64">
+                  <div key={index} className="flex-shrink-0 bg-slate-700 rounded-lg border border-slate-600 p-4 w-64 relative">
+                    {/* Delete Button - Only show when editing */}
+                    {isEditing && editableFormula && (
+                      <button
+                        onClick={() => handleDeleteIngredient(index)}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold transition-colors z-10 shadow-lg"
+                        title="Delete ingredient"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                    
                     <div className="space-y-3">
                       {/* Ingredient Name */}
                       <div>

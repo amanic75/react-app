@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/auth.jsx';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   FlaskConical, 
@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Code,
-  Building2
+  Building2,
+  Factory,
+  Truck
 } from 'lucide-react';
 import Logo from '../ui/Logo';
 
-const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
-  const { logout } = useAuth();
+const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
+  const { signOut, userProfile } = useAuth();
   const navigate = useNavigate();
 
   const handleNavigation = (path) => {
@@ -24,9 +26,20 @@ const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
     navigate(path);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const employeeLinks = [
     { icon: LayoutDashboard, label: 'Dashboard', action: () => handleNavigation('/dashboard') },
-    { icon: FlaskConical, label: 'Chemformation', action: () => console.log('Chemformation clicked') }
+    { icon: FlaskConical, label: 'Formulas', action: () => handleNavigation('/formulas') },
+    { icon: Factory, label: 'Raw Materials', action: () => handleNavigation('/raw-materials') },
+    { icon: Truck, label: 'Suppliers', action: () => handleNavigation('/suppliers') }
   ];
 
   const adminLinks = [
@@ -44,8 +57,11 @@ const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
   ];
 
   const getLinks = () => {
-    switch (role) {
+    if (!userProfile) return employeeLinks;
+    
+    switch (userProfile.role) {
       case 'admin':
+      case 'manager':
         return adminLinks;
       case 'nsight-admin':
         return nsightAdminLinks;
@@ -145,7 +161,7 @@ const Sidebar = ({ role, isCollapsed, onToggleCollapse }) => {
         {/* Logout */}
         <div className="p-4 pt-0">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="flex items-center w-full px-3 py-2 text-slate-200 hover:bg-slate-700 
                      rounded-md transition-colors duration-200 group relative"
             title={isCollapsed ? 'Logout' : ''}

@@ -44,23 +44,23 @@ const FormulasPage = () => {
   const [tempFilterSalePriceRange, setTempFilterSalePriceRange] = useState('all');
   const [tempFilterIngredientCount, setTempFilterIngredientCount] = useState('all');
 
-  // Load formulas from Supabase on component mount
+  // Load data on component mount and when filters change
   useEffect(() => {
-    const loadFormulas = async () => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
         const data = await getAllFormulas();
         setFormulas(data);
-        setError(null);
       } catch (err) {
         console.error('Error loading formulas:', err);
-        setError('Failed to load formulas');
+        setError('Failed to load formulas. Please check your database connection.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadFormulas();
+    loadData();
   }, []);
 
   // Close filter dropdown when clicking outside
@@ -254,25 +254,30 @@ const FormulasPage = () => {
     );
   }
 
-  // Show error state
+  // Error state
   if (error) {
     return (
       <DashboardLayout>
-        <div className="space-y-8">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-slate-400" />
-            </button>
-            <div className="flex items-center space-x-3">
-              <FolderOpen className="h-8 w-8 text-blue-500" />
-              <h1 className="text-3xl font-bold text-slate-100">Formulas</h1>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-6 max-w-md mx-auto">
+              <h2 className="text-xl font-semibold text-red-400 mb-4">Database Connection Error</h2>
+              <p className="text-slate-300 mb-4">{error}</p>
+              <div className="text-left text-sm text-slate-400 space-y-2 mb-4">
+                <p><strong className="text-slate-300">Possible solutions:</strong></p>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  <li>Run the database schema update script in Supabase</li>
+                  <li>Check your Supabase connection settings</li>
+                  <li>Verify authentication permissions</li>
+                </ul>
+              </div>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Retry
+              </button>
             </div>
-          </div>
-          <div className="flex items-center justify-center h-64">
-            <div className="text-red-400">{error}</div>
           </div>
         </div>
       </DashboardLayout>

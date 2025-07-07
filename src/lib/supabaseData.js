@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 
+// Helper function to get current user
+const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
 // ==============================================
 // RAW MATERIALS DATA MANAGEMENT
 // ==============================================
@@ -8,7 +14,11 @@ export const getAllMaterials = async () => {
   try {
     const { data, error } = await supabase
       .from('raw_materials')
-      .select('*')
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -30,7 +40,16 @@ export const getAllMaterials = async () => {
       purity: material.purity,
       storageConditions: material.storage_conditions,
       hazardClass: material.hazard_class,
-      shelfLife: material.shelf_life
+      shelfLife: material.shelf_life,
+      // User tracking fields
+      created_by: material.created_by,
+      assigned_to: material.assigned_to,
+      created_at: material.created_at,
+      updated_at: material.updated_at,
+      createdByUser: material.created_by_profile ? 
+        `${material.created_by_profile.first_name} ${material.created_by_profile.last_name}` : null,
+      assignedToUser: material.assigned_to_profile ? 
+        `${material.assigned_to_profile.first_name} ${material.assigned_to_profile.last_name}` : null
     }));
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -42,7 +61,11 @@ export const getMaterialById = async (id) => {
   try {
     const { data, error } = await supabase
       .from('raw_materials')
-      .select('*')
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .eq('id', id)
       .single();
 
@@ -65,7 +88,16 @@ export const getMaterialById = async (id) => {
       purity: data.purity,
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
-      shelfLife: data.shelf_life
+      shelfLife: data.shelf_life,
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error fetching material:', error);
@@ -75,6 +107,8 @@ export const getMaterialById = async (id) => {
 
 export const updateMaterial = async (materialId, updatedData) => {
   try {
+    const user = await getCurrentUser();
+    
     // Transform frontend format to database format
     const dbData = {
       material_name: updatedData.materialName,
@@ -95,11 +129,20 @@ export const updateMaterial = async (materialId, updatedData) => {
       updated_at: new Date().toISOString()
     };
 
+    // Include assigned_to if provided
+    if (updatedData.assigned_to !== undefined) {
+      dbData.assigned_to = updatedData.assigned_to;
+    }
+
     const { data, error } = await supabase
       .from('raw_materials')
       .update(dbData)
       .eq('id', materialId)
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -121,7 +164,16 @@ export const updateMaterial = async (materialId, updatedData) => {
       purity: data.purity,
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
-      shelfLife: data.shelf_life
+      shelfLife: data.shelf_life,
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error updating material:', error);
@@ -131,6 +183,9 @@ export const updateMaterial = async (materialId, updatedData) => {
 
 export const addMaterial = async (materialData) => {
   try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
     // Transform frontend format to database format
     const dbData = {
       material_name: materialData.materialName,
@@ -147,13 +202,19 @@ export const addMaterial = async (materialData) => {
       purity: materialData.purity,
       storage_conditions: materialData.storageConditions,
       hazard_class: materialData.hazardClass,
-      shelf_life: materialData.shelfLife
+      shelf_life: materialData.shelfLife,
+      created_by: user.id,
+      assigned_to: materialData.assigned_to || user.id // Assign to creator by default
     };
 
     const { data, error } = await supabase
       .from('raw_materials')
       .insert([dbData])
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -175,7 +236,16 @@ export const addMaterial = async (materialData) => {
       purity: data.purity,
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
-      shelfLife: data.shelf_life
+      shelfLife: data.shelf_life,
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error adding material:', error);
@@ -191,7 +261,11 @@ export const getAllFormulas = async () => {
   try {
     const { data, error } = await supabase
       .from('formulas')
-      .select('*')
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -203,7 +277,16 @@ export const getAllFormulas = async () => {
       totalCost: formula.total_cost,
       finalSalePriceDrum: formula.final_sale_price_drum,
       finalSalePriceTote: formula.final_sale_price_tote,
-      ingredients: formula.ingredients || []
+      ingredients: formula.ingredients || [],
+      // User tracking fields
+      created_by: formula.created_by,
+      assigned_to: formula.assigned_to,
+      created_at: formula.created_at,
+      updated_at: formula.updated_at,
+      createdByUser: formula.created_by_profile ? 
+        `${formula.created_by_profile.first_name} ${formula.created_by_profile.last_name}` : null,
+      assignedToUser: formula.assigned_to_profile ? 
+        `${formula.assigned_to_profile.first_name} ${formula.assigned_to_profile.last_name}` : null
     }));
   } catch (error) {
     console.error('Error fetching formulas:', error);
@@ -215,7 +298,11 @@ export const getFormulaById = async (id) => {
   try {
     const { data, error } = await supabase
       .from('formulas')
-      .select('*')
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .eq('id', id)
       .single();
 
@@ -227,7 +314,16 @@ export const getFormulaById = async (id) => {
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
-      ingredients: data.ingredients || []
+      ingredients: data.ingredients || [],
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error fetching formula:', error);
@@ -237,6 +333,8 @@ export const getFormulaById = async (id) => {
 
 export const updateFormula = async (formulaId, updatedData) => {
   try {
+    const user = await getCurrentUser();
+    
     const dbData = {
       name: updatedData.name,
       total_cost: updatedData.totalCost,
@@ -246,11 +344,20 @@ export const updateFormula = async (formulaId, updatedData) => {
       updated_at: new Date().toISOString()
     };
 
+    // Include assigned_to if provided
+    if (updatedData.assigned_to !== undefined) {
+      dbData.assigned_to = updatedData.assigned_to;
+    }
+
     const { data, error } = await supabase
       .from('formulas')
       .update(dbData)
       .eq('id', formulaId)
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -261,7 +368,16 @@ export const updateFormula = async (formulaId, updatedData) => {
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
-      ingredients: data.ingredients || []
+      ingredients: data.ingredients || [],
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error updating formula:', error);
@@ -271,19 +387,28 @@ export const updateFormula = async (formulaId, updatedData) => {
 
 export const addFormula = async (formulaData) => {
   try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
     const dbData = {
       id: formulaData.id || `FORM${Date.now()}`,
       name: formulaData.name,
       total_cost: formulaData.totalCost,
       final_sale_price_drum: formulaData.finalSalePriceDrum,
       final_sale_price_tote: formulaData.finalSalePriceTote,
-      ingredients: formulaData.ingredients || []
+      ingredients: formulaData.ingredients || [],
+      created_by: user.id,
+      assigned_to: formulaData.assigned_to || user.id // Assign to creator by default
     };
 
     const { data, error } = await supabase
       .from('formulas')
       .insert([dbData])
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -294,7 +419,16 @@ export const addFormula = async (formulaData) => {
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
-      ingredients: data.ingredients || []
+      ingredients: data.ingredients || [],
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error adding formula:', error);
@@ -310,7 +444,11 @@ export const getAllSuppliers = async () => {
   try {
     const { data, error } = await supabase
       .from('suppliers')
-      .select('*')
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -322,7 +460,16 @@ export const getAllSuppliers = async () => {
       supplierEmail: supplier.supplier_email,
       supplierContact: supplier.supplier_contact,
       packagingCode: supplier.packaging_code,
-      standardCost: supplier.standard_cost
+      standardCost: supplier.standard_cost,
+      // User tracking fields
+      created_by: supplier.created_by,
+      assigned_to: supplier.assigned_to,
+      created_at: supplier.created_at,
+      updated_at: supplier.updated_at,
+      createdByUser: supplier.created_by_profile ? 
+        `${supplier.created_by_profile.first_name} ${supplier.created_by_profile.last_name}` : null,
+      assignedToUser: supplier.assigned_to_profile ? 
+        `${supplier.assigned_to_profile.first_name} ${supplier.assigned_to_profile.last_name}` : null
     }));
   } catch (error) {
     console.error('Error fetching suppliers:', error);
@@ -332,19 +479,28 @@ export const getAllSuppliers = async () => {
 
 export const addSupplier = async (supplierData) => {
   try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
     const dbData = {
       supplier_name: supplierData.supplierName,
       supplier_id: supplierData.supplierId,
       supplier_email: supplierData.supplierEmail,
       supplier_contact: supplierData.supplierContact,
       packaging_code: supplierData.packagingCode,
-      standard_cost: supplierData.standardCost
+      standard_cost: supplierData.standardCost,
+      created_by: user.id,
+      assigned_to: supplierData.assigned_to || user.id // Assign to creator by default
     };
 
     const { data, error } = await supabase
       .from('suppliers')
       .insert([dbData])
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -356,7 +512,16 @@ export const addSupplier = async (supplierData) => {
       supplierEmail: data.supplier_email,
       supplierContact: data.supplier_contact,
       packagingCode: data.packaging_code,
-      standardCost: data.standard_cost
+      standardCost: data.standard_cost,
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error adding supplier:', error);
@@ -366,6 +531,8 @@ export const addSupplier = async (supplierData) => {
 
 export const updateSupplier = async (supplierId, updatedData) => {
   try {
+    const user = await getCurrentUser();
+    
     const dbData = {
       supplier_name: updatedData.supplierName,
       supplier_id: updatedData.supplierId,
@@ -376,11 +543,20 @@ export const updateSupplier = async (supplierId, updatedData) => {
       updated_at: new Date().toISOString()
     };
 
+    // Include assigned_to if provided
+    if (updatedData.assigned_to !== undefined) {
+      dbData.assigned_to = updatedData.assigned_to;
+    }
+
     const { data, error } = await supabase
       .from('suppliers')
       .update(dbData)
       .eq('id', supplierId)
-      .select()
+      .select(`
+        *,
+        created_by_profile:user_profiles!created_by(first_name, last_name, email),
+        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
+      `)
       .single();
 
     if (error) throw error;
@@ -392,7 +568,16 @@ export const updateSupplier = async (supplierId, updatedData) => {
       supplierEmail: data.supplier_email,
       supplierContact: data.supplier_contact,
       packagingCode: data.packaging_code,
-      standardCost: data.standard_cost
+      standardCost: data.standard_cost,
+      // User tracking fields
+      created_by: data.created_by,
+      assigned_to: data.assigned_to,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      createdByUser: data.created_by_profile ? 
+        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
+      assignedToUser: data.assigned_to_profile ? 
+        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     };
   } catch (error) {
     console.error('Error updating supplier:', error);

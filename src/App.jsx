@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './lib/auth.jsx';
+import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
-import LoginPage from './pages/LoginPage';
+import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import FormulasPage from './pages/FormulasPage';
 import FormulaDetailPage from './pages/FormulaDetailPage';
@@ -11,6 +11,7 @@ import RawMaterialsPage from './pages/RawMaterialsPage';
 import RawMaterialDetailPage from './pages/RawMaterialDetailPage';
 import UserManagementPage from './pages/UserManagementPage';
 import SettingsPage from './pages/SettingsPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Component to handle scroll restoration
 function ScrollToTop() {
@@ -23,44 +24,6 @@ function ScrollToTop() {
   return null;
 }
 
-function PrivateRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  // Show loading while checking auth state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  return isAuthenticated ? children : <Navigate to="/login" />;
-}
-
-function AdminRoute({ children }) {
-  const { isAuthenticated, role, isLoading } = useAuth();
-  
-  // Show loading while checking auth state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (!isAuthenticated) return <Navigate to="/login" />;
-  if (role !== 'admin') return <Navigate to="/dashboard" />;
-  return children;
-}
-
 function App() {
   return (
     <ThemeProvider>
@@ -68,48 +31,50 @@ function App() {
         <Router>
           <ScrollToTop />
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <DashboardPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/formulas" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <FormulasPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/formulas/:formulaId" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <FormulaDetailPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <SuppliersPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/raw-materials" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <RawMaterialsPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/raw-materials/:materialId" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <RawMaterialDetailPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/user-management" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <UserManagementPage />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
             <Route path="/settings" element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <SettingsPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             } />
             <Route path="/" element={<Navigate to="/dashboard" />} />
+            {/* Redirect old login route to new auth route */}
+            <Route path="/login" element={<Navigate to="/auth" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

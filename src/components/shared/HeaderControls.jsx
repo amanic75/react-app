@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FolderOpen, FlaskConical, Users, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/auth.jsx';
+import { useAuth } from '../../contexts/AuthContext';
 
 const HeaderControls = () => {
   const [isAppsDropdownOpen, setIsAppsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { user, userProfile } = useAuth();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,16 +29,45 @@ const HeaderControls = () => {
     { name: 'Suppliers', icon: Users, action: () => navigate('/suppliers') }
   ];
 
-  // Get display name from email
+  // Get display name from user profile or email
   const getDisplayName = () => {
-    if (!user) return 'User';
-    const name = user.split('@')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name} ${userProfile.last_name}`;
+    }
+    if (user?.email) {
+      const name = user.email.split('@')[0];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    return 'User';
   };
 
   // Get role display
   const getRoleDisplay = () => {
-    return role === 'admin' ? 'Admin' : 'Employee';
+    if (!userProfile?.role) return 'Employee';
+    
+    switch (userProfile.role) {
+      case 'admin':
+        return 'Admin';
+      case 'manager':
+        return 'Manager';
+      case 'nsight-admin':
+        return 'NSight Admin';
+      case 'employee':
+      default:
+        return 'Employee';
+    }
+  };
+
+  // Get initials for avatar
+  const getInitials = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name.charAt(0)}${userProfile.last_name.charAt(0)}`.toUpperCase();
+    }
+    if (user?.email) {
+      const name = user.email.split('@')[0];
+      return name.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   return (
@@ -85,8 +114,8 @@ const HeaderControls = () => {
 
       {/* User Profile */}
       <div className="flex items-center space-x-2 text-slate-300">
-        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
-          <Users className="w-4 h-4" />
+        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-sm font-medium text-slate-200">
+          {getInitials()}
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-medium text-slate-200">{getDisplayName()}</span>

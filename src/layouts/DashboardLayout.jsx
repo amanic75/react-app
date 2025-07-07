@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../lib/auth.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import Sidebar from '../components/shared/Sidebar';
 import ChatBot from '../components/shared/ChatBot';
 import HeaderControls from '../components/shared/HeaderControls';
 
 const DashboardLayout = ({ children }) => {
-  const { role } = useAuth();
+  const { userProfile } = useAuth();
   const location = useLocation();
   
   // Start collapsed for non-dashboard pages
@@ -29,7 +29,6 @@ const DashboardLayout = ({ children }) => {
       
       <div className="flex flex-1">
         <Sidebar 
-          role={role} 
           isCollapsed={isCollapsed} 
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)} 
         />

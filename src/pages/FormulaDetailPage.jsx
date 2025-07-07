@@ -24,23 +24,23 @@ const FormulaDetailPage = () => {
     const loadFormula = async () => {
       try {
         setLoading(true);
-        console.log('Loading formula with ID:', formulaId);
-        
+    console.log('Loading formula with ID:', formulaId);
+    
         const foundFormula = await getFormulaById(formulaId);
-        console.log('Found formula:', foundFormula);
-        
-        if (foundFormula) {
-          setFormula(foundFormula);
-          setEditableFormula({
-            name: foundFormula.name,
-            totalCost: foundFormula.totalCost,
-            finalSalePriceDrum: foundFormula.finalSalePriceDrum,
-            finalSalePriceTote: foundFormula.finalSalePriceTote,
-            ingredients: [...foundFormula.ingredients]
-          });
-          console.log('Formula state set successfully');
-        } else {
-          console.log('No formula found for ID:', formulaId);
+    console.log('Found formula:', foundFormula);
+    
+    if (foundFormula) {
+      setFormula(foundFormula);
+      setEditableFormula({
+        name: foundFormula.name,
+        totalCost: foundFormula.totalCost,
+        finalSalePriceDrum: foundFormula.finalSalePriceDrum,
+        finalSalePriceTote: foundFormula.finalSalePriceTote,
+        ingredients: [...foundFormula.ingredients]
+      });
+      console.log('Formula state set successfully');
+    } else {
+      console.log('No formula found for ID:', formulaId);
           setError('Formula not found');
         }
       } catch (err) {
@@ -205,16 +205,16 @@ const FormulaDetailPage = () => {
     if (isEditing) {
       try {
         // Save changes to Supabase
-        if (editableFormula) {
+      if (editableFormula) {
           const updatedFormula = await updateFormula(formula.id, editableFormula);
-          if (updatedFormula) {
-            setFormula(updatedFormula);
-            console.log('Formula saved successfully:', updatedFormula);
-          }
+        if (updatedFormula) {
+          setFormula(updatedFormula);
+          console.log('Formula saved successfully:', updatedFormula);
         }
-        console.log('Deleted documents:', deletedDocuments);
-        setIsEditing(false);
-        // Keep deleted documents after save - they are permanently removed
+      }
+      console.log('Deleted documents:', deletedDocuments);
+      setIsEditing(false);
+      // Keep deleted documents after save - they are permanently removed
       } catch (err) {
         console.error('Error saving formula:', err);
         // You might want to show an error message to the user here
@@ -301,13 +301,13 @@ const FormulaDetailPage = () => {
                 <span>Delete Formula</span>
               </Button>
             )}
-            <Button
-              onClick={handleEditToggle}
-              className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-            >
-              <Edit3 className="h-4 w-4 mr-2" />
-              {isEditing ? 'Save Changes' : 'Edit Formula'}
-            </Button>
+          <Button
+            onClick={handleEditToggle}
+            className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+          >
+            <Edit3 className="h-4 w-4 mr-2" />
+            {isEditing ? 'Save Changes' : 'Edit Formula'}
+          </Button>
           </div>
         </div>
 
@@ -637,7 +637,7 @@ const FormulaDetailPage = () => {
             </div>
           </div>
         )}
-      </div>
+       </div>
     </DashboardLayout>
   );
 };

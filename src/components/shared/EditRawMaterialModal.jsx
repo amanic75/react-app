@@ -382,19 +382,19 @@ const EditRawMaterialModal = ({ isOpen, onClose, onSave, onDelete, material }) =
               )}
             </div>
             <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-6 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Save Changes
-              </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-6 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Save Changes
+            </button>
             </div>
           </div>
         </form>

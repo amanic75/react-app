@@ -4,6 +4,7 @@ import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, Check, Loader2 }
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import ClearDataButton from '../components/ui/ClearDataButton';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -367,6 +368,9 @@ const AuthPage = () => {
               <p className="text-xs text-slate-500 mt-3">
                 Or create a new account by clicking "Sign up" above.
               </p>
+              <div className="mt-3 flex justify-center">
+                <ClearDataButton className="text-xs px-2 py-1" />
+              </div>
             </div>
           )}
         </div>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Filter, ArrowUpDown, Plus, FolderOpen, FlaskConical, Users, Edit, ChevronDown, Check, Code, Building2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getUsers, updateUser, addUser } from '../lib/data';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../contexts/AuthContext';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditUserModal from '../components/shared/EditUserModal';
 import AddUserModal from '../components/shared/AddUserModal';
@@ -10,7 +9,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, changePassword } = useAuth();
+  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -32,19 +31,73 @@ const UserManagementPage = () => {
   const [tempFilterDomain, setTempFilterDomain] = useState('all');
   const [tempFilterApp, setTempFilterApp] = useState('all');
 
+  // Helper function to get app access based on role
+  const getAppAccessByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return ['formulas', 'suppliers', 'raw-materials'];
+      case 'NSight Admin':
+        return ['developer-mode', 'existing-company-mode'];
+      case 'Employee':
+        return ['formulas'];
+      default:
+        return ['formulas'];
+    }
+  };
+
+  // Helper function to get credentials display based on role
+  const getRoleCredentials = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return 'admin/secure pass';
+      case 'NSight Admin':
+        return 'nsight-admin/enterprise pass';
+      case 'Employee':
+        return 'user/temporary pass';
+      default:
+        return 'user/temporary pass';
+    }
+  };
+
   useEffect(() => {
-    // Load users and refresh periodically to sync with dashboard
-    const loadUsers = () => {
-      setUsers(getUsers());
+    // Load users from Supabase
+    const loadUsers = async () => {
+      try {
+        const { data, error } = await getAllUsers();
+        if (error) {
+          console.error('Error loading users:', error);
+          return;
+        }
+        
+        // Transform Supabase user_profiles data to match the expected format
+        const transformedUsers = data.map((profile, index) => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+          email: profile.email,
+          role: profile.role || 'Employee',
+          status: 'Active', // Default status since user_profiles doesn't have status field
+          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+          contact: '',
+          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          credentials: getRoleCredentials(profile.role || 'Employee'),
+          department: profile.department || '',
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        }));
+        
+        setUsers(transformedUsers);
+      } catch (error) {
+        console.error('Error in loadUsers:', error);
+      }
     };
     
     loadUsers();
     
-    // Refresh users every 2 seconds to show new accounts
-    const interval = setInterval(loadUsers, 2000);
+    // Refresh users every 10 seconds
+    const interval = setInterval(loadUsers, 10000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [getAllUsers]);
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -143,7 +196,7 @@ const UserManagementPage = () => {
         break;
       case 'status':
         aValue = a.status;
-        bValue = b.status;
+        bValue = a.status;
         break;
       default:
         aValue = a.name.toLowerCase();
@@ -190,17 +243,85 @@ const UserManagementPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveUser = (updatedUser) => {
-    updateUser(updatedUser);
-    setUsers(getUsers()); // Refresh the users list
-    setIsEditModalOpen(false);
-    setSelectedUser(null);
+  const handleSaveUser = async (updatedUser) => {
+    try {
+      const updates = {
+        first_name: updatedUser.name.split(' ')[0] || '',
+        last_name: updatedUser.name.split(' ').slice(1).join(' ') || '',
+        role: updatedUser.role,
+        department: updatedUser.department || ''
+      };
+      
+      const { error } = await updateUserProfile(updatedUser.id, updates);
+      if (error) {
+        console.error('Error updating user:', error);
+        alert('Failed to update user. Please try again.');
+        return;
+      }
+      
+      // Refresh the users list
+      const { data } = await getAllUsers();
+      if (data) {
+        const transformedUsers = data.map((profile) => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+          email: profile.email,
+          role: profile.role || 'Employee',
+          status: 'Active',
+          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+          contact: '',
+          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          credentials: getRoleCredentials(profile.role || 'Employee'),
+          department: profile.department || '',
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        }));
+        setUsers(transformedUsers);
+      }
+      
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error in handleSaveUser:', error);
+      alert('Failed to update user. Please try again.');
+    }
   };
 
-  const handleDeleteUser = (userId) => {
-    setUsers(getUsers()); // Refresh the users list after deletion
-    setIsEditModalOpen(false);
-    setSelectedUser(null);
+  const handleDeleteUser = async (userId) => {
+    try {
+      const { error } = await deleteUserProfile(userId);
+      if (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user. Please try again.');
+        return;
+      }
+      
+      // Refresh the users list
+      const { data } = await getAllUsers();
+      if (data) {
+        const transformedUsers = data.map((profile) => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+          email: profile.email,
+          role: profile.role || 'Employee',
+          status: 'Active',
+          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+          contact: '',
+          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          credentials: getRoleCredentials(profile.role || 'Employee'),
+          department: profile.department || '',
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        }));
+        setUsers(transformedUsers);
+      }
+      
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error in handleDeleteUser:', error);
+      alert('Failed to delete user. Please try again.');
+    }
   };
 
   const handleCloseModal = () => {
@@ -212,9 +333,10 @@ const UserManagementPage = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveNewUser = (newUser) => {
-    addUser(newUser);
-    setUsers(getUsers()); // Refresh the users list
+  const handleSaveNewUser = async (newUser) => {
+    // Note: Creating new users through admin interface requires Supabase Admin API
+    // For now, we'll show a message to create users through the sign-up process
+    alert('To add new users, please direct them to sign up through the authentication page. User profiles will be automatically created when they sign up.');
     setIsAddModalOpen(false);
   };
 
@@ -283,6 +405,13 @@ const UserManagementPage = () => {
       setTempFilterApp(filterApp);
       setIsFilterOpen(true);
     }
+  };
+
+  // Helper function to handle password changes (placeholder)
+  const handleChangePassword = (passwordData) => {
+    // For now, just show an alert since password changes require admin privileges
+    alert('Password change functionality requires admin-level access. Please contact your system administrator.');
+    return { success: false, error: 'Not implemented in this interface' };
   };
 
   return (
@@ -592,8 +721,8 @@ const UserManagementPage = () => {
         user={selectedUser}
         onSave={handleSaveUser}
         onDelete={handleDeleteUser}
-        currentUserRole={role}
-        onChangePassword={changePassword}
+        currentUserRole={userProfile?.role || 'Employee'}
+        onChangePassword={handleChangePassword}
       />
 
       {/* Add User Modal */}

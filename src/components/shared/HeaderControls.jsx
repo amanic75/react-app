@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FolderOpen, FlaskConical, Users, ChevronDown } from 'lucide-react';
+import { FolderOpen, FlaskConical, Users, ChevronDown, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -7,7 +7,7 @@ const HeaderControls = () => {
   const [isAppsDropdownOpen, setIsAppsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -46,13 +46,11 @@ const HeaderControls = () => {
     if (!userProfile?.role) return 'Employee';
     
     switch (userProfile.role) {
-      case 'admin':
-        return 'Admin';
-      case 'manager':
-        return 'Manager';
-      case 'nsight-admin':
+      case 'Capacity Admin':
+        return 'Capacity Admin';
+      case 'NSight Admin':
         return 'NSight Admin';
-      case 'employee':
+      case 'Employee':
       default:
         return 'Employee';
     }
@@ -68,6 +66,16 @@ const HeaderControls = () => {
       return name.charAt(0).toUpperCase();
     }
     return 'U';
+  };
+
+  // Quick logout for testing
+  const handleQuickLogout = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -121,6 +129,14 @@ const HeaderControls = () => {
           <span className="text-sm font-medium text-slate-200">{getDisplayName()}</span>
           <span className="text-xs text-slate-400">{getRoleDisplay()}</span>
         </div>
+        {/* Quick Logout for Testing */}
+        <button
+          onClick={handleQuickLogout}
+          className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded transition-colors"
+          title="Quick Logout (Testing)"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

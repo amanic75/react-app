@@ -135,7 +135,7 @@ const FormulasPage = () => {
   const filteredFormulas = formulas.filter(formula => {
     // Search filter
     const matchesSearch = 
-      formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       formula.id.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Cost range filter
@@ -483,13 +483,13 @@ const FormulasPage = () => {
                             className="px-4 py-2 text-sm text-slate-300 hover:text-slate-100 transition-colors"
                           >
                             Cancel
-                          </button>
+              </button>
                           <button
                             onClick={applyFilters}
                             className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                           >
                             Apply
-                          </button>
+              </button>
                         </div>
                       </div>
                     </div>
@@ -540,7 +540,7 @@ const FormulasPage = () => {
                         <div className="flex space-x-2 min-w-max">
                           {formula.ingredients && formula.ingredients.map((ingredient, idx) => (
                             <div 
-                              key={idx}
+                              key={idx} 
                               className="flex-shrink-0 bg-slate-700 rounded-full px-3 py-1 text-xs text-slate-300 border border-slate-600"
                             >
                               {ingredient.name} ({ingredient.percentage}%)

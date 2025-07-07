@@ -3,7 +3,7 @@ import { Search, FolderOpen, FlaskConical, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import UserManagementTable from './UserManagementTable';
-import { getUsers } from '../../lib/data';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminDashboard = ({ userData }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +12,7 @@ const AdminDashboard = ({ userData }) => {
   const [users, setUsers] = useState([]);
   const cardRefs = useRef({});
   const navigate = useNavigate();
+  const { getAllUsers } = useAuth();
 
   const handleMouseMove = (e, cardId) => {
     if (!cardRefs.current[cardId]) return;
@@ -23,16 +24,55 @@ const AdminDashboard = ({ userData }) => {
     setMousePosition({ x, y });
   };
 
+  // Helper function to get app access based on role
+  const getAppAccessByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return ['formulas', 'suppliers', 'raw-materials'];
+      case 'NSight Admin':
+        return ['developer-mode', 'existing-company-mode'];
+      case 'Employee':
+        return ['formulas'];
+      default:
+        return ['formulas'];
+    }
+  };
+
   // Load users for app access display
   useEffect(() => {
-    const loadUsers = () => {
-      setUsers(getUsers());
+    const loadUsers = async () => {
+      try {
+        const { data: profiles, error } = await getAllUsers();
+        if (error) {
+          console.error('Error loading users:', error);
+          return;
+        }
+
+        // Transform Supabase user_profiles data to match expected format
+        const transformedUsers = profiles.map((profile) => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+          email: profile.email,
+          role: profile.role || 'Employee',
+          status: 'Active',
+          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+          contact: '',
+          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          department: profile.department || '',
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        }));
+        
+        setUsers(transformedUsers);
+      } catch (error) {
+        console.error('Error in loadUsers:', error);
+      }
     };
     
     loadUsers();
-    const interval = setInterval(loadUsers, 2000);
+    const interval = setInterval(loadUsers, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [getAllUsers]);
 
   // Get users who have access to a specific app
   const getUsersWithAccess = (appName) => {

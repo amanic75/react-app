@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   LayoutDashboard, 
-  FlaskConical, 
   Settings, 
   Users, 
   Activity,
@@ -12,8 +11,7 @@ import {
   ChevronRight,
   Code,
   Building2,
-  Factory,
-  Truck
+  Atom
 } from 'lucide-react';
 import Logo from '../ui/Logo';
 
@@ -36,14 +34,12 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   };
 
   const employeeLinks = [
-    { icon: LayoutDashboard, label: 'Dashboard', action: () => handleNavigation('/dashboard') },
-    { icon: FlaskConical, label: 'Formulas', action: () => handleNavigation('/formulas') },
-    { icon: Factory, label: 'Raw Materials', action: () => handleNavigation('/raw-materials') },
-    { icon: Truck, label: 'Suppliers', action: () => handleNavigation('/suppliers') }
+    { icon: LayoutDashboard, label: 'Dashboard', action: () => handleNavigation('/dashboard') }
   ];
 
   const adminLinks = [
     ...employeeLinks,
+    { icon: Atom, label: 'Chemformation', action: () => console.log('Chemformation - No dedicated page yet') },
     { icon: Users, label: 'User Management', action: () => handleNavigation('/user-management') },
     { icon: Activity, label: 'System Health', action: () => console.log('System Health clicked') }
   ];
@@ -59,13 +55,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const getLinks = () => {
     if (!userProfile) return employeeLinks;
     
+    console.log('Sidebar - User Role:', userProfile.role); // Debug log
+    
     switch (userProfile.role) {
-      case 'admin':
-      case 'manager':
+      case 'Capacity Admin':
         return adminLinks;
-      case 'nsight-admin':
+      case 'NSight Admin':
         return nsightAdminLinks;
-      case 'employee':
+      case 'Employee':
       default:
         return employeeLinks;
     }

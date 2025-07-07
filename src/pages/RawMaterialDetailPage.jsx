@@ -29,7 +29,7 @@ const RawMaterialDetailPage = () => {
         );
         
         if (foundMaterial) {
-          setMaterial(foundMaterial);
+    setMaterial(foundMaterial);
         } else {
           setError('Material not found');
         }
@@ -87,11 +87,11 @@ const RawMaterialDetailPage = () => {
     try {
       // Update the material in Supabase
       const updated = await updateMaterial(material.id, updatedData);
-      if (updated) {
-        // Update local state to reflect changes immediately
-        setMaterial(updated);
-      }
-      setIsEditModalOpen(false);
+    if (updated) {
+      // Update local state to reflect changes immediately
+      setMaterial(updated);
+    }
+    setIsEditModalOpen(false);
     } catch (err) {
       console.error('Error updating material:', err);
       // You might want to show an error message to the user here

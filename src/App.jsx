@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import './utils/clearMockData'; // Clear mock data on app start
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import FormulasPage from './pages/FormulasPage';

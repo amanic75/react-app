@@ -74,7 +74,7 @@ const DashboardPage = () => {
       
       console.log('Normalized Role for Switch:', JSON.stringify(role));
       
-      switch (role) {
+    switch (role) {
         case 'Capacity Admin':
           console.log('Rendering AdminDashboard');
           return <AdminDashboard />;
@@ -84,7 +84,7 @@ const DashboardPage = () => {
         case 'Employee':
           console.log('Rendering EmployeeDashboard (Employee role)');
           return <EmployeeDashboard />;
-        default:
+      default:
           console.log('Rendering EmployeeDashboard (Default fallback for role:', JSON.stringify(role));
           return <EmployeeDashboard />;
       }

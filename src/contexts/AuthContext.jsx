@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   // Get user profile from database
   const getUserProfile = async (userId) => {
     try {
+      console.log('🔍 Fetching user profile for ID:', userId);
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -27,13 +28,15 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('❌ Error fetching user profile:', error);
+        console.error('❌ Error details:', error.message, error.code);
         return null;
       }
       
+      console.log('✅ User profile found:', data);
       return data;
     } catch (error) {
-      console.error('Error in getUserProfile:', error);
+      console.error('❌ Error in getUserProfile:', error);
       return null;
     }
   };
@@ -263,6 +266,54 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user profile (for admins)
+  const updateUserProfile = async (userId, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({
+          first_name: updates.first_name,
+          last_name: updates.last_name,
+          role: updates.role,
+          department: updates.department,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Update user profile error:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Delete user profile (for admins)
+  const deleteUserProfile = async (userId) => {
+    try {
+      // Note: This will only delete from user_profiles, not from auth.users
+      // For complete user deletion, you'd need to use Supabase Admin API
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        throw error;
+      }
+
+      return { data: true, error: null };
+    } catch (error) {
+      console.error('Delete user profile error:', error);
+      return { data: null, error };
+    }
+  };
+
   // Assign user to item
   const assignUser = async (tableName, itemId, userId) => {
     try {
@@ -296,6 +347,8 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     resetPassword,
     getAllUsers,
+    updateUserProfile,
+    deleteUserProfile,
     assignUser,
     // Helper functions
     isAuthenticated: !!user,

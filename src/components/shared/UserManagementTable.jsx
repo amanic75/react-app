@@ -3,7 +3,7 @@ import { Users, MoreHorizontal, ExternalLink, Activity, LogIn, LogOut, Circle, C
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { getUsers } from '../../lib/data';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   getActivity, 
   getActivitySummary, 
@@ -21,59 +21,99 @@ const UserManagementTable = () => {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const navigate = useNavigate();
   const usersPerPage = 20;
+  const { getAllUsers } = useAuth();
+
+  // Helper function to get app access based on role
+  const getAppAccessByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return ['formulas', 'suppliers', 'raw-materials'];
+      case 'NSight Admin':
+        return ['developer-mode', 'existing-company-mode'];
+      case 'Employee':
+        return ['formulas'];
+      default:
+        return ['formulas'];
+    }
+  };
 
   // Load all data
-  const loadData = () => {
-    const allUsers = getUsers();
-    const recentActivity = getActivity({ limit: 50 });
-    const summary = getActivitySummary(24);
-    
-    // Track online users (logged in within last 30 minutes without logout)
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const onlineUserEmails = new Set();
-    
-    // Process activity to determine who's online
-    const userLastActivity = {};
-    recentActivity.forEach(act => {
-      if (!userLastActivity[act.userEmail] || new Date(act.timestamp) > new Date(userLastActivity[act.userEmail].timestamp)) {
-        userLastActivity[act.userEmail] = act;
+  const loadData = async () => {
+    try {
+      // Load users from Supabase
+      const { data: profiles, error } = await getAllUsers();
+      if (error) {
+        console.error('Error loading users:', error);
+        return;
       }
-    });
-    
-    Object.entries(userLastActivity).forEach(([email, lastAct]) => {
-      const actTime = new Date(lastAct.timestamp);
-      if (actTime > thirtyMinutesAgo && lastAct.type === ACTIVITY_TYPES.LOGIN) {
-        onlineUserEmails.add(email);
-      }
-    });
-    
-    // Update last login times from activity data
-    const usersWithActivity = allUsers.map(user => {
-      const userActivity = recentActivity.filter(act => act.userEmail === user.email);
-      const lastLogin = userActivity.find(act => act.type === ACTIVITY_TYPES.LOGIN);
+
+      // Transform Supabase user_profiles data to match expected format
+      const allUsers = profiles.map((profile) => ({
+        id: profile.id,
+        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+        email: profile.email,
+        role: profile.role || 'Employee',
+        status: 'Active',
+        lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+        contact: '',
+        appAccess: getAppAccessByRole(profile.role || 'Employee'),
+        department: profile.department || '',
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+      }));
+
+      const recentActivity = getActivity({ limit: 50 });
+      const summary = getActivitySummary(24);
       
-      return {
-        ...user,
-        lastLoginActivity: lastLogin,
-        recentActivity: userActivity.slice(0, 5), // Last 5 activities
-        isOnline: onlineUserEmails.has(user.email)
-      };
-    });
-    
-    // Sort by online status first, then by last activity
-    const sortedUsers = usersWithActivity.sort((a, b) => {
-      if (a.isOnline && !b.isOnline) return -1;
-      if (!a.isOnline && b.isOnline) return 1;
+      // Track online users (logged in within last 30 minutes without logout)
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const onlineUserEmails = new Set();
       
-      const aTime = a.lastLoginActivity ? new Date(a.lastLoginActivity.timestamp) : new Date(0);
-      const bTime = b.lastLoginActivity ? new Date(b.lastLoginActivity.timestamp) : new Date(0);
-      return bTime - aTime;
-    });
-    
-    setUsers(sortedUsers);
-    setActivity(recentActivity);
-    setActivitySummary(summary);
-    setOnlineUsers(onlineUserEmails);
+      // Process activity to determine who's online
+      const userLastActivity = {};
+      recentActivity.forEach(act => {
+        if (!userLastActivity[act.userEmail] || new Date(act.timestamp) > new Date(userLastActivity[act.userEmail].timestamp)) {
+          userLastActivity[act.userEmail] = act;
+        }
+      });
+      
+      Object.entries(userLastActivity).forEach(([email, lastAct]) => {
+        const actTime = new Date(lastAct.timestamp);
+        if (actTime > thirtyMinutesAgo && lastAct.type === ACTIVITY_TYPES.LOGIN) {
+          onlineUserEmails.add(email);
+        }
+      });
+      
+      // Update last login times from activity data
+      const usersWithActivity = allUsers.map(user => {
+        const userActivity = recentActivity.filter(act => act.userEmail === user.email);
+        const lastLogin = userActivity.find(act => act.type === ACTIVITY_TYPES.LOGIN);
+        
+        return {
+          ...user,
+          lastLoginActivity: lastLogin,
+          recentActivity: userActivity.slice(0, 5), // Last 5 activities
+          isOnline: onlineUserEmails.has(user.email)
+        };
+      });
+      
+      // Sort by online status first, then by last activity
+      const sortedUsers = usersWithActivity.sort((a, b) => {
+        if (a.isOnline && !b.isOnline) return -1;
+        if (!a.isOnline && b.isOnline) return 1;
+        
+        const aTime = a.lastLoginActivity ? new Date(a.lastLoginActivity.timestamp) : new Date(0);
+        const bTime = b.lastLoginActivity ? new Date(b.lastLoginActivity.timestamp) : new Date(0);
+        return bTime - aTime;
+      });
+      
+      setUsers(sortedUsers);
+      setActivity(recentActivity);
+      setActivitySummary(summary);
+      setOnlineUsers(onlineUserEmails);
+    } catch (error) {
+      console.error('Error in loadData:', error);
+    }
   };
 
   useEffect(() => {
@@ -260,33 +300,57 @@ const UserManagementTable = () => {
                   </td>
                 </tr>
                 
-                {/* Expanded Activity Timeline */}
+                {/* Expanded row with user details */}
                 {expandedUsers.has(user.id) && (
-                  <tr>
-                    <td colSpan="5" className="py-2 px-4 bg-slate-800">
-                      <div className="ml-8 space-y-2">
-                        <h4 className="text-sm font-medium text-slate-200 mb-3">Recent Activity</h4>
-                        {user.recentActivity.length > 0 ? (
-                          <div className="space-y-2">
-                            {user.recentActivity.map((act, index) => (
-                              <div key={act.id} className="flex items-center space-x-3 text-sm">
-                                {act.type === ACTIVITY_TYPES.LOGIN ? (
-                                  <LogIn className="w-3 h-3 text-green-400" />
-                                ) : (
-                                  <LogOut className="w-3 h-3 text-orange-400" />
-                                )}
-                                <span className={getActivityColor(act.type, act.timestamp)}>
-                                  {act.type === ACTIVITY_TYPES.LOGIN ? 'Logged in' : 'Logged out'}
-                                </span>
-                                <span className="text-slate-500">
-                                  {formatTimestamp(act.timestamp)}
-                                </span>
-                              </div>
-                            ))}
+                  <tr className="bg-slate-800 border-b border-slate-700">
+                    <td colSpan="5" className="py-4 px-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* User Details */}
+                        <div>
+                          <h4 className="text-sm font-medium text-slate-200 mb-3">User Details</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">ID:</span>
+                              <span className="text-slate-300">{user.id}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Email:</span>
+                              <span className="text-slate-300">{user.email}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Department:</span>
+                              <span className="text-slate-300">{user.department || 'Not specified'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Created:</span>
+                              <span className="text-slate-300">
+                                {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+                              </span>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="text-slate-500 text-sm">No recent activity recorded</p>
-                        )}
+                        </div>
+                        
+                        {/* Recent Activity */}
+                        <div>
+                          <h4 className="text-sm font-medium text-slate-200 mb-3">Recent Activity</h4>
+                          <div className="space-y-2">
+                            {user.recentActivity && user.recentActivity.length > 0 ? (
+                              user.recentActivity.map((activity, idx) => (
+                                <div key={idx} className="flex items-center space-x-3 text-sm">
+                                  <Activity className={`w-3 h-3 ${getActivityColor(activity.type, activity.timestamp)}`} />
+                                  <span className="text-slate-300">
+                                    {activity.type === ACTIVITY_TYPES.LOGIN ? 'Login' : 'Logout'}
+                                  </span>
+                                  <span className="text-slate-500">
+                                    {formatTimestamp(activity.timestamp)}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-slate-500 text-sm">No recent activity</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -297,38 +361,43 @@ const UserManagementTable = () => {
         </table>
       </div>
       
-      <div className="mt-4 pt-4 border-t border-slate-600 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <p className="text-sm text-slate-300">
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-slate-400">
             Showing {startIndex + 1}-{Math.min(endIndex, users.length)} of {users.length} users
-          </p>
-          <div className="flex items-center space-x-1 text-xs text-slate-400">
-            <Circle className="w-2 h-2 text-green-400 fill-current" />
-            <span>Online users shown first</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-slate-400">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-slate-300">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
+      )}
+      
+      {users.length === 0 && (
+        <div className="text-center py-8">
+          <Users className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-300 mb-2">No users found</h3>
+          <p className="text-slate-500">Users will appear here once they sign up for accounts.</p>
         </div>
-      </div>
+      )}
     </Card>
   );
 };

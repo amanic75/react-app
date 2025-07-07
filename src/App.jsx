@@ -8,6 +8,7 @@ import FormulasPage from './pages/FormulasPage';
 import FormulaDetailPage from './pages/FormulaDetailPage';
 import SuppliersPage from './pages/SuppliersPage';
 import RawMaterialsPage from './pages/RawMaterialsPage';
+import RawMaterialDetailPage from './pages/RawMaterialDetailPage';
 import UserManagementPage from './pages/UserManagementPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -91,6 +92,11 @@ function App() {
             <Route path="/raw-materials" element={
               <PrivateRoute>
                 <RawMaterialsPage />
+              </PrivateRoute>
+            } />
+            <Route path="/raw-materials/:materialId" element={
+              <PrivateRoute>
+                <RawMaterialDetailPage />
               </PrivateRoute>
             } />
             <Route path="/user-management" element={

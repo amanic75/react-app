@@ -3,6 +3,7 @@ import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
+import { getFormulaById, updateFormula, getAllFormulas } from '../lib/data';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -12,54 +13,72 @@ const FormulaDetailPage = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
   const [editableFormula, setEditableFormula] = useState(null);
+  const [formula, setFormula] = useState(null);
+  const [deletedDocuments, setDeletedDocuments] = useState([]);
 
-  // Simple mock data for the formula
-  const formulaData = {
-    'HDST001': {
-      id: 'HDST001',
-      name: 'Heavy Duty Steam Title Placeholder',
-      totalCost: 245.67,
-      finalSalePriceDrum: 589.99,
-      finalSalePriceTote: 1249.99,
-      ingredients: [
-        { name: 'Sodium Hydroxide', percentage: 35.2, cost: 87.45 },
-        { name: 'Calcium Carbonate', percentage: 25.8, cost: 56.23 },
-        { name: 'Ethylene Glycol', percentage: 20.1, cost: 78.12 },
-        { name: 'Surfactant Blend', percentage: 12.4, cost: 23.87 },
-        { name: 'Corrosion Inhibitor', percentage: 6.5, cost: 0.00 }
-      ]
-    },
-    'MDCL002': {
-      id: 'MDCL002',
-      name: 'Multi-Purpose Degreaser Compound',
-      totalCost: 156.34,
-      finalSalePriceDrum: 389.99,
-      finalSalePriceTote: 799.99,
-      ingredients: [
-        { name: 'Isopropyl Alcohol', percentage: 45.0, cost: 78.90 },
-        { name: 'Sodium Carbonate', percentage: 25.0, cost: 34.12 },
-        { name: 'Citric Acid', percentage: 15.0, cost: 23.45 },
-        { name: 'Non-ionic Surfactant', percentage: 10.0, cost: 19.87 },
-        { name: 'Water', percentage: 5.0, cost: 0.00 }
-      ]
-    },
-    'INDL003': {
-      id: 'INDL003',
-      name: 'Industrial Solvent Formula XP',
-      totalCost: 334.12,
-      finalSalePriceDrum: 789.99,
-      finalSalePriceTote: 1549.99,
-      ingredients: [
-        { name: 'Methylene Chloride', percentage: 40.0, cost: 145.67 },
-        { name: 'Acetone', percentage: 30.0, cost: 89.34 },
-        { name: 'Toluene', percentage: 20.0, cost: 67.23 },
-        { name: 'Stabilizer Blend', percentage: 8.0, cost: 31.88 },
-        { name: 'Antioxidant', percentage: 2.0, cost: 0.00 }
-      ]
+  // Get formula from shared data source
+  React.useEffect(() => {
+    console.log('Loading formula with ID:', formulaId);
+    
+    // Debug: Check all available formulas
+    const allFormulas = getAllFormulas();
+    console.log('All available formulas:', allFormulas);
+    console.log('Available formula IDs:', allFormulas.map(f => f.id));
+    
+    const foundFormula = getFormulaById(formulaId);
+    console.log('Found formula:', foundFormula);
+    
+    if (foundFormula) {
+      setFormula(foundFormula);
+      setEditableFormula({
+        name: foundFormula.name,
+        totalCost: foundFormula.totalCost,
+        finalSalePriceDrum: foundFormula.finalSalePriceDrum,
+        finalSalePriceTote: foundFormula.finalSalePriceTote,
+        ingredients: [...foundFormula.ingredients]
+      });
+      console.log('Formula state set successfully');
+    } else {
+      console.log('No formula found for ID:', formulaId);
     }
-  };
+  }, [formulaId]);
 
-  const formula = formulaData[formulaId] || formulaData['HDST001'];
+  // Reset edit state when navigating to different formula
+  React.useEffect(() => {
+    console.log('FormulaDetailPage rendered with formulaId:', formulaId);
+    
+    // Reset edit state when navigating to different formula
+    setIsEditing(false);
+    setUploadedFiles([]);
+    setDeletedDocuments([]);
+    
+    return () => {
+      console.log('FormulaDetailPage cleanup');
+    };
+  }, [formulaId]);
+
+  console.log('Current formula state:', formula);
+  console.log('Current editableFormula state:', editableFormula);
+
+  if (!formula) {
+    console.log('Rendering Formula Not Found page');
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-slate-100 mb-4">Formula Not Found</h2>
+            <p className="text-slate-400 mb-4">Formula ID: {formulaId}</p>
+            <button
+              onClick={() => navigate('/formulas')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Back to Formulas
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
 
 
@@ -90,7 +109,6 @@ const FormulaDetailPage = () => {
   };
 
   const existingDocuments = getExistingDocuments(formulaId);
-  const [deletedDocuments, setDeletedDocuments] = useState([]);
 
   const handleDeleteDocument = (documentId) => {
     setDeletedDocuments(prev => [...prev, documentId]);
@@ -160,8 +178,14 @@ const FormulaDetailPage = () => {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Save changes logic would go here
-      console.log('Saving formula changes:', editableFormula);
+      // Save changes to shared data source
+      if (editableFormula) {
+        const updatedFormula = updateFormula(formula.id, editableFormula);
+        if (updatedFormula) {
+          setFormula(updatedFormula);
+          console.log('Formula saved successfully:', updatedFormula);
+        }
+      }
       console.log('Deleted documents:', deletedDocuments);
       setIsEditing(false);
       // Keep deleted documents after save - they are permanently removed
@@ -195,30 +219,6 @@ const FormulaDetailPage = () => {
       )
     }));
   };
-
-  // Debug logging for navigation and initialize state
-  React.useEffect(() => {
-    console.log('FormulaDetailPage rendered with formulaId:', formulaId);
-    
-    // Reset edit state when navigating to different formula
-    setIsEditing(false);
-    setUploadedFiles([]);
-    setDeletedDocuments([]);
-    
-    // Initialize editable formula state
-    const currentFormula = formulaData[formulaId] || formulaData['HDST001'];
-    setEditableFormula({
-      name: currentFormula.name,
-      totalCost: currentFormula.totalCost,
-      finalSalePriceDrum: currentFormula.finalSalePriceDrum,
-      finalSalePriceTote: currentFormula.finalSalePriceTote,
-      ingredients: [...currentFormula.ingredients]
-    });
-    
-    return () => {
-      console.log('FormulaDetailPage cleanup');
-    };
-  }, [formulaId]);
 
   return (
     <DashboardLayout key={`formula-${formulaId}`}>

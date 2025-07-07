@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
+import { getAllFormulas } from '../lib/data';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -38,51 +39,8 @@ const FormulasPage = () => {
     };
   }, []);
 
-  // Mock formula data with ingredients
-  const formulas = [
-    { 
-      id: 'HDST001', 
-      name: 'Heavy Duty Steam Title Placeholder', 
-      totalCost: 245.670, 
-      finalSalePrice: 589.990, 
-      finalSalePricePerTote: 1249.990,
-      ingredients: [
-        { name: 'Sodium Hydroxide', percentage: 35.2 },
-        { name: 'Calcium Carbonate', percentage: 25.8 },
-        { name: 'Ethylene Glycol', percentage: 20.1 },
-        { name: 'Surfactant Blend', percentage: 12.4 },
-        { name: 'Corrosion Inhibitor', percentage: 6.5 }
-      ]
-    },
-    { 
-      id: 'MDCL002', 
-      name: 'Multi-Purpose Degreaser Compound', 
-      totalCost: 156.340, 
-      finalSalePrice: 389.990, 
-      finalSalePricePerTote: 799.990,
-      ingredients: [
-        { name: 'Isopropyl Alcohol', percentage: 45.0 },
-        { name: 'Sodium Carbonate', percentage: 25.0 },
-        { name: 'Citric Acid', percentage: 15.0 },
-        { name: 'Non-ionic Surfactant', percentage: 10.0 },
-        { name: 'Water', percentage: 5.0 }
-      ]
-    },
-    { 
-      id: 'INDL003', 
-      name: 'Industrial Solvent Formula XP', 
-      totalCost: 334.120, 
-      finalSalePrice: 789.990, 
-      finalSalePricePerTote: 1549.990,
-      ingredients: [
-        { name: 'Methylene Chloride', percentage: 40.0 },
-        { name: 'Acetone', percentage: 30.0 },
-        { name: 'Toluene', percentage: 20.0 },
-        { name: 'Stabilizer Blend', percentage: 8.0 },
-        { name: 'Antioxidant', percentage: 2.0 }
-      ]
-    },
-  ];
+  // Get formulas data from shared source
+  const formulas = getAllFormulas();
 
   const filteredFormulas = formulas.filter(formula => 
     formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -256,8 +214,8 @@ const FormulasPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-300">$ {formula.totalCost.toFixed(3)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePrice.toFixed(3)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePricePerTote.toFixed(3)}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePriceDrum.toFixed(3)}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">$ {formula.finalSalePriceTote.toFixed(3)}</td>
                   </tr>
                 ))}
                 {/* Add empty rows to fill space like in reference */}

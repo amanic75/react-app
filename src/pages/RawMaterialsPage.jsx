@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X, Edit } from 'lucide-react';
+import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
+import { getAllMaterials, generateMaterialId } from '../lib/data';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -23,8 +23,6 @@ const RawMaterialsPage = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isDropboxModalOpen, setIsDropboxModalOpen] = useState(false);
   const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const tabRefs = useRef({});
 
@@ -42,119 +40,14 @@ const RawMaterialsPage = () => {
     supplierCost: ''
   });
 
-  // Mock raw materials data
-  const rawMaterials = [
-    { 
-      materialName: 'CALCIUM CHLORIDE (100%)', 
-      supplierName: 'ChemSupply Co.', 
-      manufacture: 'Dow Chemical', 
-      tradeName: 'DowFlake Xtra', 
-      supplierCost: 0.000,
-      casNumber: '10043-52-4',
-      weightVolume: 0,
-      density: 0,
-      country: '--'
-    },
-    { 
-      materialName: '60% HEDP Liquid Tech Grade', 
-      supplierName: 'Industrial Chemicals Ltd.', 
-      manufacture: 'Kemira', 
-      tradeName: 'Dequest 2010', 
-      supplierCost: 0.000,
-      casNumber: '--',
-      weightVolume: 0,
-      density: 0,
-      country: '--'
-    },
-    { 
-      materialName: 'Acetic Acid, Glacial', 
-      supplierName: 'Acid Solutions Inc.', 
-      manufacture: 'Eastman Chemical', 
-      tradeName: 'Glacial Acetic Acid', 
-      supplierCost: 8.76,
-      casNumber: '--',
-      weightVolume: 0,
-      density: 0,
-      country: '--'
-    },
-    { 
-      materialName: 'Sodium Molybdate Crystals, Tech Grade', 
-      supplierName: 'Specialty Metals Corp.', 
-      manufacture: 'Climax Molybdenum', 
-      tradeName: 'Sodium Molybdate Dihydrate', 
-      supplierCost: 0.000,
-      casNumber: '--',
-      weightVolume: 0,
-      density: 3.78,
-      country: '--'
-    },
-    { 
-      materialName: 'HPMA (homopolymer of maleic acid) 50%', 
-      supplierName: 'Polymer Technologies', 
-      manufacture: 'Dow Chemical', 
-      tradeName: 'Belclene 200', 
-      supplierCost: 0.000,
-      casNumber: '--',
-      weightVolume: 0,
-      density: 0,
-      country: '--'
-    },
-    { 
-      materialName: 'PBTC Phosphonobutane Tricarboxylic Acid', 
-      supplierName: 'Water Treatment Chemicals', 
-      manufacture: 'Italmatch Chemicals', 
-      tradeName: 'Dequest 7000', 
-      supplierCost: 1.55,
-      casNumber: '--',
-      weightVolume: 0,
-      density: 9,
-      country: '--'
-    },
-    { 
-      materialName: 'Sodium Hypochlorite Solution 12.5%', 
-      supplierName: 'Bleach Supply Co.', 
-      manufacture: 'Olin Corporation', 
-      tradeName: 'Liquid Bleach', 
-      supplierCost: 2.34,
-      casNumber: '7681-52-9',
-      weightVolume: 0,
-      density: 1.2,
-      country: 'USA'
-    },
-    { 
-      materialName: 'Citric Acid Anhydrous', 
-      supplierName: 'Food Grade Chemicals', 
-      manufacture: 'Cargill', 
-      tradeName: 'CitriSafe', 
-      supplierCost: 3.45,
-      casNumber: '77-92-9',
-      weightVolume: 0,
-      density: 1.67,
-      country: 'Brazil'
-    },
-    { 
-      materialName: 'Hydrogen Peroxide 35%', 
-      supplierName: 'Peroxide Solutions LLC', 
-      manufacture: 'Solvay', 
-      tradeName: 'Proxitane AHP35', 
-      supplierCost: 4.89,
-      casNumber: '7722-84-1',
-      weightVolume: 0,
-      density: 1.13,
-      country: 'Belgium'
-    },
-    { 
-      materialName: 'Potassium Hydroxide Flakes 90%', 
-      supplierName: 'Caustic Supply Inc.', 
-      manufacture: 'Olin Corporation', 
-      tradeName: 'KOH Technical Grade', 
-      supplierCost: 6.78,
-      casNumber: '1310-58-3',
-      weightVolume: 0,
-      density: 2.04,
-      country: 'USA'
-    }
-  ];
+  // Handle clicking on a material name to navigate to detail page
+  const handleMaterialClick = (material) => {
+    const materialId = generateMaterialId(material.materialName);
+    navigate(`/raw-materials/${materialId}`);
+  };
+
+  // Get raw materials data from shared source
+  const rawMaterials = getAllMaterials();
 
   const filteredMaterials = rawMaterials.filter(material => 
     material.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,18 +85,6 @@ const RawMaterialsPage = () => {
   // Handle opening add material modal
   const handleAddMaterial = () => {
     setIsAddMaterialModalOpen(true);
-  };
-
-  // Handle editing material
-  const handleEditMaterial = (material) => {
-    setSelectedMaterial(material);
-    setIsEditModalOpen(true);
-  };
-
-  // Handle closing edit modal
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
-    setSelectedMaterial(null);
   };
 
   // Handle showing confirmation dialog
@@ -364,16 +245,18 @@ const RawMaterialsPage = () => {
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Density</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Supplier Cost</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Country</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-200">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMaterials.map((material, index) => (
                   <tr 
                     key={`${material.materialName}-${index}`}
-                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
+                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors cursor-pointer"
+                    onClick={() => handleMaterialClick(material)}
                   >
-                    <td className="px-6 py-4 text-sm text-slate-300">{material.materialName}</td>
+                    <td className="px-6 py-4 text-sm text-blue-400 hover:text-blue-300 font-medium">
+                      {material.materialName}
+                    </td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.casNumber}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.weightVolume}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.density}</td>
@@ -381,24 +264,11 @@ const RawMaterialsPage = () => {
                       $ {material.supplierCost.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.country}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditMaterial(material);
-                        }}
-                        className="p-1 hover:bg-slate-600 rounded transition-colors"
-                        title="Edit material"
-                      >
-                        <Edit className="h-4 w-4 text-slate-400 hover:text-slate-200" />
-                      </button>
-                    </td>
                   </tr>
                 ))}
                 {/* Add empty rows to fill space like in reference */}
                 {Array.from({ length: 15 }, (_, index) => (
                   <tr key={`empty-${index}`} className="border-b border-slate-700">
-                    <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
                     <td className="px-6 py-4 text-sm text-slate-600">&nbsp;</td>
@@ -424,13 +294,6 @@ const RawMaterialsPage = () => {
         <DropboxUploadModal
           isOpen={isDropboxModalOpen}
           onClose={() => setIsDropboxModalOpen(false)}
-        />
-
-        {/* Edit Material Modal */}
-        <EditRawMaterialModal
-          isOpen={isEditModalOpen}
-          onClose={handleCloseEditModal}
-          material={selectedMaterial}
         />
 
         {/* Add Material Modal */}

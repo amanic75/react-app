@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 
-const EditRawMaterialModal = ({ isOpen, onClose, onSave, material }) => {
+const EditRawMaterialModal = ({ isOpen, onClose, onSave, onDelete, material }) => {
   const [formData, setFormData] = useState({
     materialName: '',
     supplierName: '',
@@ -19,6 +19,7 @@ const EditRawMaterialModal = ({ isOpen, onClose, onSave, material }) => {
     hazardClass: '',
     shelfLife: ''
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Update form data when material prop changes
   useEffect(() => {
@@ -63,6 +64,14 @@ const EditRawMaterialModal = ({ isOpen, onClose, onSave, material }) => {
     }
   };
 
+  const handleDelete = () => {
+    if (onDelete && material) {
+      onDelete(material.id);
+      setShowDeleteConfirm(false);
+      onClose();
+    }
+  };
+
   const handleCancel = () => {
     // Reset form data to original values
     if (material) {
@@ -84,6 +93,7 @@ const EditRawMaterialModal = ({ isOpen, onClose, onSave, material }) => {
         shelfLife: material.shelfLife || ''
       });
     }
+    setShowDeleteConfirm(false);
     onClose();
   };
 
@@ -358,22 +368,67 @@ const EditRawMaterialModal = ({ isOpen, onClose, onSave, material }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-slate-700">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-6 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Save Changes
-            </button>
+          <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-700">
+            <div>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center space-x-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete Material</span>
+                </button>
+              )}
+            </div>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-6 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <div className="bg-red-100 rounded-full p-2 mr-3">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-100">Delete Material</h3>
+              </div>
+              <p className="text-slate-300 mb-6">
+                Are you sure you want to delete <strong>{material?.materialName}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

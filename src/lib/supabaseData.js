@@ -523,6 +523,51 @@ export const deleteUser = async (userId) => {
   }
 };
 
+export const deleteFormula = async (formulaId) => {
+  try {
+    const { error } = await supabase
+      .from('formulas')
+      .delete()
+      .eq('id', formulaId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting formula:', error);
+    return false;
+  }
+};
+
+export const deleteMaterial = async (materialId) => {
+  try {
+    const { error } = await supabase
+      .from('raw_materials')
+      .delete()
+      .eq('id', materialId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting material:', error);
+    return false;
+  }
+};
+
+export const deleteSupplier = async (supplierId) => {
+  try {
+    const { error } = await supabase
+      .from('suppliers')
+      .delete()
+      .eq('id', supplierId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting supplier:', error);
+    return false;
+  }
+};
+
 // ==============================================
 // UTILITY FUNCTIONS
 // ==============================================

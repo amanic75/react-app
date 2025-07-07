@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
-import { getFormulaById, updateFormula, getAllFormulas } from '../lib/supabaseData';
+import { getFormulaById, updateFormula, getAllFormulas, deleteFormula } from '../lib/supabaseData';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const FormulaDetailPage = () => {
   const [deletedDocuments, setDeletedDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Get formula from Supabase
   useEffect(() => {
@@ -255,6 +256,23 @@ const FormulaDetailPage = () => {
     }));
   };
 
+  const handleDeleteFormula = async () => {
+    try {
+      const success = await deleteFormula(formula.id);
+      if (success) {
+        // Navigate back to formulas list after successful deletion
+        navigate('/formulas');
+      } else {
+        console.error('Failed to delete formula');
+        // You might want to show an error message to the user here
+      }
+    } catch (err) {
+      console.error('Error deleting formula:', err);
+      // You might want to show an error message to the user here
+    }
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <DashboardLayout key={`formula-${formulaId}`}>
       <div className="space-y-6">
@@ -273,13 +291,24 @@ const FormulaDetailPage = () => {
             </div>
           </div>
           
-          <Button
-            onClick={handleEditToggle}
-            className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            <Edit3 className="h-4 w-4 mr-2" />
-            {isEditing ? 'Save Changes' : 'Edit Formula'}
-          </Button>
+          <div className="flex items-center space-x-3">
+            {isEditing && (
+              <Button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="bg-red-600 hover:bg-red-700 flex items-center space-x-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Formula</span>
+              </Button>
+            )}
+            <Button
+              onClick={handleEditToggle}
+              className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              {isEditing ? 'Save Changes' : 'Edit Formula'}
+            </Button>
+          </div>
         </div>
 
         {/* Formula Info Card */}
@@ -577,7 +606,38 @@ const FormulaDetailPage = () => {
            )}
            </div>
          </div>
-       </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <div className="bg-red-100 rounded-full p-2 mr-3">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-100">Delete Formula</h3>
+              </div>
+              <p className="text-slate-300 mb-6">
+                Are you sure you want to delete formula <strong>{formula?.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteFormula}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 };

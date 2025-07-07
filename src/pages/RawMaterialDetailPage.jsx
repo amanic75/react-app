@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
-import { getMaterialById, updateMaterial, getAllMaterials, generateMaterialId } from '../lib/supabaseData';
+import { getMaterialById, updateMaterial, getAllMaterials, generateMaterialId, deleteMaterial } from '../lib/supabaseData';
 import { useTheme } from '../contexts/ThemeContext';
 
 const RawMaterialDetailPage = () => {
@@ -94,6 +94,22 @@ const RawMaterialDetailPage = () => {
       setIsEditModalOpen(false);
     } catch (err) {
       console.error('Error updating material:', err);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId) => {
+    try {
+      const success = await deleteMaterial(materialId);
+      if (success) {
+        // Navigate back to raw materials list after successful deletion
+        navigate('/raw-materials');
+      } else {
+        console.error('Failed to delete material');
+        // You might want to show an error message to the user here
+      }
+    } catch (err) {
+      console.error('Error deleting material:', err);
       // You might want to show an error message to the user here
     }
   };
@@ -245,6 +261,7 @@ const RawMaterialDetailPage = () => {
           isOpen={isEditModalOpen}
           onClose={handleCloseEditModal}
           onSave={handleSaveMaterial}
+          onDelete={handleDeleteMaterial}
           material={material}
         />
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X } from 'lucide-react';
+import { ArrowLeft, FlaskConical, List, ArrowUpDown, Plus, Info, X, Search, Filter, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -28,6 +28,23 @@ const RawMaterialsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const tabRefs = useRef({});
+
+  // Sort and Filter states
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('materialName');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [filterSupplier, setFilterSupplier] = useState('all');
+  const [filterForm, setFilterForm] = useState('all');
+  const [filterHazard, setFilterHazard] = useState('all');
+  const [filterCountry, setFilterCountry] = useState('all');
+
+  // Temporary states for complex filtering
+  const [tempSortBy, setTempSortBy] = useState('materialName');
+  const [tempSortOrder, setTempSortOrder] = useState('asc');
+  const [tempFilterSupplier, setTempFilterSupplier] = useState('all');
+  const [tempFilterForm, setTempFilterForm] = useState('all');
+  const [tempFilterHazard, setTempFilterHazard] = useState('all');
+  const [tempFilterCountry, setTempFilterCountry] = useState('all');
 
   // Form state for new material
   const [newMaterial, setNewMaterial] = useState({
@@ -62,20 +79,163 @@ const RawMaterialsPage = () => {
     loadMaterials();
   }, []);
 
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isFilterOpen && !event.target.closest('.relative')) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFilterOpen]);
+
   // Handle clicking on a material name to navigate to detail page
   const handleMaterialClick = (material) => {
     const materialId = generateMaterialId(material.materialName);
     navigate(`/raw-materials/${materialId}`);
   };
 
-  const filteredMaterials = rawMaterials.filter(material => 
-    material.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.tradeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.casNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.manufacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.country.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Sort and Filter functions
+  const handleSortChange = (newSortBy) => {
+    setTempSortBy(newSortBy);
+  };
+
+  const toggleSortOrder = () => {
+    setTempSortOrder(tempSortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const clearAllFilters = () => {
+    setSortBy('materialName');
+    setSortOrder('asc');
+    setFilterSupplier('all');
+    setFilterForm('all');
+    setFilterHazard('all');
+    setFilterCountry('all');
+    setSearchTerm('');
+    
+    // Reset temp states
+    setTempSortBy('materialName');
+    setTempSortOrder('asc');
+    setTempFilterSupplier('all');
+    setTempFilterForm('all');
+    setTempFilterHazard('all');
+    setTempFilterCountry('all');
+  };
+
+  const applyFilters = () => {
+    setSortBy(tempSortBy);
+    setSortOrder(tempSortOrder);
+    setFilterSupplier(tempFilterSupplier);
+    setFilterForm(tempFilterForm);
+    setFilterHazard(tempFilterHazard);
+    setFilterCountry(tempFilterCountry);
+    setIsFilterOpen(false);
+  };
+
+  const cancelFilters = () => {
+    setTempSortBy(sortBy);
+    setTempSortOrder(sortOrder);
+    setTempFilterSupplier(filterSupplier);
+    setTempFilterForm(filterForm);
+    setTempFilterHazard(filterHazard);
+    setTempFilterCountry(filterCountry);
+    setIsFilterOpen(false);
+  };
+
+  const toggleFilter = () => {
+    if (isFilterOpen) {
+      cancelFilters();
+    } else {
+      setTempSortBy(sortBy);
+      setTempSortOrder(sortOrder);
+      setTempFilterSupplier(filterSupplier);
+      setTempFilterForm(filterForm);
+      setTempFilterHazard(filterHazard);
+      setTempFilterCountry(filterCountry);
+      setIsFilterOpen(true);
+    }
+  };
+
+  // Filter materials based on search term and filters
+  const filteredMaterials = rawMaterials.filter(material => {
+    // Search filter
+    const matchesSearch = 
+      material.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.tradeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.casNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.manufacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      material.country.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Supplier filter
+    const matchesSupplier = filterSupplier === 'all' || material.supplierName === filterSupplier;
+    
+    // Physical form filter
+    const matchesForm = filterForm === 'all' || material.physicalForm === filterForm;
+    
+    // Hazard class filter
+    const matchesHazard = filterHazard === 'all' || material.hazardClass === filterHazard;
+    
+    // Country filter
+    const matchesCountry = filterCountry === 'all' || material.country === filterCountry;
+    
+    return matchesSearch && matchesSupplier && matchesForm && matchesHazard && matchesCountry;
+  });
+
+  // Sort filtered materials
+  const sortedMaterials = [...filteredMaterials].sort((a, b) => {
+    let aValue, bValue;
+    
+    switch (sortBy) {
+      case 'materialName':
+        aValue = a.materialName.toLowerCase();
+        bValue = b.materialName.toLowerCase();
+        break;
+      case 'supplierName':
+        aValue = a.supplierName.toLowerCase();
+        bValue = b.supplierName.toLowerCase();
+        break;
+      case 'supplierCost':
+        aValue = parseFloat(a.supplierCost) || 0;
+        bValue = parseFloat(b.supplierCost) || 0;
+        break;
+      case 'physicalForm':
+        aValue = a.physicalForm.toLowerCase();
+        bValue = b.physicalForm.toLowerCase();
+        break;
+      case 'hazardClass':
+        aValue = a.hazardClass.toLowerCase();
+        bValue = b.hazardClass.toLowerCase();
+        break;
+      case 'country':
+        aValue = a.country.toLowerCase();
+        bValue = b.country.toLowerCase();
+        break;
+      case 'purity':
+        aValue = a.purity.toLowerCase();
+        bValue = b.purity.toLowerCase();
+        break;
+      case 'casNumber':
+        aValue = a.casNumber.toLowerCase();
+        bValue = b.casNumber.toLowerCase();
+        break;
+      default:
+        aValue = a.materialName.toLowerCase();
+        bValue = b.materialName.toLowerCase();
+    }
+    
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Get unique values for filter dropdowns
+  const uniqueSuppliers = [...new Set(rawMaterials.map(m => m.supplierName))].sort();
+  const uniqueForms = [...new Set(rawMaterials.map(m => m.physicalForm))].filter(Boolean).sort();
+  const uniqueHazards = [...new Set(rawMaterials.map(m => m.hazardClass))].filter(Boolean).sort();
+  const uniqueCountries = [...new Set(rawMaterials.map(m => m.country))].filter(Boolean).sort();
 
   const handleMouseMove = (e, tabId) => {
     if (!tabRefs.current[tabId]) return;
@@ -285,21 +445,158 @@ const RawMaterialsPage = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                <List className="w-4 h-4 text-slate-300" />
-                <span className="text-sm text-slate-300">Filter</span>
-              </button>
-              <button className="flex items-center space-x-2 px-3 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
-                <ArrowUpDown className="w-4 h-4 text-slate-300" />
-                <span className="text-sm text-slate-300">Sort</span>
-              </button>
-              <button 
+              <div className="relative">
+                <button 
+                  onClick={toggleFilter}
+                  className="flex items-center space-x-2 p-2 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  <Filter className="h-5 w-5 text-slate-300" />
+                  <span className="text-sm text-slate-300">Filter & Sort</span>
+                  <ChevronDown className="h-4 w-4 text-slate-300" />
+                </button>
+
+                {isFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-96 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
+                    <div className="p-4">
+                      {/* Sort Section */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-medium text-slate-200">Sort By</h3>
+                          <button
+                            onClick={toggleSortOrder}
+                            className="flex items-center space-x-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs text-slate-300 transition-colors"
+                          >
+                            <span>{tempSortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
+                            <span>{tempSortOrder === 'asc' ? '↑' : '↓'}</span>
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { key: 'materialName', label: 'Material Name' },
+                            { key: 'supplierName', label: 'Supplier' },
+                            { key: 'supplierCost', label: 'Cost' },
+                            { key: 'physicalForm', label: 'Physical Form' },
+                            { key: 'hazardClass', label: 'Hazard Class' },
+                            { key: 'country', label: 'Country' },
+                            { key: 'purity', label: 'Purity' },
+                            { key: 'casNumber', label: 'CAS Number' }
+                          ].map((option) => (
+                            <button
+                              key={option.key}
+                              onClick={() => handleSortChange(option.key)}
+                              className={`text-left px-3 py-2 rounded text-sm transition-colors ${
+                                tempSortBy === option.key 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Filter Section */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Supplier Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Supplier</h3>
+                            <select
+                              value={tempFilterSupplier}
+                              onChange={(e) => setTempFilterSupplier(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Suppliers</option>
+                              {uniqueSuppliers.map(supplier => (
+                                <option key={supplier} value={supplier}>{supplier}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Physical Form Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Form</h3>
+                            <select
+                              value={tempFilterForm}
+                              onChange={(e) => setTempFilterForm(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Forms</option>
+                              {uniqueForms.map(form => (
+                                <option key={form} value={form}>{form}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Hazard Class Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Hazard</h3>
+                            <select
+                              value={tempFilterHazard}
+                              onChange={(e) => setTempFilterHazard(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Hazard Classes</option>
+                              {uniqueHazards.map(hazard => (
+                                <option key={hazard} value={hazard}>{hazard}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Country Filter */}
+                          <div>
+                            <h3 className="text-sm font-medium text-slate-200 mb-2">Filter by Country</h3>
+                            <select
+                              value={tempFilterCountry}
+                              onChange={(e) => setTempFilterCountry(e.target.value)}
+                              className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+                            >
+                              <option value="all">All Countries</option>
+                              {uniqueCountries.map(country => (
+                                <option key={country} value={country}>{country}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-600">
+                        <button
+                          onClick={clearAllFilters}
+                          className="px-3 py-1 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                        >
+                          Clear All
+                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={cancelFilters}
+                            className="px-4 py-2 text-sm text-slate-300 hover:text-slate-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={applyFilters}
+                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Button 
                 onClick={handleAddMaterial}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
               >
-                <Plus className="w-4 h-4 text-white" />
-                <span className="text-sm text-white font-medium">Add Raw Material</span>
-              </button>
+                <Plus className="w-4 h-4" />
+                <span>Add Material</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -321,7 +618,7 @@ const RawMaterialsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredMaterials.map((material, index) => (
+                {sortedMaterials.map((material, index) => (
                   <tr 
                     key={`${material.id}-${index}`}
                     onClick={() => handleMaterialClick(material)}

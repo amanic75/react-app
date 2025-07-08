@@ -21,7 +21,7 @@ const UserManagementTable = () => {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const navigate = useNavigate();
   const usersPerPage = 20;
-  const { getAllUsers } = useAuth();
+  const { getAllUsers, userProfile } = useAuth();
 
   // Helper function to get app access based on role
   const getAppAccessByRole = (role) => {
@@ -238,12 +238,15 @@ const UserManagementTable = () => {
           </div>
         </div>
         
-        <Button 
-          size="sm"
-          onClick={() => navigate('/user-management?action=add')}
-        >
-          Add User
-        </Button>
+        {/* Only show Add User button for Capacity Admin */}
+        {userProfile?.role === 'Capacity Admin' && (
+          <Button 
+            size="sm"
+            onClick={() => navigate('/user-management?action=add')}
+          >
+            Add User
+          </Button>
+        )}
       </div>
       
       <div className="overflow-x-auto">

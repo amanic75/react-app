@@ -9,7 +9,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile } = useAuth();
+  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -375,10 +375,48 @@ const UserManagementPage = () => {
   };
 
   const handleSaveNewUser = async (newUser) => {
-    // Note: Creating new users through admin interface requires Supabase Admin API
-    // For now, we'll show a message to create users through the sign-up process
-    alert('To add new users, please direct them to sign up through the authentication page. User profiles will be automatically created when they sign up.');
-    setIsAddModalOpen(false);
+    try {
+      // Use the signUp function from auth context to create the user
+      const { data, error } = await signUp(newUser.email, 'TemporaryPassword123!', {
+        firstName: newUser.name.split(' ')[0] || '',
+        lastName: newUser.name.split(' ').slice(1).join(' ') || '',
+        role: newUser.role,
+        department: newUser.department || ''
+      });
+
+      if (error) {
+        console.error('Error creating user:', error);
+        alert(`Failed to create user: ${error.message}`);
+        return;
+      }
+
+      alert(`User created successfully! Email: ${newUser.email}\nTemporary Password: TemporaryPassword123!\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
+      
+      // Refresh the users list
+      const { data: refreshData } = await getAllUsers();
+      if (refreshData) {
+        const transformedUsers = refreshData.map((profile) => ({
+          id: profile.id,
+          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+          email: profile.email,
+          role: profile.role || 'Employee',
+          status: 'Active',
+          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+          contact: '',
+          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          credentials: getRoleCredentials(profile.role || 'Employee'),
+          department: profile.department || '',
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        }));
+        setUsers(transformedUsers);
+      }
+      
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error('Error in handleSaveNewUser:', error);
+      alert(`Unexpected error: ${error.message}`);
+    }
   };
 
   const handleCloseAddModal = () => {
@@ -638,13 +676,16 @@ const UserManagementPage = () => {
               </div>
             </div>
 
-            <button
-              onClick={handleAddUser}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add User</span>
-            </button>
+            {/* Only show Add User button for Capacity Admin */}
+            {userProfile?.role === 'Capacity Admin' && (
+              <button
+                onClick={handleAddUser}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add User</span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -14,12 +14,6 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
   });
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
-  const credentialOptions = [
-    'user/temporary pass',
-    'admin/secure pass',
-    'nsight-admin/enterprise pass'
-  ];
-
   const getAppOptions = (userRole) => {
     if (userRole === 'NSight Admin') {
       return [
@@ -234,10 +228,10 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Role & Permissions</h3>
               
-              {/* Role */}
+              {/* Role & Access Level */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-                  Role
+                  Role & Access Level
                 </label>
                 <select
                   value={formData.role}
@@ -248,24 +242,9 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
                   <option value="Capacity Admin" className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">Capacity Admin</option>
                   <option value="NSight Admin" className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">NSight Admin</option>
                 </select>
-              </div>
-
-              {/* Credentials */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
-                  Credentials
-                </label>
-                <select
-                  value={formData.credentials}
-                  onChange={(e) => handleInputChange('credentials', e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {credentialOptions.map(option => (
-                    <option key={option} value={option} className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                  Credentials: {formData.credentials}
+                </p>
               </div>
 
               {/* App Access */}

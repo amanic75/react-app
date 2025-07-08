@@ -7,19 +7,19 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     name: '',
     email: '',
     contact: '',
+    role: 'Employee',
     credentials: 'user/temporary pass',
-    appAccess: []
+    appAccess: ['formulas']
   });
 
-  const credentialOptions = [
-    'user/temporary pass',
-    'admin/secure pass',
-    'nsight-admin/enterprise pass',
-    'unknown/restricted access'
+  const roleOptions = [
+    { value: 'Employee', label: 'Employee', credentials: 'user/temporary pass' },
+    { value: 'Capacity Admin', label: 'Capacity Admin', credentials: 'admin/secure pass' },
+    { value: 'NSight Admin', label: 'NSight Admin', credentials: 'nsight-admin/enterprise pass' }
   ];
 
-  const getAppOptions = (credentials) => {
-    if (credentials === 'nsight-admin/enterprise pass') {
+  const getAppOptions = (userRole) => {
+    if (userRole === 'NSight Admin') {
       return [
         { id: 'developer-mode', name: 'Developer Mode', icon: Code },
         { id: 'existing-company-mode', name: 'Existing Company Mode', icon: Building2 }
@@ -33,19 +33,39 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     }
   };
 
+  const getAppAccessByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return ['formulas', 'suppliers', 'raw-materials'];
+      case 'NSight Admin':
+        return ['developer-mode', 'existing-company-mode'];
+      case 'Employee':
+        return ['formulas'];
+      default:
+        return ['formulas'];
+    }
+  };
+
+  const getCredentialsByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return 'admin/secure pass';
+      case 'NSight Admin':
+        return 'nsight-admin/enterprise pass';
+      case 'Employee':
+      default:
+        return 'user/temporary pass';
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       
-      // Auto-set app access based on credentials
-      if (field === 'credentials') {
-        if (value === 'nsight-admin/enterprise pass') {
-          newData.appAccess = ['developer-mode', 'existing-company-mode'];
-        } else if (value === 'admin/secure pass') {
-          newData.appAccess = ['formulas', 'suppliers', 'raw-materials'];
-        } else {
-          newData.appAccess = ['formulas'];
-        }
+      // Auto-set app access and credentials based on role
+      if (field === 'role') {
+        newData.appAccess = getAppAccessByRole(value);
+        newData.credentials = getCredentialsByRole(value);
       }
       
       return newData;
@@ -72,10 +92,9 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       name: formData.name.trim(),
       email: formData.email.trim(),
       contact: formData.contact.trim(),
+      role: formData.role,
       credentials: formData.credentials,
       appAccess: formData.appAccess,
-      role: formData.credentials === 'nsight-admin/enterprise pass' ? 'NSight Admin' : 
-            formData.credentials === 'admin/secure pass' ? 'Admin' : 'Employee',
       status: 'Active',
       lastLogin: 'Never'
     };
@@ -87,8 +106,9 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       name: '',
       email: '',
       contact: '',
+      role: 'Employee',
       credentials: 'user/temporary pass',
-      appAccess: []
+      appAccess: ['formulas']
     });
     
     onClose();
@@ -100,8 +120,9 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       name: '',
       email: '',
       contact: '',
+      role: 'Employee',
       credentials: 'user/temporary pass',
-      appAccess: []
+      appAccess: ['formulas']
     });
     onClose();
   };
@@ -117,120 +138,136 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       ></div>
       
       {/* Modal */}
-      <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-md mx-4 border border-slate-700">
+      <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl mx-4 border border-gray-200 dark:border-slate-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-slate-100">Add User</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Add User</h2>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
-            <X className="h-5 w-5 text-slate-400" />
+            <X className="h-5 w-5 text-gray-400 dark:text-slate-400" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="Enter full name"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+        <div className="p-6">
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Basic Info */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Basic Information</h3>
+              
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter full name"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="Enter email address"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-          {/* Contact */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Contact
-            </label>
-            <input
-              type="text"
-              value={formData.contact}
-              onChange={(e) => handleInputChange('contact', e.target.value)}
-              placeholder="Phone number (optional)"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+              {/* Contact */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Contact
+                </label>
+                <input
+                  type="text"
+                  value={formData.contact}
+                  onChange={(e) => handleInputChange('contact', e.target.value)}
+                  placeholder="Phone number (optional)"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-          {/* Credentials */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Credentials
-            </label>
-            <select
-              value={formData.credentials}
-              onChange={(e) => handleInputChange('credentials', e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {credentialOptions.map(option => (
-                <option key={option} value={option} className="bg-slate-700">
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Right Column - Role & Permissions */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Role & Permissions</h3>
+              
+              {/* Role & Access Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Role & Access Level
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => handleInputChange('role', e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {roleOptions.map(option => (
+                    <option key={option.value} value={option.value} className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                  Credentials: {formData.credentials}
+                </p>
+              </div>
 
-          {/* App Access */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-3">
-              App Access
-            </label>
-            <div className="space-y-3">
-              {getAppOptions(formData.credentials).map(app => {
-                const IconComponent = app.icon;
-                const isSelected = formData.appAccess.includes(app.id);
-                
-                return (
-                  <button
-                    key={app.id}
-                    onClick={() => toggleAppAccess(app.id)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-blue-600 border-blue-500 text-white'
-                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
-                        isSelected ? 'bg-blue-500' : 'bg-slate-600'
-                      }`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium">{app.name}</span>
-                    </div>
-                    {isSelected && (
-                      <Check className="w-5 h-5" />
-                    )}
-                  </button>
-                );
-              })}
+              {/* App Access */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-3">
+                  App Access
+                </label>
+                <div className="space-y-3">
+                  {getAppOptions(formData.role).map(app => {
+                    const IconComponent = app.icon;
+                    const isSelected = formData.appAccess.includes(app.id);
+                    
+                    return (
+                      <button
+                        key={app.id}
+                        onClick={() => toggleAppAccess(app.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-500 text-white'
+                            : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
+                            isSelected ? 'bg-blue-500' : 'bg-slate-600'
+                          }`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium">{app.name}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-5 h-5" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-slate-700">
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-slate-700">
           <Button
             variant="secondary"
             onClick={handleClose}

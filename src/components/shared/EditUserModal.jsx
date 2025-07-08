@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, FolderOpen, FlaskConical, Users, Check, Trash2, Code, Building2, Lock } from 'lucide-react';
 import Button from '../ui/Button';
-import { deleteUser } from '../../lib/data';
 import ChangePasswordModal from './ChangePasswordModal';
 
 const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRole, onChangePassword }) => {
@@ -85,10 +84,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
 
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) {
-      deleteUser(user.id);
-      if (onDelete) {
-        onDelete(user.id);
-      }
+      onDelete(user.id);
       onClose();
     }
   };

@@ -66,9 +66,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Add timeout to prevent hanging
+      // Add timeout to prevent hanging - increased to 10 seconds
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000) // Reduced to 3 seconds
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       );
       
       const fetchPromise = supabase
@@ -164,9 +164,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Add timeout for profile creation
+      // Add timeout for profile creation - increased to 10 seconds
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile creation timeout')), 3000)
+        setTimeout(() => reject(new Error('Profile creation timeout')), 10000)
       );
       
       // Get user info from auth
@@ -336,6 +336,18 @@ export const AuthProvider = ({ children }) => {
             }
             
             setUser(session.user);
+            
+            // Skip profile refetch for USER_UPDATED events if we already have a profile
+            // This prevents unnecessary database calls after password changes
+            if (event === 'USER_UPDATED' && userProfile && userProfile.id === session.user.id) {
+              console.log('🔄 USER_UPDATED event - keeping existing profile to avoid refetch');
+              // Keep the existing profile, just update user object
+              if (mounted) {
+                setLoading(false);
+              }
+              return;
+            }
+            
             try {
               const profile = await getUserProfile(session.user.id, session.user);
               if (mounted) {
@@ -585,7 +597,7 @@ export const AuthProvider = ({ children }) => {
       console.log('🔍 Fetching all users from database...');
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Get users timeout')), 3000)
+        setTimeout(() => reject(new Error('Get users timeout')), 10000)
       );
       
       const fetchPromise = supabase
@@ -615,7 +627,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserProfile = async (userId, updates) => {
     try {
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Update timeout')), 3000)
+        setTimeout(() => reject(new Error('Update timeout')), 10000)
       );
       
       const updatePromise = supabase
@@ -656,7 +668,7 @@ export const AuthProvider = ({ children }) => {
       console.log('🔒 Set deletion marker for user BEFORE deletion:', userId);
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Delete timeout')), 3000)
+        setTimeout(() => reject(new Error('Delete timeout')), 10000)
       );
       
       // Delete from user_profiles table
@@ -700,7 +712,7 @@ export const AuthProvider = ({ children }) => {
   const assignUser = async (tableName, itemId, userId) => {
     try {
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Assign timeout')), 3000)
+        setTimeout(() => reject(new Error('Assign timeout')), 10000)
       );
       
       const assignPromise = supabase

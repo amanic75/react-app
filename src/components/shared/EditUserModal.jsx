@@ -124,18 +124,23 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
     setIsChangePasswordModalOpen(false);
   };
 
-  const handleSavePassword = (passwordData) => {
-    const result = onChangePassword({
-      email: user.email,
-      newPassword: passwordData.newPassword,
-      isAdminReset: true // Flag to indicate this is an admin reset
-    });
-    
-    if (result.success) {
-      alert(`Password changed successfully for ${user.name}!`);
-      setIsChangePasswordModalOpen(false);
-    } else {
-      alert(`Error: ${result.error}`);
+  const handleSavePassword = async (passwordData) => {
+    try {
+      const result = await onChangePassword({
+        email: user.email,
+        newPassword: passwordData.newPassword,
+        isAdminReset: true // Flag to indicate this is an admin reset
+      });
+      
+      if (result && result.success) {
+        alert(`Password changed successfully for ${user.name}!`);
+        setIsChangePasswordModalOpen(false);
+      } else {
+        alert(`Error: ${result?.error || 'Unknown error occurred'}`);
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      alert(`Error: Failed to change password. Please try again.`);
     }
   };
 

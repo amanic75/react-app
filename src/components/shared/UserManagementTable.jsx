@@ -143,11 +143,10 @@ const UserManagementTable = () => {
     };
 
     window.addEventListener('loginActivityUpdate', handleActivityUpdate);
-    const interval = setInterval(loadData, 30000); // Refresh every 30 seconds
+    // Removed automatic interval - data will refresh when loginActivityUpdate event fires
 
     return () => {
       window.removeEventListener('loginActivityUpdate', handleActivityUpdate);
-      clearInterval(interval);
     };
   }, []);
 

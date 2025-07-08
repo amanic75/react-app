@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Filter, ArrowUpDown, Plus, FolderOpen, FlaskConical, Users, Edit, ChevronDown, Check, Code, Building2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditUserModal from '../components/shared/EditUserModal';
 import AddUserModal from '../components/shared/AddUserModal';
@@ -9,7 +10,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp } = useAuth();
+  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp, changePassword } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -22,6 +23,7 @@ const UserManagementPage = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDomain, setFilterDomain] = useState('all');
   const [filterApp, setFilterApp] = useState('all');
+  const [isLoading, setIsLoading] = useState(false);
   
   // Temporary states for complex filtering
   const [tempSortBy, setTempSortBy] = useState('name');
@@ -59,45 +61,46 @@ const UserManagementPage = () => {
     }
   };
 
-  useEffect(() => {
-    // Load users from Supabase
-    const loadUsers = async () => {
-      try {
-        const { data, error } = await getAllUsers();
-        if (error) {
-          console.error('Error loading users:', error);
-          return;
-        }
-        
-        // Transform Supabase user_profiles data to match the expected format
-        const transformedUsers = data.map((profile, index) => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
-          email: profile.email,
-          role: profile.role || 'Employee',
-          status: 'Active', // Default status since user_profiles doesn't have status field
-          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
-          contact: '',
-          appAccess: getAppAccessByRole(profile.role || 'Employee'),
-          credentials: getRoleCredentials(profile.role || 'Employee'),
-          department: profile.department || '',
-          created_at: profile.created_at,
-          updated_at: profile.updated_at
-        }));
-        
-        setUsers(transformedUsers);
-      } catch (error) {
-        console.error('Error in loadUsers:', error);
+  // Load users from Supabase - moved outside useEffect for reusability
+  const loadUsers = async () => {
+    if (isLoading) return; // Prevent concurrent loads
+    
+    try {
+      setIsLoading(true);
+      const { data, error } = await getAllUsers();
+      if (error) {
+        console.error('Error loading users:', error);
+        return;
       }
-    };
-    
+      
+      // Transform Supabase user_profiles data to match the expected format
+      const transformedUsers = data.map((profile, index) => ({
+        id: profile.id,
+        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
+        email: profile.email,
+        role: profile.role || 'Employee',
+        status: 'Active', // Default status since user_profiles doesn't have status field
+        lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
+        contact: '',
+        appAccess: getAppAccessByRole(profile.role || 'Employee'),
+        credentials: getRoleCredentials(profile.role || 'Employee'),
+        department: profile.department || '',
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+      }));
+      
+      setUsers(transformedUsers);
+    } catch (error) {
+      console.error('Error in loadUsers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load users only once on component mount
     loadUsers();
-    
-    // Refresh users every 10 seconds
-    const interval = setInterval(loadUsers, 10000);
-    
-    return () => clearInterval(interval);
-  }, [getAllUsers]);
+  }, []); // Removed getAllUsers dependency to prevent constant refetching
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -262,24 +265,7 @@ const UserManagementPage = () => {
       }
       
       // Refresh the users list
-      const { data } = await getAllUsers();
-      if (data) {
-        const transformedUsers = data.map((profile) => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
-          email: profile.email,
-          role: profile.role || 'Employee',
-          status: 'Active',
-          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
-          contact: '',
-          appAccess: getAppAccessByRole(profile.role || 'Employee'),
-          credentials: getRoleCredentials(profile.role || 'Employee'),
-          department: profile.department || '',
-          created_at: profile.created_at,
-          updated_at: profile.updated_at
-        }));
-        setUsers(transformedUsers);
-      }
+      await loadUsers();
       
       setIsEditModalOpen(false);
       setSelectedUser(null);
@@ -322,39 +308,22 @@ const UserManagementPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Only refresh the users list if delete actually succeeded
-      const { data: refreshData, error: refreshError } = await getAllUsers();
-      if (refreshError) {
-        console.error('❌ UserManagementPage: Error refreshing users:', refreshError);
-        alert('User deleted but failed to refresh list. Please reload the page.');
-        return;
-      }
-      
-      if (refreshData) {
-        console.log(`📝 UserManagementPage: Refreshed with ${refreshData.length} users`);
-        const transformedUsers = refreshData.map((profile) => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
-          email: profile.email,
-          role: profile.role || 'Employee',
-          status: 'Active',
-          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
-          contact: '',
-          appAccess: getAppAccessByRole(profile.role || 'Employee'),
-          credentials: getRoleCredentials(profile.role || 'Employee'),
-          department: profile.department || '',
-          created_at: profile.created_at,
-          updated_at: profile.updated_at
-        }));
-        setUsers(transformedUsers);
+      try {
+        await loadUsers();
+        console.log(`📝 UserManagementPage: Refreshed user list after deletion`);
         
         // Check if the user was actually removed
-        const userStillExists = transformedUsers.some(u => u.id === userId);
+        const userStillExists = users.some(u => u.id === userId);
         if (userStillExists) {
           console.warn('⚠️ UserManagementPage: User still exists after deletion - likely auto-recreated');
           alert('User profile was deleted but may have been automatically recreated. This can happen if the user is currently authenticated in another session.');
         } else {
           alert('User deleted successfully!');
         }
+      } catch (refreshError) {
+        console.error('❌ UserManagementPage: Error refreshing users:', refreshError);
+        alert('User deleted but failed to refresh list. Please reload the page.');
+        return;
       }
       
       setIsEditModalOpen(false);
@@ -393,24 +362,7 @@ const UserManagementPage = () => {
       alert(`User created successfully! Email: ${newUser.email}\nTemporary Password: TemporaryPassword123!\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
       
       // Refresh the users list
-      const { data: refreshData } = await getAllUsers();
-      if (refreshData) {
-        const transformedUsers = refreshData.map((profile) => ({
-          id: profile.id,
-          name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
-          email: profile.email,
-          role: profile.role || 'Employee',
-          status: 'Active',
-          lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
-          contact: '',
-          appAccess: getAppAccessByRole(profile.role || 'Employee'),
-          credentials: getRoleCredentials(profile.role || 'Employee'),
-          department: profile.department || '',
-          created_at: profile.created_at,
-          updated_at: profile.updated_at
-        }));
-        setUsers(transformedUsers);
-      }
+      await loadUsers();
       
       setIsAddModalOpen(false);
     } catch (error) {
@@ -487,30 +439,104 @@ const UserManagementPage = () => {
   };
 
   // Helper function to handle password changes
-  const handleChangePassword = (passwordData) => {
+  const handleChangePassword = async (passwordData) => {
+    // Validate input
+    if (!passwordData || !passwordData.email || !passwordData.newPassword) {
+      console.error('Invalid password data:', passwordData);
+      return { 
+        success: false, 
+        error: 'Invalid password data provided' 
+      };
+    }
+
     // Check if current user has Capacity Admin role
     if (userProfile?.role !== 'Capacity Admin') {
-      alert('Password change functionality requires Capacity Admin access. Please contact your system administrator.');
+      console.error('Insufficient permissions for password change');
       return { success: false, error: 'Insufficient permissions' };
     }
 
     try {
-      // For now, simulate success since actual password change would require backend API
-      // In a real implementation, this would call a secure admin API endpoint
       console.log('Password change requested for:', passwordData.email);
       console.log('Admin user:', userProfile?.email);
       
-      // Simulate success response
-      return { 
-        success: true, 
-        message: `Password successfully changed for ${passwordData.email}` 
-      };
+      if (passwordData.email === user?.email) {
+        // If admin is changing their own password
+        console.log('Admin changing own password');
+        const { error } = await changePassword(passwordData.newPassword);
+        
+        if (error) {
+          console.error('Password change error:', error);
+          return { 
+            success: false, 
+            error: error.message || 'Failed to change password' 
+          };
+        }
+        
+        console.log('Password change successful for own account');
+        return { 
+          success: true, 
+          message: `Password successfully changed for ${passwordData.email}` 
+        };
+      } else {
+        // For other users - call secure backend API
+        console.log('Admin changing another user\'s password');
+        
+        // Get current user's session token for API authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error('No active session found');
+          return { 
+            success: false, 
+            error: 'No active session found. Please log in again.' 
+          };
+        }
+
+        // Call the secure backend API
+        const response = await fetch('/api/admin/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            targetEmail: passwordData.email,
+            newPassword: passwordData.newPassword,
+            adminToken: session.access_token
+          })
+        });
+
+        if (!response.ok) {
+          console.error('API request failed with status:', response.status);
+          try {
+            const errorResult = await response.json();
+            console.error('API Error:', errorResult.error);
+            return { 
+              success: false, 
+              error: errorResult.error || 'Failed to change password' 
+            };
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+            return { 
+              success: false, 
+              error: 'Failed to change password. Server error.' 
+            };
+          }
+        }
+
+        const result = await response.json();
+        console.log('Password change API response:', result);
+
+        return { 
+          success: true, 
+          message: result.message || `Password successfully changed for ${passwordData.email}` 
+        };
+      }
       
     } catch (error) {
       console.error('Password change error:', error);
       return { 
         success: false, 
-        error: 'Failed to change password. Please try again.' 
+        error: error.message || 'Failed to change password. Please try again.' 
       };
     }
   };
@@ -698,16 +724,32 @@ const UserManagementPage = () => {
               </div>
             </div>
 
-            {/* Only show Add User button for Capacity Admin */}
-            {userProfile?.role === 'Capacity Admin' && (
+            {/* Action buttons */}
+            <div className="flex items-center space-x-3">
+              {/* Refresh button */}
               <button
-                onClick={handleAddUser}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                onClick={loadUsers}
+                disabled={isLoading}
+                className="flex items-center space-x-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 disabled:opacity-50 text-slate-200 rounded-lg transition-colors"
+                title="Refresh user list"
               >
-                <Plus className="h-4 w-4" />
-                <span>Add User</span>
+                <svg className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
               </button>
-            )}
+
+              {/* Only show Add User button for Capacity Admin */}
+              {userProfile?.role === 'Capacity Admin' && (
+                <button
+                  onClick={handleAddUser}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add User</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

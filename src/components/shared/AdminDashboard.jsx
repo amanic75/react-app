@@ -70,9 +70,7 @@ const AdminDashboard = ({ userData }) => {
     };
     
     loadUsers();
-    const interval = setInterval(loadUsers, 10000);
-    return () => clearInterval(interval);
-  }, [getAllUsers]);
+  }, []); // Removed getAllUsers dependency and interval to prevent constant refetching
 
   // Get users who have access to a specific app
   const getUsersWithAccess = (appName) => {

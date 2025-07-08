@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, MoreHorizontal, ExternalLink, Activity, LogIn, LogOut, Circle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, MoreHorizontal, ExternalLink, Activity, LogIn, LogOut, Circle, ChevronDown, ChevronRight, FolderOpen, FlaskConical, Code, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -34,6 +34,24 @@ const UserManagementTable = () => {
         return ['formulas'];
       default:
         return ['formulas'];
+    }
+  };
+
+  // Helper function to get app icons
+  const getAppIcon = (appName) => {
+    switch (appName) {
+      case 'formulas':
+        return <FolderOpen className="w-4 h-4 text-blue-500" />;
+      case 'raw-materials':
+        return <FlaskConical className="w-4 h-4 text-blue-500" />;
+      case 'suppliers':
+        return <Users className="w-4 h-4 text-blue-500" />;
+      case 'developer-mode':
+        return <Code className="w-4 h-4 text-blue-500" />;
+      case 'existing-company-mode':
+        return <Building2 className="w-4 h-4 text-green-500" />;
+      default:
+        return null;
     }
   };
 
@@ -236,7 +254,7 @@ const UserManagementTable = () => {
               <th className="text-left py-3 px-4 font-medium text-slate-200">Role</th>
               <th className="text-left py-3 px-4 font-medium text-slate-200">Status</th>
               <th className="text-left py-3 px-4 font-medium text-slate-200">Last Activity</th>
-              <th className="text-left py-3 px-4 font-medium text-slate-200">Actions</th>
+              <th className="text-left py-3 px-4 font-medium text-slate-200">App Access</th>
             </tr>
           </thead>
           <tbody>
@@ -295,11 +313,19 @@ const UserManagementTable = () => {
                       <span className="text-slate-500 text-sm">No recent activity</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    <button className="text-slate-400 hover:text-slate-200">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </td>
+                                      <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2">
+                        {user.appAccess.map((app, index) => (
+                          <div
+                            key={index}
+                            className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors"
+                            title={app.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          >
+                            {getAppIcon(app)}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
                 </tr>
                 
                 {/* Expanded row with user details */}

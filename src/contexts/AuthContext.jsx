@@ -66,9 +66,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Add timeout to prevent hanging - increased to 10 seconds
+      // Add timeout to prevent hanging - reduced to 1 second for fastest fallback
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 1000)
       );
       
       const fetchPromise = supabase
@@ -125,7 +125,12 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ User profile found in database:', data);
       return data;
     } catch (error) {
-      console.error('❌ Error in getUserProfile:', error);
+      // Check if it's a timeout - this is expected sometimes
+      if (error.message === 'Profile fetch timeout') {
+        console.warn('⏱️ Profile fetch timed out after 1s, using fallback');
+      } else {
+        console.error('❌ Error in getUserProfile:', error);
+      }
       
       // Always fall back to auth-based profile
       console.log('🚨 Profile fetch failed, creating from auth data');
@@ -384,7 +389,7 @@ export const AuthProvider = ({ children }) => {
         console.log('⚠️ Auth timeout - forcing loading to false');
         setLoading(false);
       }
-    }, 5000);
+    }, 15000); // Increased from 5000ms to 15000ms to allow profile fetch to complete
 
     return () => {
       mounted = false;

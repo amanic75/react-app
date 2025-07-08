@@ -355,13 +355,32 @@ export const AuthProvider = ({ children }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        throw error;
+        // If session is already missing, treat as successful logout
+        if (error.message?.includes('Auth session missing') || 
+            error.name === 'AuthSessionMissingError') {
+          console.log('⚠️ Session already missing, clearing local state');
+        } else {
+          throw error;
+        }
       }
-      setUser(null);
-      setUserProfile(null);
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error;
+      
+      // If it's a session missing error, don't throw - just clear state
+      if (error.message?.includes('Auth session missing') || 
+          error.name === 'AuthSessionMissingError') {
+        console.log('⚠️ Session missing error caught, clearing local state anyway');
+      } else {
+        // For other errors, still clear state but re-throw
+        setUser(null);
+        setUserProfile(null);
+        throw error;
+      }
+    } finally {
+      // Always clear local state regardless of Supabase response
+      console.log('🚪 Clearing local auth state');
+      setUser(null);
+      setUserProfile(null);
     }
   };
 

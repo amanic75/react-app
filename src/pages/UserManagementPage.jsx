@@ -229,6 +229,8 @@ const UserManagementPage = () => {
     switch (role) {
       case 'Admin':
         return 'text-purple-600 bg-purple-100';
+      case 'Capacity Admin':
+        return 'text-green-600 bg-green-100';
       case 'NSight Admin':
         return 'text-indigo-600 bg-indigo-100';
       case 'Employee':

@@ -156,26 +156,26 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
       ></div>
       
       {/* Modal */}
-      <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-lg mx-4 border border-slate-700">
+      <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl mx-4 border border-gray-200 dark:border-slate-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h2 className="text-xl font-semibold text-slate-100">Edit User</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Edit User</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
-            <X className="h-5 w-5 text-slate-400" />
+            <X className="h-5 w-5 text-gray-400 dark:text-slate-400" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-6">
           {/* Change Password Button - Only for Admins */}
           {currentUserRole === 'Capacity Admin' && (
-            <div className="pb-4 border-b border-slate-700">
+            <div className="pb-6 border-b border-slate-700 mb-6">
               <Button
                 onClick={handleChangePassword}
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center space-x-2 py-3"
+                className="bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center space-x-2 py-3 px-6"
               >
                 <Lock className="w-4 h-4" />
                 <span>Change Password for {user?.name}</span>
@@ -183,120 +183,133 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
             </div>
           )}
 
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Basic Info */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Basic Information</h3>
+              
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
 
-          {/* Contact */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Contact
-            </label>
-            <input
-              type="text"
-              value={formData.contact}
-              onChange={(e) => handleInputChange('contact', e.target.value)}
-              placeholder="Phone number"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+              {/* Contact */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Contact
+                </label>
+                <input
+                  type="text"
+                  value={formData.contact}
+                  onChange={(e) => handleInputChange('contact', e.target.value)}
+                  placeholder="Phone number"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-          {/* Role */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Role
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => handleInputChange('role', e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="Employee">Employee</option>
-              <option value="Capacity Admin">Capacity Admin</option>
-              <option value="NSight Admin">NSight Admin</option>
-            </select>
-          </div>
+            {/* Right Column - Role & Permissions */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Role & Permissions</h3>
+              
+              {/* Role */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Role
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => handleInputChange('role', e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="Employee" className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">Employee</option>
+                  <option value="Capacity Admin" className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">Capacity Admin</option>
+                  <option value="NSight Admin" className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">NSight Admin</option>
+                </select>
+              </div>
 
-          {/* Credentials */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Credentials
-            </label>
-            <select
-              value={formData.credentials}
-              onChange={(e) => handleInputChange('credentials', e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {credentialOptions.map(option => (
-                <option key={option} value={option} className="bg-slate-700">
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
+              {/* Credentials */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Credentials
+                </label>
+                <select
+                  value={formData.credentials}
+                  onChange={(e) => handleInputChange('credentials', e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {credentialOptions.map(option => (
+                    <option key={option} value={option} className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100">
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* App Access */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-3">
-              App Access
-            </label>
-            <div className="space-y-3">
-              {getAppOptions(formData.role).map(app => {
-                const IconComponent = app.icon;
-                const isSelected = formData.appAccess.includes(app.id);
-                
-                return (
-                  <button
-                    key={app.id}
-                    onClick={() => toggleAppAccess(app.id)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-blue-600 border-blue-500 text-white'
-                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
-                        isSelected ? 'bg-blue-500' : 'bg-slate-600'
-                      }`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium">{app.name}</span>
-                    </div>
-                    {isSelected && (
-                      <Check className="w-5 h-5" />
-                    )}
-                  </button>
-                );
-              })}
+              {/* App Access */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-3">
+                  App Access
+                </label>
+                <div className="space-y-3">
+                  {getAppOptions(formData.role).map(app => {
+                    const IconComponent = app.icon;
+                    const isSelected = formData.appAccess.includes(app.id);
+                    
+                    return (
+                      <button
+                        key={app.id}
+                        onClick={() => toggleAppAccess(app.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-500 text-white'
+                            : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
+                            isSelected ? 'bg-blue-500' : 'bg-slate-600'
+                          }`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium">{app.name}</span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-5 h-5" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-slate-700">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-slate-700">
           <Button
             onClick={handleDelete}
             className="bg-red-600 hover:bg-red-500 text-white flex items-center space-x-2"

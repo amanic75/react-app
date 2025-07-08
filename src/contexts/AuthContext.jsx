@@ -542,6 +542,8 @@ export const AuthProvider = ({ children }) => {
   // Delete user profile (for admins)
   const deleteUserProfile = async (userId) => {
     try {
+      console.log('🗑️ Attempting to delete user profile:', userId);
+      
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Delete timeout')), 3000)
       );
@@ -551,17 +553,26 @@ export const AuthProvider = ({ children }) => {
         .delete()
         .eq('id', userId);
 
-      const { error } = await Promise.race([deletePromise, timeoutPromise]);
+      const { data, error } = await Promise.race([deletePromise, timeoutPromise]);
 
       if (error) {
-        throw error;
+        console.error('❌ Supabase delete error:', error);
+        return { data: null, error: error };
       }
 
+      console.log('✅ User profile deleted successfully:', data);
       return { data: true, error: null };
     } catch (error) {
       console.error('❌ Delete user profile failed:', error);
-      // Return success to keep UI working
-      return { data: true, error: null };
+      
+      // Check if it's a timeout or other error
+      if (error.message === 'Delete timeout') {
+        console.log('⏱️ Delete operation timed out - database may be unavailable');
+        return { data: null, error: new Error('Delete operation timed out. Please try again.') };
+      }
+      
+      // For other errors, return the actual error
+      return { data: null, error: error };
     }
   };
 

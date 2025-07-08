@@ -289,17 +289,28 @@ const UserManagementPage = () => {
 
   const handleDeleteUser = async (userId) => {
     try {
-      const { error } = await deleteUserProfile(userId);
+      console.log('🔄 UserManagementPage: Deleting user with ID:', userId);
+      const { data, error } = await deleteUserProfile(userId);
+      
       if (error) {
-        console.error('Error deleting user:', error);
-        alert('Failed to delete user. Please try again.');
+        console.error('❌ UserManagementPage: Delete failed:', error);
+        alert(`Failed to delete user: ${error.message || error}`);
+        return;
+      }
+
+      console.log('✅ UserManagementPage: Delete successful, refreshing user list...');
+      
+      // Only refresh the users list if delete actually succeeded
+      const { data: refreshData, error: refreshError } = await getAllUsers();
+      if (refreshError) {
+        console.error('❌ UserManagementPage: Error refreshing users:', refreshError);
+        alert('User deleted but failed to refresh list. Please reload the page.');
         return;
       }
       
-      // Refresh the users list
-      const { data } = await getAllUsers();
-      if (data) {
-        const transformedUsers = data.map((profile) => ({
+      if (refreshData) {
+        console.log(`📝 UserManagementPage: Refreshed with ${refreshData.length} users`);
+        const transformedUsers = refreshData.map((profile) => ({
           id: profile.id,
           name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
           email: profile.email,
@@ -314,13 +325,14 @@ const UserManagementPage = () => {
           updated_at: profile.updated_at
         }));
         setUsers(transformedUsers);
+        alert('User deleted successfully!');
       }
       
       setIsEditModalOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error('Error in handleDeleteUser:', error);
-      alert('Failed to delete user. Please try again.');
+      console.error('❌ UserManagementPage: Unexpected error in handleDeleteUser:', error);
+      alert(`Unexpected error: ${error.message}`);
     }
   };
 

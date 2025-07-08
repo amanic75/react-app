@@ -10,7 +10,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp, changePassword } = useAuth();
+  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp, changePassword, getDashboardRoute, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -32,6 +32,18 @@ const UserManagementPage = () => {
   const [tempFilterStatus, setTempFilterStatus] = useState('all');
   const [tempFilterDomain, setTempFilterDomain] = useState('all');
   const [tempFilterApp, setTempFilterApp] = useState('all');
+
+  // Role-based access control - only Capacity Admin and NSight Admin can access user management
+  useEffect(() => {
+    if (!loading && userProfile) {
+      const allowedRoles = ['Capacity Admin', 'NSight Admin'];
+      if (!allowedRoles.includes(userProfile.role)) {
+        console.log(`🚫 Access denied to user management for role: ${userProfile.role}, redirecting to dashboard`);
+        const dashboardRoute = getDashboardRoute();
+        navigate(dashboardRoute, { replace: true });
+      }
+    }
+  }, [userProfile, loading, navigate, getDashboardRoute]);
 
   // Helper function to get app access based on role
   const getAppAccessByRole = (role) => {
@@ -101,6 +113,25 @@ const UserManagementPage = () => {
     // Load users only once on component mount
     loadUsers();
   }, []); // Removed getAllUsers dependency to prevent constant refetching
+
+  // Show loading while checking auth and permissions
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-slate-300">Loading...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Don't render anything if user doesn't have permission (redirect will happen)
+  if (userProfile && !['Capacity Admin', 'NSight Admin'].includes(userProfile.role)) {
+    return null;
+  }
 
   // Close filter dropdown when clicking outside
   useEffect(() => {

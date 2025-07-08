@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth.jsx';
+import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -8,28 +8,40 @@ import Button from '../components/ui/Button';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const { user, userProfile, loading, signIn, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard if already logged in
+  // Redirect to appropriate dashboard if already logged in
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard');
+    if (!loading && user && userProfile) {
+      const dashboardRoute = getDashboardRoute();
+      navigate(dashboardRoute);
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [user, userProfile, loading, navigate, getDashboardRoute]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSigningIn(true);
     
-    const result = login(email, password, keepSignedIn);
-    if (!result.success) {
-      setError(result.error);
-    } else {
-      navigate('/dashboard');
+    try {
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        setError(error.message || 'Login failed');
+        return;
+      }
+
+      // Don't redirect here - let useEffect handle it once userProfile is loaded
+      // The auth state change will trigger the redirect to the appropriate dashboard
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
@@ -65,7 +77,7 @@ const LoginPage = () => {
   );
 
   // Show loading while checking auth state
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -118,33 +130,20 @@ const LoginPage = () => {
               onRightIconClick={togglePasswordVisibility}
             />
 
-            {/* Keep me signed in checkbox */}
-            <div className="flex items-center">
-              <input
-                id="keep-signed-in"
-                type="checkbox"
-                checked={keepSignedIn}
-                onChange={(e) => setKeepSignedIn(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-400 rounded bg-slate-700"
-              />
-              <label htmlFor="keep-signed-in" className="ml-2 block text-sm text-slate-200">
-                Keep me signed in
-              </label>
-            </div>
-            
             <Button 
               type="submit" 
               className="w-full"
               size="lg"
+              disabled={isSigningIn}
             >
-              Sign In
+              {isSigningIn ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
           
           <div className="mt-6 text-sm text-slate-300">
             <p className="font-medium mb-2">Example Login Credentials:</p>
             <div className="space-y-1">
-              <p><span className="font-medium text-purple-300">Capacity Admin:</span> capacity@capacity.com / password</p>
+              <p><span className="font-medium text-purple-300">Capacity Admin:</span> admintest@capacity.com / password</p>
               <p><span className="font-medium text-indigo-300">NSight Admin:</span> nsight@nsight-inc.com / password</p>
               <p><span className="font-medium text-blue-300">Employee:</span> employee@domain.com / password</p>
             </div>

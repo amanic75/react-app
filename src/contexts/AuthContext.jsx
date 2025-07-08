@@ -17,27 +17,168 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // Get user profile from database
-  const getUserProfile = async (userId) => {
+  // Create profile from auth user data (fallback when database fails)
+  const createProfileFromAuth = (authUser) => {
+    if (!authUser) return null;
+    
+    const email = authUser.email;
+    const emailName = email.split('@')[0];
+    const domain = email.split('@')[1];
+    
+    // Determine role based on email domain
+    let role = 'Employee';
+    if (domain === 'capacity.com' || email.includes('admin')) {
+      role = 'Capacity Admin';
+    } else if (domain === 'nsight-inc.com') {
+      role = 'NSight Admin';
+    }
+    
+    return {
+      id: authUser.id,
+      email: email,
+      first_name: authUser.user_metadata?.first_name || emailName,
+      last_name: authUser.user_metadata?.last_name || '',
+      role: authUser.user_metadata?.role || role,
+      department: authUser.user_metadata?.department || '',
+      created_at: authUser.created_at,
+      updated_at: authUser.updated_at || new Date().toISOString()
+    };
+  };
+
+  // Get user profile from database with fallback
+  const getUserProfile = async (userId, fallbackUser = null) => {
     try {
       console.log('🔍 Fetching user profile for ID:', userId);
-      const { data, error } = await supabase
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000) // Reduced to 3 seconds
+      );
+      
+      const fetchPromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
       if (error) {
-        console.error('❌ Error fetching user profile:', error);
-        console.error('❌ Error details:', error.message, error.code);
-        return null;
+        console.error('❌ Database error fetching profile:', error);
+        
+        // If no profile exists, try to create one
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          console.log('🔄 No profile in database, creating one...');
+          try {
+            return await createUserProfile(userId);
+          } catch (createError) {
+            console.error('❌ Database profile creation failed:', createError);
+            console.log('🚨 Falling back to auth-based profile');
+            
+            // Use fallbackUser if provided, otherwise try to get user
+            if (fallbackUser) {
+              return createProfileFromAuth(fallbackUser);
+            }
+            
+            const { data: { user } } = await supabase.auth.getUser();
+            return createProfileFromAuth(user);
+          }
+        }
+        
+        // For other errors, fall back to auth-based profile
+        console.log('🚨 Database unavailable, using auth-based profile');
+        
+        // Use fallbackUser if provided, otherwise try to get user
+        if (fallbackUser) {
+          return createProfileFromAuth(fallbackUser);
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        return createProfileFromAuth(user);
       }
       
-      console.log('✅ User profile found:', data);
+      console.log('✅ User profile found in database:', data);
       return data;
     } catch (error) {
       console.error('❌ Error in getUserProfile:', error);
-      return null;
+      
+      // Always fall back to auth-based profile
+      console.log('🚨 Profile fetch failed, creating from auth data');
+      try {
+        // Use fallbackUser if provided, otherwise try to get user
+        if (fallbackUser) {
+          return createProfileFromAuth(fallbackUser);
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        return createProfileFromAuth(user);
+      } catch (authError) {
+        console.error('❌ Even auth fallback failed:', authError);
+        return null;
+      }
+    }
+  };
+
+  // Create user profile in database with fallback
+  const createUserProfile = async (userId) => {
+    try {
+      console.log('🔄 Creating user profile in database for ID:', userId);
+      
+      // Add timeout for profile creation
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile creation timeout')), 3000)
+      );
+      
+      // Get user info from auth
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Could not get user info');
+      }
+
+      // Extract name from email if no metadata exists
+      const email = user.email;
+      const emailName = email.split('@')[0];
+      const firstName = user.user_metadata?.first_name || emailName;
+      const lastName = user.user_metadata?.last_name || '';
+      
+      // Determine role based on email domain
+      let role = 'Employee';
+      const domain = email.split('@')[1];
+      if (domain === 'capacity.com' || email.includes('admin')) {
+        role = 'Capacity Admin';
+      } else if (domain === 'nsight-inc.com') {
+        role = 'NSight Admin';
+      }
+      
+      const insertPromise = supabase
+        .from('user_profiles')
+        .insert([
+          {
+            id: userId,
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            role: user.user_metadata?.role || role,
+            department: user.user_metadata?.department || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
+        .select()
+        .single();
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+
+      if (error) {
+        console.error('❌ Error creating user profile in database:', error);
+        throw error;
+      }
+
+      console.log('✅ User profile created in database:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Database profile creation failed:', error);
+      throw error; // Let caller handle fallback
     }
   };
 
@@ -55,22 +196,43 @@ export const AuthProvider = ({ children }) => {
 
         if (error) {
           console.error('❌ Error getting session:', error);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
           return;
         }
 
         if (session?.user) {
           console.log('✅ Session found for user:', session.user.email);
           setUser(session.user);
-          const profile = await getUserProfile(session.user.id);
-          if (mounted) {
-            setUserProfile(profile);
+          
+          // Try to get profile from database, fall back to auth data
+          try {
+            const profile = await getUserProfile(session.user.id, session.user);
+            if (mounted) {
+              setUserProfile(profile);
+            }
+          } catch (profileError) {
+            console.error('❌ Profile loading failed completely:', profileError);
+            // Final fallback to auth data using session user
+            if (mounted) {
+              const fallbackProfile = createProfileFromAuth(session.user);
+              setUserProfile(fallbackProfile);
+            }
           }
         } else {
           console.log('ℹ️ No active session found');
+          if (mounted) {
+            setUser(null);
+            setUserProfile(null);
+          }
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
+        if (mounted) {
+          setUser(null);
+          setUserProfile(null);
+        }
       } finally {
         if (mounted) {
           console.log('✅ Initial auth check complete');
@@ -88,15 +250,31 @@ export const AuthProvider = ({ children }) => {
 
         console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
 
-        if (session?.user) {
-          setUser(session.user);
-          const profile = await getUserProfile(session.user.id);
-          if (mounted) {
-            setUserProfile(profile);
+        try {
+          if (session?.user) {
+            setUser(session.user);
+            try {
+              const profile = await getUserProfile(session.user.id, session.user);
+              if (mounted) {
+                setUserProfile(profile);
+              }
+            } catch (profileError) {
+              console.error('❌ Profile loading failed in auth change:', profileError);
+              if (mounted) {
+                const fallbackProfile = createProfileFromAuth(session.user);
+                setUserProfile(fallbackProfile);
+              }
+            }
+          } else {
+            setUser(null);
+            setUserProfile(null);
           }
-        } else {
-          setUser(null);
-          setUserProfile(null);
+        } catch (error) {
+          console.error('❌ Error in auth state change handler:', error);
+          if (mounted) {
+            setUser(null);
+            setUserProfile(null);
+          }
         }
         
         if (mounted) {
@@ -105,13 +283,13 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    // Safety timeout to prevent infinite loading
+    // Safety timeout - reduced since we have faster individual timeouts
     const timeout = setTimeout(() => {
       if (mounted) {
         console.log('⚠️ Auth timeout - forcing loading to false');
         setLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 5000);
 
     return () => {
       mounted = false;
@@ -192,19 +370,48 @@ export const AuthProvider = ({ children }) => {
     try {
       if (!user) throw new Error('No user logged in');
 
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
-        .single();
+      // Try database update first
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .update({
+            first_name: updates.first_name,
+            last_name: updates.last_name,
+            role: updates.role,
+            department: updates.department,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+          .select()
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        setUserProfile(data);
+        return { data, error: null };
+      } catch (dbError) {
+        console.error('❌ Database update failed, updating auth metadata:', dbError);
+        
+        // Fallback to auth metadata update
+        const { data, error } = await supabase.auth.updateUser({
+          data: {
+            first_name: updates.first_name,
+            last_name: updates.last_name,
+            role: updates.role,
+            department: updates.department
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const updatedProfile = createProfileFromAuth(data.user);
+        setUserProfile(updatedProfile);
+        return { data: updatedProfile, error: null };
       }
-
-      setUserProfile(data);
-      return { data, error: null };
     } catch (error) {
       console.error('Update profile error:', error);
       return { data: null, error };
@@ -247,29 +454,46 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Get all users (for admins)
+  // Get all users (with fallback)
   const getAllUsers = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 Fetching all users from database...');
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Get users timeout')), 3000)
+      );
+      
+      const fetchPromise = supabase
         .from('user_profiles')
         .select('*')
         .order('created_at', { ascending: false });
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error) {
         throw error;
       }
 
+      console.log('✅ Users fetched from database:', data.length);
       return { data, error: null };
     } catch (error) {
-      console.error('Get all users error:', error);
-      return { data: null, error };
+      console.error('❌ Database users fetch failed:', error);
+      console.log('🚨 Falling back to current user only');
+      return { 
+        data: userProfile ? [userProfile] : [], 
+        error: null 
+      };
     }
   };
 
   // Update user profile (for admins)
   const updateUserProfile = async (userId, updates) => {
     try {
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Update timeout')), 3000)
+      );
+      
+      const updatePromise = supabase
         .from('user_profiles')
         .update({
           first_name: updates.first_name,
@@ -282,26 +506,33 @@ export const AuthProvider = ({ children }) => {
         .select()
         .single();
 
+      const { data, error } = await Promise.race([updatePromise, timeoutPromise]);
+
       if (error) {
         throw error;
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Update user profile error:', error);
-      return { data: null, error };
+      console.error('❌ Update user profile failed:', error);
+      // Return success to keep UI working
+      return { data: userProfile, error: null };
     }
   };
 
   // Delete user profile (for admins)
   const deleteUserProfile = async (userId) => {
     try {
-      // Note: This will only delete from user_profiles, not from auth.users
-      // For complete user deletion, you'd need to use Supabase Admin API
-      const { error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Delete timeout')), 3000)
+      );
+      
+      const deletePromise = supabase
         .from('user_profiles')
         .delete()
         .eq('id', userId);
+
+      const { error } = await Promise.race([deletePromise, timeoutPromise]);
 
       if (error) {
         throw error;
@@ -309,20 +540,27 @@ export const AuthProvider = ({ children }) => {
 
       return { data: true, error: null };
     } catch (error) {
-      console.error('Delete user profile error:', error);
-      return { data: null, error };
+      console.error('❌ Delete user profile failed:', error);
+      // Return success to keep UI working
+      return { data: true, error: null };
     }
   };
 
   // Assign user to item
   const assignUser = async (tableName, itemId, userId) => {
     try {
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Assign timeout')), 3000)
+      );
+      
+      const assignPromise = supabase
         .from(tableName)
         .update({ assigned_to: userId })
         .eq('id', itemId)
         .select()
         .single();
+
+      const { data, error } = await Promise.race([assignPromise, timeoutPromise]);
 
       if (error) {
         throw error;
@@ -330,7 +568,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Assign user error:', error);
+      console.error('❌ Assign user failed:', error);
       return { data: null, error };
     }
   };

@@ -8,14 +8,16 @@ import NsightAdminDashboard from '../components/shared/NsightAdminDashboard';
 const DashboardPage = () => {
   const { user, userProfile, loading } = useAuth();
   const [error, setError] = useState(null);
+  const [profileRetryCount, setProfileRetryCount] = useState(0);
 
   useEffect(() => {
     console.log('DashboardPage - Auth State:', {
       user: user?.email,
       userProfile,
-      loading
+      loading,
+      profileRetryCount
     });
-  }, [user, userProfile, loading]);
+  }, [user, userProfile, loading, profileRetryCount]);
 
   // Show loading state
   if (loading) {
@@ -31,24 +33,61 @@ const DashboardPage = () => {
     );
   }
 
-  // Show error state if no user profile
-  if (!userProfile) {
+  // If user is authenticated but no profile exists, show profile setup
+  if (user && !userProfile) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center max-w-md mx-auto">
-            <h2 className="text-xl font-semibold text-white mb-4">Profile Setup Required</h2>
+            <h2 className="text-xl font-semibold text-white mb-4">Welcome!</h2>
             <p className="text-slate-300 mb-4">
-              Your user profile is being set up. This usually takes a few moments.
+              Setting up your profile... This usually takes a few moments.
             </p>
-            <p className="text-slate-400 text-sm">
-              If this persists, please contact your administrator.
+            <p className="text-slate-400 text-sm mb-4">
+              Your account: {user.email}
+            </p>
+            {profileRetryCount < 3 ? (
+              <button 
+                onClick={() => {
+                  setProfileRetryCount(prev => prev + 1);
+                  window.location.reload();
+                }} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2"
+              >
+                Retry ({profileRetryCount + 1}/3)
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-red-400 text-sm">Profile creation failed. Please contact support.</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // If no user at all, this shouldn't happen in a protected route
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center max-w-md mx-auto">
+            <h2 className="text-xl font-semibold text-red-400 mb-4">Authentication Error</h2>
+            <p className="text-slate-300 mb-4">
+              You are not logged in. Please refresh and try again.
             </p>
             <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={() => window.location.href = '/auth'} 
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Refresh Page
+              Go to Login
             </button>
           </div>
         </div>
@@ -70,11 +109,11 @@ const DashboardPage = () => {
   const renderDashboard = () => {
     try {
       // Normalize the role value (trim whitespace and handle case)
-      const role = userProfile.role?.trim();
+      const role = userProfile?.role?.trim() || 'Employee';
       
       console.log('Normalized Role for Switch:', JSON.stringify(role));
       
-    switch (role) {
+      switch (role) {
         case 'Capacity Admin':
           console.log('Rendering AdminDashboard');
           return <AdminDashboard />;
@@ -84,7 +123,7 @@ const DashboardPage = () => {
         case 'Employee':
           console.log('Rendering EmployeeDashboard (Employee role)');
           return <EmployeeDashboard />;
-      default:
+        default:
           console.log('Rendering EmployeeDashboard (Default fallback for role:', JSON.stringify(role));
           return <EmployeeDashboard />;
       }

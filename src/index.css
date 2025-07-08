@@ -144,4 +144,53 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force dark theme for elements with 'dark' class */
+.dark {
+  color-scheme: dark;
+}
+
+/* Override light theme for elements with 'dark' class */
+.dark .bg-slate-900 {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+}
+
+.dark .bg-slate-800 {
+  background-color: rgb(30 41 59) !important; /* slate-800 */
+}
+
+.dark .bg-slate-700 {
+  background-color: rgb(51 65 85) !important; /* slate-700 */
+}
+
+.dark .bg-slate-600 {
+  background-color: rgb(71 85 105) !important; /* slate-600 */
+}
+
+.dark .bg-slate-700\/50 {
+  background-color: rgb(51 65 85 / 0.5) !important;
+}
+
+.dark .text-slate-100,
+.dark .text-slate-200 {
+  color: rgb(248 250 252) !important; /* slate-50 */
+}
+
+.dark .text-slate-300,
+.dark .text-slate-400 {
+  color: rgb(148 163 184) !important; /* slate-400 */
+}
+
+.dark .text-slate-500 {
+  color: rgb(100 116 139) !important; /* slate-500 */
+}
+
+.dark .border-slate-600,
+.dark .border-slate-700 {
+  border-color: rgb(71 85 105) !important; /* slate-600 */
+}
+
+.dark .placeholder-slate-400::placeholder {
+  color: rgb(148 163 184) !important; /* slate-400 */
 } 

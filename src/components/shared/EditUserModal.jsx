@@ -8,6 +8,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
     name: '',
     email: '',
     contact: '',
+    role: '',
     credentials: '',
     appAccess: []
   });
@@ -36,7 +37,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
 
   const getDefaultCredentials = (userRole) => {
     switch (userRole) {
-      case 'Admin':
+      case 'Capacity Admin':
         return 'admin/secure pass';
       case 'NSight Admin':
         return 'nsight-admin/enterprise pass';
@@ -46,17 +47,49 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
     }
   };
 
+  const getAppAccessByRole = (role) => {
+    switch (role) {
+      case 'Capacity Admin':
+        return ['formulas', 'suppliers', 'raw-materials'];
+      case 'NSight Admin':
+        return ['developer-mode', 'existing-company-mode'];
+      case 'Employee':
+        return ['formulas'];
+      default:
+        return ['formulas'];
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setFormData({
         name: user.name || '',
         email: user.email || '',
         contact: user.contact || '',
+        role: user.role || 'Employee',
         credentials: user.credentials || getDefaultCredentials(user.role),
         appAccess: user.appAccess || []
       });
     }
   }, [user]);
+
+  // Update app access and credentials when role changes
+  useEffect(() => {
+    if (formData.role && user) {
+      const newAppAccess = getAppAccessByRole(formData.role);
+      const newCredentials = getDefaultCredentials(formData.role);
+      
+      // Only update if the values are actually different to prevent infinite loops
+      if (JSON.stringify(formData.appAccess) !== JSON.stringify(newAppAccess) || 
+          formData.credentials !== newCredentials) {
+        setFormData(prev => ({
+          ...prev,
+          appAccess: newAppAccess,
+          credentials: newCredentials
+        }));
+      }
+    }
+  }, [formData.role, user]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -138,7 +171,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
         {/* Content */}
         <div className="p-6 space-y-4">
           {/* Change Password Button - Only for Admins */}
-          {currentUserRole === 'admin' && (
+          {currentUserRole === 'Capacity Admin' && (
             <div className="pb-4 border-b border-slate-700">
               <Button
                 onClick={handleChangePassword}
@@ -190,6 +223,22 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
             />
           </div>
 
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium text-slate-200 mb-2">
+              Role
+            </label>
+            <select
+              value={formData.role}
+              onChange={(e) => handleInputChange('role', e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="Employee">Employee</option>
+              <option value="Capacity Admin">Capacity Admin</option>
+              <option value="NSight Admin">NSight Admin</option>
+            </select>
+          </div>
+
           {/* Credentials */}
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">
@@ -214,7 +263,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
               App Access
             </label>
             <div className="space-y-3">
-              {getAppOptions(user?.role).map(app => {
+              {getAppOptions(formData.role).map(app => {
                 const IconComponent = app.icon;
                 const isSelected = formData.appAccess.includes(app.id);
                 

@@ -691,64 +691,77 @@ const UserManagementPage = () => {
 
           {/* Table */}
           <div className="bg-slate-800 rounded-lg shadow-sm overflow-hidden border border-slate-700">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-700 bg-slate-750">
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Name</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">ID</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Email</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Role</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Contact</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">App Access</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300">Credentials</th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-300"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedUsers.map((employee, index) => (
-                  <tr 
-                    key={employee.id} 
-                    className="border-b border-slate-700 hover:bg-slate-700 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm text-slate-100 font-medium">{employee.name}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">{employee.id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
-                      <a href={`mailto:${employee.email}`} className="text-blue-400 hover:text-blue-300 underline">
-                        {employee.email}
-                      </a>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(employee.role)}`}>
-                        {employee.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">{employee.contact || ''}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        {employee.appAccess.map((app, appIndex) => (
-                          <div
-                            key={app}
-                            className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors"
-                            title={app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          >
-                            {getAppIcon(app)}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">{employee.credentials}</td>
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleEditUser(employee)}
-                        className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-600 rounded-md transition-colors"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed min-w-[1240px]">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-750">
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[180px]">Name</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[120px]">ID</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[220px]">Email</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[140px]">Role</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[120px]">Contact</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[160px]">App Access</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[180px]">Credentials</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-slate-300 w-[80px]">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {sortedUsers.map((employee, index) => (
+                    <tr 
+                      key={employee.id} 
+                      className="border-b border-slate-700 hover:bg-slate-700 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm text-slate-100 font-medium truncate" title={employee.name}>
+                        {employee.name}
+                      </td>
+                                             <td className="px-6 py-4">
+                         <span className="inline-flex items-center px-2 py-1 bg-slate-700 text-slate-200 text-xs font-mono rounded border border-slate-600">
+                           #{employee.id}
+                         </span>
+                       </td>
+                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.email}>
+                        <a href={`mailto:${employee.email}`} className="text-blue-400 hover:text-blue-300 underline truncate block">
+                          {employee.email}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium truncate ${getRoleColor(employee.role)}`}>
+                          {employee.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.contact || ''}>
+                        {employee.contact || '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-1 overflow-x-auto">
+                          {employee.appAccess.map((app, appIndex) => (
+                            <div
+                              key={app}
+                              className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors flex-shrink-0"
+                              title={app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            >
+                              {getAppIcon(app)}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.credentials}>
+                        {employee.credentials}
+                      </td>
+                      <td className="px-6 py-4">
+                        <button 
+                          onClick={() => handleEditUser(employee)}
+                          className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-600 rounded-md transition-colors"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

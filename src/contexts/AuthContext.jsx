@@ -50,6 +50,22 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔍 Fetching user profile for ID:', userId);
       
+      // Check if this user was recently deleted (within last 10 minutes)
+      const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
+      if (recentlyDeleted) {
+        const deleteTime = parseInt(recentlyDeleted);
+        const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+        console.log('🔒 Checking deletion marker for user:', userId, 'deleteTime:', new Date(deleteTime), 'threshold:', new Date(tenMinutesAgo));
+        if (deleteTime > tenMinutesAgo) {
+          console.log('⚠️ User was recently deleted, not auto-creating profile');
+          return null;
+        } else {
+          // Clean up expired deletion marker
+          console.log('🧹 Cleaning up expired deletion marker for user:', userId);
+          localStorage.removeItem(`deleted_user_${userId}`);
+        }
+      }
+      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), 3000) // Reduced to 3 seconds
@@ -66,9 +82,18 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         console.error('❌ Database error fetching profile:', error);
         
-        // If no profile exists, try to create one
+        // If no profile exists, try to create one (unless recently deleted)
         if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-          console.log('🔄 No profile in database, creating one...');
+          console.log('🔄 No profile in database for user:', userId);
+          
+          // Double-check deletion marker before creating
+          const stillDeleted = localStorage.getItem(`deleted_user_${userId}`);
+          if (stillDeleted) {
+            console.log('🚫 User is marked as deleted, aborting profile creation');
+            return null;
+          }
+          
+          console.log('🆕 Creating new profile for user:', userId);
           try {
             return await createUserProfile(userId);
           } catch (createError) {
@@ -124,6 +149,21 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔄 Creating user profile in database for ID:', userId);
       
+      // Check one more time if user was recently deleted (within last 10 minutes)
+      const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
+      if (recentlyDeleted) {
+        const deleteTime = parseInt(recentlyDeleted);
+        const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+        if (deleteTime > tenMinutesAgo) {
+          console.log('🚫 Aborting profile creation - user was recently deleted:', userId);
+          throw new Error('User was recently deleted');
+        } else {
+          // Clean up expired deletion marker
+          console.log('🧹 Create profile: Cleaning up expired deletion marker for user:', userId);
+          localStorage.removeItem(`deleted_user_${userId}`);
+        }
+      }
+      
       // Add timeout for profile creation
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile creation timeout')), 3000)
@@ -134,6 +174,8 @@ export const AuthProvider = ({ children }) => {
       if (userError || !user) {
         throw new Error('Could not get user info');
       }
+
+      console.log('👤 Creating profile for authenticated user:', user.email, 'requested userId:', userId);
 
       // Extract name from email if no metadata exists
       const email = user.email;
@@ -204,6 +246,26 @@ export const AuthProvider = ({ children }) => {
 
         if (session?.user) {
           console.log('✅ Session found for user:', session.user.email);
+          
+          // Check if this user was recently deleted
+          const recentlyDeleted = localStorage.getItem(`deleted_user_${session.user.id}`);
+          if (recentlyDeleted) {
+            const deleteTime = parseInt(recentlyDeleted);
+            const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+            if (deleteTime > tenMinutesAgo) {
+              console.log('🚫 Initial session: User was recently deleted, not setting profile:', session.user.email);
+              if (mounted) {
+                setUser(null);
+                setUserProfile(null);
+                setLoading(false);
+              }
+              return;
+            } else {
+              console.log('🧹 Initial session: Cleaning up expired deletion marker');
+              localStorage.removeItem(`deleted_user_${session.user.id}`);
+            }
+          }
+          
           setUser(session.user);
           
           // Try to get profile from database, fall back to auth data
@@ -252,6 +314,27 @@ export const AuthProvider = ({ children }) => {
 
         try {
           if (session?.user) {
+            console.log('👤 Processing auth state change for user:', session.user.id, session.user.email);
+            
+            // Check if this user was recently deleted
+            const recentlyDeleted = localStorage.getItem(`deleted_user_${session.user.id}`);
+            if (recentlyDeleted) {
+              const deleteTime = parseInt(recentlyDeleted);
+              const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+              if (deleteTime > tenMinutesAgo) {
+                console.log('🚫 Auth state change: User was recently deleted, not setting profile:', session.user.email);
+                // Don't set user or profile for recently deleted users
+                if (mounted) {
+                  setUser(null);
+                  setUserProfile(null);
+                }
+                return;
+              } else {
+                console.log('🧹 Auth state change: Cleaning up expired deletion marker');
+                localStorage.removeItem(`deleted_user_${session.user.id}`);
+              }
+            }
+            
             setUser(session.user);
             try {
               const profile = await getUserProfile(session.user.id, session.user);
@@ -339,6 +422,29 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         throw error;
+      }
+
+      // Check if this account was recently deleted
+      if (data.user) {
+        console.log('✅ Authentication successful, checking if account exists...');
+        const recentlyDeleted = localStorage.getItem(`deleted_user_${data.user.id}`);
+        if (recentlyDeleted) {
+          const deleteTime = parseInt(recentlyDeleted);
+          const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+          if (deleteTime > tenMinutesAgo) {
+            console.log('🚫 Attempted login with deleted account:', data.user.email);
+            
+            // Sign them out immediately
+            await supabase.auth.signOut();
+            
+            // Return a clear error message
+            throw new Error('This account has been deleted and is no longer available. Please contact your administrator if you believe this is an error.');
+          } else {
+            // Clean up expired deletion marker
+            console.log('🧹 Cleaning up expired deletion marker during login');
+            localStorage.removeItem(`deleted_user_${data.user.id}`);
+          }
+        }
       }
 
       return { data, error: null };
@@ -473,7 +579,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Get all users (with fallback)
+  // Get all users (with fallback) - Excludes soft-deleted users
   const getAllUsers = async () => {
     try {
       console.log('🔍 Fetching all users from database...');
@@ -539,39 +645,53 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Delete user profile (for admins)
+  // Delete user profile (for admins) - Simple delete from database
   const deleteUserProfile = async (userId) => {
     try {
-      console.log('🗑️ Attempting to delete user profile:', userId);
+      console.log('🗑️ Deleting user profile for ID:', userId);
+      
+      // CRITICAL: Set deletion marker BEFORE deleting from database
+      // This prevents race conditions where auth listeners recreate the user
+      localStorage.setItem(`deleted_user_${userId}`, Date.now().toString());
+      console.log('🔒 Set deletion marker for user BEFORE deletion:', userId);
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Delete timeout')), 3000)
       );
       
+      // Delete from user_profiles table
+      console.log('🗃️ Deleting from user_profiles table...');
       const deletePromise = supabase
         .from('user_profiles')
         .delete()
         .eq('id', userId);
 
-      const { data, error } = await Promise.race([deletePromise, timeoutPromise]);
+      const { error } = await Promise.race([deletePromise, timeoutPromise]);
 
       if (error) {
-        console.error('❌ Supabase delete error:', error);
+        console.error('❌ Error deleting user profile:', error);
+        // Keep the deletion marker even if database deletion fails
+        // This prevents auto-recreation attempts
+        console.log('🔒 Keeping deletion marker due to database error');
         return { data: null, error: error };
       }
 
-      console.log('✅ User profile deleted successfully:', data);
+      console.log('✅ User profile deleted from database');
+      console.log('✅ Delete successful - deletion marker will prevent auto-recreation');
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Delete user profile failed:', error);
+      console.error('❌ Delete operation failed:', error);
       
       // Check if it's a timeout or other error
       if (error.message === 'Delete timeout') {
         console.log('⏱️ Delete operation timed out - database may be unavailable');
+        console.log('🔒 Keeping deletion marker due to timeout');
         return { data: null, error: new Error('Delete operation timed out. Please try again.') };
       }
       
       // For other errors, return the actual error
+      // Keep deletion marker to prevent auto-recreation
+      console.log('🔒 Keeping deletion marker due to error');
       return { data: null, error: error };
     }
   };

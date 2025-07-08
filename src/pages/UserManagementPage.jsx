@@ -290,6 +290,22 @@ const UserManagementPage = () => {
   const handleDeleteUser = async (userId) => {
     try {
       console.log('🔄 UserManagementPage: Deleting user with ID:', userId);
+      
+      // Check if trying to delete the currently authenticated user
+      if (user && user.id === userId) {
+        alert('Cannot delete your own account while logged in. Please have another admin delete your account, or sign out first.');
+        return;
+      }
+      
+      // Find the user being deleted to get their email
+      const userToDelete = users.find(u => u.id === userId);
+      if (!userToDelete) {
+        alert('User not found in current list.');
+        return;
+      }
+      
+      console.log('🔄 UserManagementPage: Deleting user:', userToDelete.email);
+      
       const { data, error } = await deleteUserProfile(userId);
       
       if (error) {
@@ -299,6 +315,9 @@ const UserManagementPage = () => {
       }
 
       console.log('✅ UserManagementPage: Delete successful, refreshing user list...');
+      
+      // Wait a moment before refreshing to allow any auth state changes to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Only refresh the users list if delete actually succeeded
       const { data: refreshData, error: refreshError } = await getAllUsers();
@@ -325,7 +344,15 @@ const UserManagementPage = () => {
           updated_at: profile.updated_at
         }));
         setUsers(transformedUsers);
-        alert('User deleted successfully!');
+        
+        // Check if the user was actually removed
+        const userStillExists = transformedUsers.some(u => u.id === userId);
+        if (userStillExists) {
+          console.warn('⚠️ UserManagementPage: User still exists after deletion - likely auto-recreated');
+          alert('User profile was deleted but may have been automatically recreated. This can happen if the user is currently authenticated in another session.');
+        } else {
+          alert('User deleted successfully!');
+        }
       }
       
       setIsEditModalOpen(false);

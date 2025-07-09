@@ -47,19 +47,29 @@ const SystemHealthPage = () => {
     }
   }, [userProfile, loading, navigate, getDashboardRoute]);
 
-  // Fetch metrics on component mount
+  // Track user activity and fetch metrics on component mount
   useEffect(() => {
     fetchMetrics();
-  }, []);
+    
+    // Track that user is active on this page
+    if (userProfile?.id) {
+      trackUserActivity();
+    }
+  }, [userProfile?.id]);
 
-  // Auto-refresh metrics every 30 seconds
+  // Auto-refresh metrics every 30 seconds and track activity
   useEffect(() => {
     const interval = setInterval(() => {
       fetchMetrics();
+      
+      // Also track activity to keep user marked as active
+      if (userProfile?.id) {
+        trackUserActivity();
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [userProfile?.id]);
 
   // If user doesn't have access, don't render anything
   if (userProfile && userProfile.role !== 'Capacity Admin') {
@@ -88,6 +98,32 @@ const SystemHealthPage = () => {
     }
     // In production, use Vercel serverless functions
     return '/api/system';
+  };
+
+  // Track user activity to update active user count
+  const trackUserActivity = async () => {
+    if (!userProfile?.id) return;
+    
+    try {
+      const baseUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+        ? 'http://localhost:3001/api'
+        : '/api';
+        
+      await fetch(`${baseUrl}/track-activity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userProfile.id,
+          page: 'system-health'
+        })
+      });
+      
+      console.log('👤 User activity tracked for System Health page');
+    } catch (error) {
+      console.log('⚠️ Activity tracking failed (non-critical):', error.message);
+    }
   };
 
   // Fetch real metrics from API endpoints (optimized with staggered requests)

@@ -72,14 +72,26 @@ const SystemHealthPage = () => {
     );
   }
 
+  // Get environment-aware API base URL
+  const getApiBaseUrl = () => {
+    // In development, use local Express server
+    if (import.meta.env.DEV || window.location.hostname === 'localhost') {
+      return 'http://localhost:3001/api/system';
+    }
+    // In production, use Vercel serverless functions
+    return '/api/system';
+  };
+
   // Fetch real metrics from API endpoints (optimized with staggered requests)
   const fetchMetrics = async () => {
     setIsLoadingMetrics(true);
+    const baseUrl = getApiBaseUrl();
+    
     try {
       // Fetch critical metrics first (server and database)
       const [serverRes, databaseRes] = await Promise.all([
-        fetch('http://localhost:3001/api/system/server-status'),
-        fetch('http://localhost:3001/api/system/database-health')
+        fetch(`${baseUrl}/server-status`),
+        fetch(`${baseUrl}/database-health`)
       ]);
 
       const [serverData, databaseData] = await Promise.all([
@@ -87,37 +99,37 @@ const SystemHealthPage = () => {
         databaseRes.json()
       ]);
 
-      // Update UI with critical metrics immediately
+      // Update UI with critical metrics immediately - adapt data structure for production
       setInfrastructureMetrics(prev => ({
         ...prev,
         serverStatus: {
           uptime: serverData.uptime,
           responseTime: serverData.responseTime,
           status: serverData.status,
-          lastCheck: serverData.lastCheck,
+          lastCheck: serverData.lastCheck || serverData.timestamp,
           details: {
-            actualUptimeSeconds: serverData.actualUptimeSeconds,
-            actualUptimeFormatted: serverData.actualUptimeFormatted
+            actualUptimeSeconds: serverData.actualUptimeSeconds || 'N/A',
+            actualUptimeFormatted: serverData.actualUptimeFormatted || 'Serverless Function'
           }
         },
         database: {
-          queryTime: databaseData.queryTime,
-          connections: databaseData.connections,
-          maxConnections: databaseData.maxConnections,
-          slowQueries: databaseData.slowQueries,
-          status: databaseData.status,
+          queryTime: databaseData.queryTime || databaseData.averageResponseTime,
+          connections: databaseData.connections || 'Managed',
+          maxConnections: databaseData.maxConnections || 'Auto-scaling',
+          slowQueries: databaseData.slowQueries || '0',
+          status: databaseData.status || databaseData.overallHealth,
           details: {
-            realUserCount: databaseData.realUserCount,
-            hasQueryError: databaseData.hasQueryError,
-            errorMessage: databaseData.errorMessage
+            realUserCount: databaseData.realUserCount || 'N/A',
+            hasQueryError: databaseData.hasQueryError || false,
+            errorMessage: databaseData.errorMessage || null
           }
         }
       }));
 
       // Then fetch secondary metrics (can be cached)
       const [resourcesRes, networkRes] = await Promise.all([
-        fetch('http://localhost:3001/api/system/resources'),
-        fetch('http://localhost:3001/api/system/network')
+        fetch(`${baseUrl}/resources`),
+        fetch(`${baseUrl}/network`)
       ]);
 
       const [resourcesData, networkData] = await Promise.all([
@@ -125,21 +137,28 @@ const SystemHealthPage = () => {
         networkRes.json()
       ]);
 
-      // Update with all metrics
+      // Update with all metrics - adapt data structure for production
       setInfrastructureMetrics(prev => ({
         ...prev,
         resources: {
-          cpuUsage: resourcesData.cpuUsage,
-          memoryUsage: resourcesData.memoryUsage,
-          diskUsage: resourcesData.diskUsage,
-          status: resourcesData.status,
-          details: resourcesData.details
+          cpuUsage: resourcesData.cpuUsage || resourcesData.cpu?.usagePercent,
+          memoryUsage: resourcesData.memoryUsage || resourcesData.memory?.usagePercent,
+          diskUsage: resourcesData.diskUsage || resourcesData.disk?.usagePercent,
+          status: resourcesData.status || resourcesData.overallStatus,
+          details: resourcesData.details || {
+            totalMemory: resourcesData.memory?.total,
+            cpuCores: resourcesData.cpu?.cores,
+            environment: resourcesData.system?.environment
+          }
         },
         network: {
-          latency: networkData.latency,
-          bandwidth: networkData.bandwidth,
-          status: networkData.status,
-          details: networkData.details
+          latency: networkData.latency || networkData.averageLatency,
+          bandwidth: networkData.bandwidth || 'Auto-scaling',
+          status: networkData.status || networkData.overallStatus,
+          details: networkData.details || {
+            tests: networkData.tests,
+            environment: networkData.environment
+          }
         }
       }));
       

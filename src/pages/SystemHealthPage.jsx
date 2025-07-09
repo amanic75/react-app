@@ -22,9 +22,9 @@ const SystemHealthPage = () => {
   const [refreshTime, setRefreshTime] = useState(new Date());
   const [infrastructureMetrics, setInfrastructureMetrics] = useState({
     serverStatus: { uptime: '--', responseTime: '--', status: 'loading' },
-    database: { queryTime: '--', connections: 0, maxConnections: 100, slowQueries: 0, status: 'loading' },
-    resources: { cpuUsage: 0, memoryUsage: 0, diskUsage: 0, status: 'loading' },
-    network: { latency: '--', bandwidth: '--', status: 'loading' }
+    database: { queryTime: '--', connections: 'Loading...', maxConnections: 'Loading...', slowQueries: '0', status: 'loading' },
+    resources: { cpuUsage: '0%', memoryUsage: '0%', diskUsage: '0%', status: 'loading' },
+    network: { latency: '--', bandwidth: 'Loading...', status: 'loading' }
   });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
@@ -317,15 +317,27 @@ const SystemHealthPage = () => {
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Connections</span>
                     <span className="text-slate-100 font-mono">
-                      {infrastructureMetrics.database.connections}/{infrastructureMetrics.database.maxConnections}
+                      {infrastructureMetrics.database.connections}
+                      {infrastructureMetrics.database.maxConnections !== 'Auto-scaling' && 
+                        `/${infrastructureMetrics.database.maxConnections}`}
                     </span>
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div 
-                      className="bg-green-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${(infrastructureMetrics.database.connections / infrastructureMetrics.database.maxConnections) * 100}%` }}
-                    ></div>
-                  </div>
+                  {/* Only show progress bar for numeric values */}
+                  {typeof infrastructureMetrics.database.connections === 'number' && 
+                   typeof infrastructureMetrics.database.maxConnections === 'number' && (
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className="bg-green-400 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.min((infrastructureMetrics.database.connections / infrastructureMetrics.database.maxConnections) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  )}
+                  {/* Show indicator for managed connections */}
+                  {infrastructureMetrics.database.connections === 'Managed' && (
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div className="bg-green-400 h-2 rounded-full transition-all duration-300 w-full opacity-50"></div>
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -351,12 +363,12 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">CPU</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.cpuUsage}%</span>
+                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.cpuUsage}</span>
                   </div>
                   <div className="w-full bg-slate-700 rounded-full h-2">
                     <div 
                       className="bg-blue-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${infrastructureMetrics.resources.cpuUsage}%` }}
+                      style={{ width: `${parseInt(infrastructureMetrics.resources.cpuUsage) || 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -364,12 +376,12 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Memory</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.memoryUsage}%</span>
+                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.memoryUsage}</span>
                   </div>
                   <div className="w-full bg-slate-700 rounded-full h-2">
                     <div 
                       className="bg-yellow-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${infrastructureMetrics.resources.memoryUsage}%` }}
+                      style={{ width: `${parseInt(infrastructureMetrics.resources.memoryUsage) || 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -377,12 +389,12 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Disk</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.diskUsage}%</span>
+                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.diskUsage}</span>
                   </div>
                   <div className="w-full bg-slate-700 rounded-full h-2">
                     <div 
                       className="bg-green-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${infrastructureMetrics.resources.diskUsage}%` }}
+                      style={{ width: `${parseInt(infrastructureMetrics.resources.diskUsage) || 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -405,6 +417,18 @@ const SystemHealthPage = () => {
                     <span className="text-slate-400">Latency</span>
                     <span className="text-slate-100 font-mono">{infrastructureMetrics.network.latency}</span>
                   </div>
+                  {/* Show latency quality indicator */}
+                  <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        parseInt(infrastructureMetrics.network.latency) < 100 ? 'bg-green-400' :
+                        parseInt(infrastructureMetrics.network.latency) < 300 ? 'bg-yellow-400' : 'bg-red-400'
+                      }`}
+                      style={{ 
+                        width: `${Math.min(Math.max(parseInt(infrastructureMetrics.network.latency) / 1000 * 100, 10), 100)}%` 
+                      }}
+                    ></div>
+                  </div>
                 </div>
                 
                 <div>
@@ -412,12 +436,21 @@ const SystemHealthPage = () => {
                     <span className="text-slate-400">Bandwidth</span>
                     <span className="text-slate-100 font-mono">{infrastructureMetrics.network.bandwidth}</span>
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div 
-                      className="bg-purple-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: infrastructureMetrics.network.bandwidth }}
-                    ></div>
-                  </div>
+                  {/* Show managed bandwidth indicator */}
+                  {infrastructureMetrics.network.bandwidth === 'Auto-scaling' && (
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div className="bg-purple-400 h-2 rounded-full transition-all duration-300 w-full opacity-50"></div>
+                    </div>
+                  )}
+                  {/* Show actual bandwidth bar for numeric values */}
+                  {infrastructureMetrics.network.bandwidth !== 'Auto-scaling' && (
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className="bg-purple-400 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.min(parseInt(infrastructureMetrics.network.bandwidth) || 0, 100)}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
                 
                 <div>

@@ -33,11 +33,10 @@ const UserManagementPage = () => {
   const [tempFilterDomain, setTempFilterDomain] = useState('all');
   const [tempFilterApp, setTempFilterApp] = useState('all');
 
-  // Role-based access control - only Capacity Admin and NSight Admin can access user management
+  // Role-based access control - only Capacity Admin can access user management
   useEffect(() => {
     if (!loading && userProfile) {
-      const allowedRoles = ['Capacity Admin', 'NSight Admin'];
-      if (!allowedRoles.includes(userProfile.role)) {
+      if (userProfile.role !== 'Capacity Admin') {
         console.log(`🚫 Access denied to user management for role: ${userProfile.role}, redirecting to dashboard`);
         const dashboardRoute = getDashboardRoute();
         navigate(dashboardRoute, { replace: true });
@@ -129,7 +128,7 @@ const UserManagementPage = () => {
   }
 
   // Don't render anything if user doesn't have permission (redirect will happen)
-  if (userProfile && !['Capacity Admin', 'NSight Admin'].includes(userProfile.role)) {
+  if (userProfile && userProfile.role !== 'Capacity Admin') {
     return null;
   }
 

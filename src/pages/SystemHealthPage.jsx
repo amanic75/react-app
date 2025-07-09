@@ -11,7 +11,11 @@ import {
   Clock,
   TrendingUp,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Users,
+  BarChart3,
+  HardDrive,
+  Zap
 } from 'lucide-react';
 
 const SystemHealthPage = () => {
@@ -21,7 +25,14 @@ const SystemHealthPage = () => {
   const [infrastructureMetrics, setInfrastructureMetrics] = useState({
     serverStatus: { uptime: '--', responseTime: '--', status: 'loading' },
     database: { queryTime: '--', connections: 'Loading...', maxConnections: 'Loading...', slowQueries: '0', status: 'loading' },
-    network: { latency: '--', bandwidth: 'Loading...', status: 'loading' }
+    network: { latency: '--', status: 'loading' }
+  });
+  const [usageAnalytics, setUsageAnalytics] = useState({
+    activeUsers: { current: '--', peakToday: '--', peakHourLabel: 'Loading...', recentlyActive: '--' },
+    apiCallVolume: { requestsPerMinute: '--', requestsPerHour: '--', totalRequests: '--', mostUsedEndpoints: [] },
+    databaseOperations: { readOperations: '--', writeOperations: '--', queryCount: '--', totalUsers: '--' },
+    storageUsage: { databaseSize: 'Loading...', tableCount: 'Loading...', indexSize: 'Loading...', growthRate: 'Loading...' },
+    status: 'loading'
   });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
@@ -123,23 +134,45 @@ const SystemHealthPage = () => {
         }
       }));
 
-      // Then fetch network metrics (can be cached)
-      const networkRes = await fetch(`${baseUrl}/network`);
-      const networkData = await networkRes.json();
+      // Fetch simple network metrics
+      try {
+        const networkRes = await fetch(`${baseUrl}/network`);
+        const networkData = await networkRes.json();
 
-      // Update with network metrics - adapt data structure for production
-      setInfrastructureMetrics(prev => ({
-        ...prev,
-        network: {
-          latency: networkData.latency || networkData.averageLatency,
-          bandwidth: networkData.bandwidth || 'Auto-scaling',
-          status: networkData.status || networkData.overallStatus,
-          details: networkData.details || {
-            tests: networkData.tests,
-            environment: networkData.environment
+        setInfrastructureMetrics(prev => ({
+          ...prev,
+          network: {
+            latency: networkData.latency,
+            status: networkData.status
           }
-        }
-      }));
+        }));
+      } catch (networkError) {
+        console.error('❌ Failed to fetch network metrics:', networkError);
+        setInfrastructureMetrics(prev => ({
+          ...prev,
+          network: { latency: 'error', status: 'error' }
+        }));
+      }
+
+      // Fetch usage analytics metrics
+      try {
+        const analyticsRes = await fetch(`${baseUrl}/usage-analytics`);
+        const analyticsData = await analyticsRes.json();
+
+        setUsageAnalytics({
+          activeUsers: analyticsData.activeUsers,
+          apiCallVolume: analyticsData.apiCallVolume,
+          databaseOperations: analyticsData.databaseOperations,
+          storageUsage: analyticsData.storageUsage,
+          status: analyticsData.status || 'healthy'
+        });
+      } catch (analyticsError) {
+        console.error('❌ Failed to fetch usage analytics:', analyticsError);
+        setUsageAnalytics(prev => ({
+          ...prev,
+          status: 'error'
+        }));
+      }
       
       setRefreshTime(new Date());
     } catch (error) {
@@ -165,6 +198,7 @@ const SystemHealthPage = () => {
         return 'text-yellow-400';
       case 'critical':
       case 'error':
+      case 'poor':
         return 'text-red-400';
       default:
         return 'text-slate-400';
@@ -181,6 +215,7 @@ const SystemHealthPage = () => {
         return <AlertTriangle className="h-5 w-5 text-yellow-400" />;
       case 'critical':
       case 'error':
+      case 'poor':
         return <AlertTriangle className="h-5 w-5 text-red-400" />;
       default:
         return <Activity className="h-5 w-5 text-slate-400" />;
@@ -309,7 +344,7 @@ const SystemHealthPage = () => {
 
 
 
-            {/* Network Performance */}
+            {/* Simple Network Performance */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -323,26 +358,20 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Latency</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.network.latency}</span>
+                    <span className="text-slate-100 font-mono text-lg font-bold">{infrastructureMetrics.network.latency}</span>
                   </div>
-                  {/* Show latency quality indicator */}
+                  {/* Simple status bar */}
                   <div className="w-full bg-slate-700 rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full transition-all duration-300 ${
-                        parseInt(infrastructureMetrics.network.latency) < 100 ? 'bg-green-400' :
-                        parseInt(infrastructureMetrics.network.latency) < 300 ? 'bg-yellow-400' : 'bg-red-400'
+                        infrastructureMetrics.network.status === 'good' ? 'bg-green-400' :
+                        infrastructureMetrics.network.status === 'warning' ? 'bg-yellow-400' : 'bg-red-400'
                       }`}
                       style={{ 
-                        width: `${Math.min(Math.max(parseInt(infrastructureMetrics.network.latency) / 1000 * 100, 10), 100)}%` 
+                        width: infrastructureMetrics.network.status === 'good' ? '25%' :
+                               infrastructureMetrics.network.status === 'warning' ? '60%' : '90%'
                       }}
                     ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Bandwidth</span>
-                    <span className="text-slate-100 font-mono">Managed by Platform</span>
                   </div>
                 </div>
                 
@@ -352,6 +381,193 @@ const SystemHealthPage = () => {
                     <span className={`font-semibold capitalize ${getStatusColor(infrastructureMetrics.network.status)}`}>
                       {infrastructureMetrics.network.status}
                     </span>
+                  </div>
+                </div>
+                
+
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Usage Analytics Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="h-6 w-6 text-purple-400" />
+              <h2 className="text-xl font-semibold text-slate-100">Usage Analytics</h2>
+            </div>
+            {usageAnalytics.status === 'error' && (
+              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Unable to fetch usage analytics</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Active Users */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-blue-400" />
+                  <h3 className="font-semibold text-slate-100">Active Users</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Current Online</span>
+                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers.current}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Peak Today</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.peakToday}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Peak Hour</span>
+                    <span className="text-slate-100 font-mono text-xs">{usageAnalytics.activeUsers.peakHourLabel}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Recently Active</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.recentlyActive}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* API Call Volume */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-yellow-400" />
+                  <h3 className="font-semibold text-slate-100">API Calls</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Per Minute</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerMinute}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Per Hour</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerHour}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Today</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.totalRequests}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Most Used:</div>
+                  <div className="text-xs text-slate-300 font-mono truncate">
+                    {usageAnalytics.apiCallVolume.mostUsedEndpoints.length > 0 
+                      ? usageAnalytics.apiCallVolume.mostUsedEndpoints[0]?.endpoint?.split('/').pop() || 'N/A'
+                      : 'Loading...'
+                    }
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Database Operations */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Database className="h-5 w-5 text-green-400" />
+                  <h3 className="font-semibold text-slate-100">DB Operations</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Read Ops</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.readOperations}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Write Ops</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.writeOperations}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Queries</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.queryCount}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Users</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.totalUsers}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Storage Usage */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <HardDrive className="h-5 w-5 text-orange-400" />
+                  <h3 className="font-semibold text-slate-100">Storage</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Database Size</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.databaseSize}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Tables</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.tableCount}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Index Size</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.indexSize}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Growth Rate</span>
+                    <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage.growthRate}</span>
                   </div>
                 </div>
               </div>

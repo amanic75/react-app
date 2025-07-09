@@ -459,22 +459,17 @@ app.get('/api/system/resources', (req, res) => {
   }
 });
 
-// Network Performance - Real latency tests (with caching)
+// Simple Network Performance - Clean rebuild with correct logic
 app.get('/api/system/network', async (req, res) => {
   try {
-    // Check cache first
-    if (isCacheValid('network')) {
-      console.log('🔄 Returning cached network data');
-      return res.json(monitoringCache.network.data);
-    }
-    const startTime = Date.now();
+    console.log('🌐 Testing network latency...');
     
-    // Optimized: Test single fast endpoint with shorter timeout
-    let avgLatency = null;
+    // Simple latency test
+    let latencyMs = null;
     try {
       const testStart = Date.now();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000); // Shorter timeout
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       await fetch('https://httpbin.org/status/200', { 
         method: 'HEAD',
@@ -482,36 +477,77 @@ app.get('/api/system/network', async (req, res) => {
       });
       
       clearTimeout(timeout);
-      avgLatency = Date.now() - testStart;
+      latencyMs = Date.now() - testStart;
+      console.log(`✅ Network test completed: ${latencyMs}ms`);
     } catch (error) {
-      avgLatency = null;
+      console.log(`❌ Network test failed: ${error.message}`);
+      latencyMs = null;
     }
     
-    // Simulate bandwidth (would need more complex testing for real bandwidth)
-    const bandwidth = avgLatency ? Math.max(20, 100 - (avgLatency / 10)) : 85;
-    
-    // Determine status
-    let status = 'good';
-    if (avgLatency > 200) status = 'warning';
-    if (avgLatency > 500 || avgLatency === null) status = 'poor';
-    
-    const responseData = {
-      latency: avgLatency ? `${avgLatency}ms` : 'timeout',
-      bandwidth: `${Math.round(bandwidth)}%`,
-      status: status,
-      details: {
-        testEndpoint: 'https://httpbin.org/status/200',
-        testMethod: 'HEAD',
-        timeout: '2000ms'
+    // Simple status logic - exactly as requested
+    let status = 'poor'; // Default for timeouts
+    if (latencyMs !== null) {
+      if (latencyMs < 1000) {
+        status = 'good';
+        console.log(`✅ Status: good (${latencyMs}ms < 1000ms)`);
+      } else if (latencyMs <= 1500) {
+        status = 'warning';
+        console.log(`⚠️ Status: warning (${latencyMs}ms between 1000-1500ms)`);
+      } else {
+        status = 'poor';
+        console.log(`❌ Status: poor (${latencyMs}ms > 1500ms)`);
       }
+    } else {
+      console.log(`❌ Status: poor (timeout)`);
+    }
+    
+    // Simple response
+    const response = {
+      latency: latencyMs ? `${latencyMs}ms` : 'timeout',
+      status: status,
+      timestamp: new Date().toISOString()
     };
     
-    // Cache the result
-    setCache('network', responseData);
-    res.json(responseData);
+    res.json(response);
   } catch (error) {
-    console.error('❌ Network performance error:', error);
-    res.status(500).json({ error: 'Failed to get network performance', details: error.message });
+    console.error('❌ Network endpoint error:', error);
+    res.status(500).json({ 
+      error: 'Network test failed', 
+      details: error.message,
+      status: 'poor'
+    });
+  }
+});
+
+// Usage Analytics - Real usage metrics
+app.get('/api/system/usage-analytics', async (req, res) => {
+  try {
+    // Import the handler function (this will have access to env vars)
+    const { default: handler } = await import('../api/system/usage-analytics.js');
+    
+    // Create a mock response object that matches Vercel's API format
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      },
+      json: (data) => {
+        res.json(data);
+      }
+    };
+
+    // Call the handler with request and mock response
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Usage Analytics Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get usage analytics', 
+      details: error.message
+    });
   }
 });
 
@@ -543,6 +579,7 @@ app.listen(PORT, () => {
   console.log(`   GET  http://localhost:${PORT}/api/system/database-health`);
   console.log(`   GET  http://localhost:${PORT}/api/system/resources`);
   console.log(`   GET  http://localhost:${PORT}/api/system/network`);
+  console.log(`   GET  http://localhost:${PORT}/api/system/usage-analytics`);
 });
 
 // Graceful shutdown

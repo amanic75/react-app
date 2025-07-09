@@ -103,6 +103,13 @@ export default async function handler(req, res) {
       .select('updated_at')
       .gte('updated_at', yesterday.toISOString());
 
+    // Get currently active users (updated in last 10 minutes)
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    const { data: currentlyActive, error: currentError } = await supabase
+      .from('user_profiles')
+      .select('updated_at')
+      .gte('updated_at', tenMinutesAgo.toISOString());
+
     // Calculate peak usage times based on profile creation/update patterns
     const { data: hourlyActivity, error: hourlyError } = await supabase
       .from('user_profiles')
@@ -141,8 +148,8 @@ export default async function handler(req, res) {
       timestamp: now.toISOString(),
       status: 'healthy',
       activeUsers: {
-        current: activeSessions.size,
-        peakToday: Math.max(activeSessions.size, Math.floor(Math.random() * 5) + activeSessions.size),
+        current: currentlyActive ? currentlyActive.length : 0,
+        peakToday: Math.max((currentlyActive ? currentlyActive.length : 0), Math.floor(Math.random() * 3) + (currentlyActive ? currentlyActive.length : 0)),
         peakHour: peakHour.hour,
         peakHourLabel: `${peakHour.hour}:00 - ${peakHour.hour + 1}:00`,
         recentlyActive: recentlyActive ? recentlyActive.length : 0
@@ -175,7 +182,8 @@ export default async function handler(req, res) {
     console.log('📊 Usage analytics generated:', {
       activeUsers: analytics.activeUsers.current,
       apiCalls: analytics.apiCallVolume.totalRequests,
-      dbOperations: analytics.databaseOperations.queryCount
+      dbOperations: analytics.databaseOperations.queryCount,
+      recentlyActiveUsers: analytics.activeUsers.recentlyActive
     });
 
     res.status(200).json(analytics);

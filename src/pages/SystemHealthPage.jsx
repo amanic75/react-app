@@ -189,6 +189,7 @@ const SystemHealthPage = () => {
   };
 
   const getStatusColor = (status) => {
+    if (!status) return 'text-slate-400';
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'good':
@@ -206,6 +207,7 @@ const SystemHealthPage = () => {
   };
 
   const getStatusIcon = (status) => {
+    if (!status) return <Activity className="h-5 w-5 text-slate-400" />;
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'good':

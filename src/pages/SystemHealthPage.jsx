@@ -7,8 +7,6 @@ import {
   Activity, 
   Server, 
   Database, 
-  Cpu, 
-  HardDrive,
   Wifi,
   Clock,
   TrendingUp,
@@ -23,7 +21,6 @@ const SystemHealthPage = () => {
   const [infrastructureMetrics, setInfrastructureMetrics] = useState({
     serverStatus: { uptime: '--', responseTime: '--', status: 'loading' },
     database: { queryTime: '--', connections: 'Loading...', maxConnections: 'Loading...', slowQueries: '0', status: 'loading' },
-    resources: { cpuUsage: '0%', memoryUsage: '0%', diskUsage: '0%', status: 'loading' },
     network: { latency: '--', bandwidth: 'Loading...', status: 'loading' }
   });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
@@ -126,31 +123,13 @@ const SystemHealthPage = () => {
         }
       }));
 
-      // Then fetch secondary metrics (can be cached)
-      const [resourcesRes, networkRes] = await Promise.all([
-        fetch(`${baseUrl}/resources`),
-        fetch(`${baseUrl}/network`)
-      ]);
+      // Then fetch network metrics (can be cached)
+      const networkRes = await fetch(`${baseUrl}/network`);
+      const networkData = await networkRes.json();
 
-      const [resourcesData, networkData] = await Promise.all([
-        resourcesRes.json(),
-        networkRes.json()
-      ]);
-
-      // Update with all metrics - adapt data structure for production
+      // Update with network metrics - adapt data structure for production
       setInfrastructureMetrics(prev => ({
         ...prev,
-        resources: {
-          cpuUsage: resourcesData.cpuUsage || resourcesData.cpu?.usagePercent,
-          memoryUsage: resourcesData.memoryUsage || resourcesData.memory?.usagePercent,
-          diskUsage: resourcesData.diskUsage || resourcesData.disk?.usagePercent,
-          status: resourcesData.status || resourcesData.overallStatus,
-          details: resourcesData.details || {
-            totalMemory: resourcesData.memory?.total,
-            cpuCores: resourcesData.cpu?.cores,
-            environment: resourcesData.system?.environment
-          }
-        },
         network: {
           latency: networkData.latency || networkData.averageLatency,
           bandwidth: networkData.bandwidth || 'Auto-scaling',
@@ -169,7 +148,6 @@ const SystemHealthPage = () => {
       setInfrastructureMetrics(prev => ({
         serverStatus: { ...prev.serverStatus, status: 'error' },
         database: { ...prev.database, status: 'error' },
-        resources: { ...prev.resources, status: 'error' },
         network: { ...prev.network, status: 'error' }
       }));
     } finally {
@@ -258,7 +236,7 @@ const SystemHealthPage = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Server Status */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -314,30 +292,10 @@ const SystemHealthPage = () => {
                 </div>
                 
                 <div>
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Connections</span>
-                    <span className="text-slate-100 font-mono">
-                      {infrastructureMetrics.database.connections}
-                      {infrastructureMetrics.database.maxConnections !== 'Auto-scaling' && 
-                        `/${infrastructureMetrics.database.maxConnections}`}
-                    </span>
+                    <span className="text-slate-100 font-mono">Managed by Platform</span>
                   </div>
-                  {/* Only show progress bar for numeric values */}
-                  {typeof infrastructureMetrics.database.connections === 'number' && 
-                   typeof infrastructureMetrics.database.maxConnections === 'number' && (
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div 
-                        className="bg-green-400 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${Math.min((infrastructureMetrics.database.connections / infrastructureMetrics.database.maxConnections) * 100, 100)}%` }}
-                      ></div>
-                    </div>
-                  )}
-                  {/* Show indicator for managed connections */}
-                  {infrastructureMetrics.database.connections === 'Managed' && (
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div className="bg-green-400 h-2 rounded-full transition-all duration-300 w-full opacity-50"></div>
-                    </div>
-                  )}
                 </div>
                 
                 <div>
@@ -349,57 +307,7 @@ const SystemHealthPage = () => {
               </div>
             </Card>
 
-            {/* Resource Usage */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Cpu className="h-5 w-5 text-orange-400" />
-                  <h3 className="font-semibold text-slate-100">Resource Usage</h3>
-                </div>
-                {getStatusIcon(infrastructureMetrics.resources.status)}
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">CPU</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.cpuUsage}</span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div 
-                      className="bg-blue-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${parseInt(infrastructureMetrics.resources.cpuUsage) || 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Memory</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.memoryUsage}</span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div 
-                      className="bg-yellow-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${parseInt(infrastructureMetrics.resources.memoryUsage) || 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Disk</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.resources.diskUsage}</span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
-                    <div 
-                      className="bg-green-400 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${parseInt(infrastructureMetrics.resources.diskUsage) || 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </Card>
+
 
             {/* Network Performance */}
             <Card className="p-6">
@@ -432,25 +340,10 @@ const SystemHealthPage = () => {
                 </div>
                 
                 <div>
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Bandwidth</span>
-                    <span className="text-slate-100 font-mono">{infrastructureMetrics.network.bandwidth}</span>
+                    <span className="text-slate-100 font-mono">Managed by Platform</span>
                   </div>
-                  {/* Show managed bandwidth indicator */}
-                  {infrastructureMetrics.network.bandwidth === 'Auto-scaling' && (
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div className="bg-purple-400 h-2 rounded-full transition-all duration-300 w-full opacity-50"></div>
-                    </div>
-                  )}
-                  {/* Show actual bandwidth bar for numeric values */}
-                  {infrastructureMetrics.network.bandwidth !== 'Auto-scaling' && (
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div 
-                        className="bg-purple-400 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${Math.min(parseInt(infrastructureMetrics.network.bandwidth) || 0, 100)}%` }}
-                      ></div>
-                    </div>
-                  )}
                 </div>
                 
                 <div>

@@ -15,7 +15,11 @@ import {
   Users,
   BarChart3,
   HardDrive,
-  Zap
+  Zap,
+  AlertCircle,
+  XCircle,
+  TrendingDown,
+  FileText
 } from 'lucide-react';
 
 const SystemHealthPage = () => {
@@ -34,6 +38,28 @@ const SystemHealthPage = () => {
     storageUsage: { databaseSize: 'Loading...', tableCount: 'Loading...', indexSize: 'Loading...', growthRate: 'Loading...' },
     status: 'loading'
   });
+  const [errorMonitoring, setErrorMonitoring] = useState({
+    errorRates: { 
+      http4xx: '--', 
+      http5xx: '--', 
+      errorTrend: 'loading', 
+      totalErrorsToday: '--' 
+    },
+    failedOperations: { 
+      loginFailures: '--', 
+      databaseTimeouts: '--', 
+      authenticationErrors: '--', 
+      apiErrors: '--' 
+    },
+    systemAlerts: { 
+      criticalAlerts: '--', 
+      warningAlerts: '--', 
+      lastCriticalAlert: 'Loading...', 
+      alertStatus: 'loading' 
+    },
+    recentErrors: [],
+    status: 'loading'
+  });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   // Role-based access control - only Capacity Admin can access
@@ -50,26 +76,16 @@ const SystemHealthPage = () => {
   // Track user activity and fetch metrics on component mount
   useEffect(() => {
     fetchMetrics();
-    
-    // Track that user is active on this page
-    if (userProfile?.id) {
-      trackUserActivity();
-    }
-  }, [userProfile?.id]);
+  }, []);
 
-  // Auto-refresh metrics every 30 seconds and track activity
+  // Auto-refresh metrics every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchMetrics();
-      
-      // Also track activity to keep user marked as active
-      if (userProfile?.id) {
-        trackUserActivity();
-      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [userProfile?.id]);
+  }, []);
 
   // If user doesn't have access, don't render anything
   if (userProfile && userProfile.role !== 'Capacity Admin') {
@@ -100,35 +116,7 @@ const SystemHealthPage = () => {
     return '/api/system';
   };
 
-  // Track user activity to update active user count
-  const trackUserActivity = async () => {
-    if (!userProfile?.id) return;
-    
-    try {
-      const baseUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
-        ? 'http://localhost:3001/api'
-        : '/api';
-        
-      await fetch(`${baseUrl}/track-activity`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userProfile.id,
-          page: 'system-health'
-        })
-      });
-      
-      console.log('👤 User activity tracked for System Health page:', {
-        userId: userProfile.id,
-        email: userProfile.email,
-        page: 'system-health'
-      });
-    } catch (error) {
-      console.log('⚠️ Activity tracking failed (non-critical):', error.message);
-    }
-  };
+
 
   // Fetch real metrics from API endpoints (optimized with staggered requests)
   const fetchMetrics = async () => {
@@ -213,6 +201,26 @@ const SystemHealthPage = () => {
           status: 'error'
         }));
       }
+
+      // Fetch error monitoring metrics
+      try {
+        const errorRes = await fetch(`${baseUrl}/error-monitoring`);
+        const errorData = await errorRes.json();
+
+        setErrorMonitoring({
+          errorRates: errorData.errorRates,
+          failedOperations: errorData.failedOperations,
+          systemAlerts: errorData.systemAlerts,
+          recentErrors: errorData.recentErrors,
+          status: errorData.status || 'healthy'
+        });
+      } catch (errorMonitoringError) {
+        console.error('❌ Failed to fetch error monitoring data:', errorMonitoringError);
+        setErrorMonitoring(prev => ({
+          ...prev,
+          status: 'error'
+        }));
+      }
       
       setRefreshTime(new Date());
     } catch (error) {
@@ -222,6 +230,11 @@ const SystemHealthPage = () => {
         serverStatus: { ...prev.serverStatus, status: 'error' },
         database: { ...prev.database, status: 'error' },
         network: prev.network // Keep existing network data (may have fallback values)
+      }));
+      // Set error status for error monitoring
+      setErrorMonitoring(prev => ({
+        ...prev,
+        status: 'error'
       }));
     } finally {
       setIsLoadingMetrics(false);
@@ -612,6 +625,195 @@ const SystemHealthPage = () => {
                     <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage.growthRate}</span>
                   </div>
                 </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Error Monitoring Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-6 w-6 text-red-400" />
+              <h2 className="text-xl font-semibold text-slate-100">🚨 Error Monitoring</h2>
+            </div>
+            {errorMonitoring.status === 'error' && (
+              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Unable to fetch error monitoring data</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Error Rates */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingDown className="h-5 w-5 text-red-400" />
+                  <h3 className="font-semibold text-slate-100">Error Rates</h3>
+                </div>
+                {getStatusIcon(errorMonitoring.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">4xx Errors</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.errorRates.http4xx}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">5xx Errors</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.errorRates.http5xx}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Today</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.errorRates.totalErrorsToday}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Trend</span>
+                    <span className={`font-mono text-xs capitalize ${
+                      errorMonitoring.errorRates.errorTrend === 'improving' ? 'text-green-400' :
+                      errorMonitoring.errorRates.errorTrend === 'stable' ? 'text-yellow-400' : 'text-red-400'
+                    }`}>
+                      {errorMonitoring.errorRates.errorTrend}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Failed Operations */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <XCircle className="h-5 w-5 text-orange-400" />
+                  <h3 className="font-semibold text-slate-100">Failed Operations</h3>
+                </div>
+                {getStatusIcon(errorMonitoring.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Login Failures</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.failedOperations.loginFailures}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">DB Timeouts</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.failedOperations.databaseTimeouts}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Auth Errors</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.failedOperations.authenticationErrors}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">API Errors</span>
+                    <span className="text-slate-100 font-mono">{errorMonitoring.failedOperations.apiErrors}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* System Alerts */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                  <h3 className="font-semibold text-slate-100">System Alerts</h3>
+                </div>
+                {getStatusIcon(errorMonitoring.systemAlerts.alertStatus)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Critical</span>
+                    <span className="text-red-400 font-mono font-bold">{errorMonitoring.systemAlerts.criticalAlerts}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Warnings</span>
+                    <span className="text-yellow-400 font-mono">{errorMonitoring.systemAlerts.warningAlerts}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Status</span>
+                    <span className={`font-semibold capitalize ${getStatusColor(errorMonitoring.systemAlerts.alertStatus)}`}>
+                      {errorMonitoring.systemAlerts.alertStatus}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Last Critical:</div>
+                  <div className="text-xs text-slate-300 font-mono">
+                    {errorMonitoring.systemAlerts.lastCriticalAlert}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Recent Error Log */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-5 w-5 text-purple-400" />
+                  <h3 className="font-semibold text-slate-100">Recent Error Log</h3>
+                </div>
+                {getStatusIcon(errorMonitoring.status)}
+              </div>
+              
+              <div className="space-y-2">
+                {errorMonitoring.recentErrors.length > 0 ? (
+                  errorMonitoring.recentErrors.slice(0, 4).map((error, index) => (
+                    <div key={index} className="border-l-2 border-red-400 pl-3 py-1">
+                      <div className="text-xs text-red-400 font-mono">
+                        {error.type}
+                      </div>
+                      <div className="text-xs text-slate-300 truncate">
+                        {error.message}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {error.timestamp}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <CheckCircle className="h-8 w-8 text-green-400 mx-auto mb-2" />
+                    <div className="text-sm text-green-400">No recent errors</div>
+                    <div className="text-xs text-slate-400">System running smoothly</div>
+                  </div>
+                )}
+                
+                {errorMonitoring.recentErrors.length > 4 && (
+                  <div className="text-xs text-slate-400 text-center pt-2 border-t border-slate-700">
+                    +{errorMonitoring.recentErrors.length - 4} more errors
+                  </div>
+                )}
               </div>
             </Card>
           </div>

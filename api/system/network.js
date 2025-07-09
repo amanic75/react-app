@@ -1,143 +1,78 @@
 export default async function handler(req, res) {
   // Set CORS headers for cross-origin requests
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
-  // Only allow GET requests
   if (req.method !== 'GET') {
-    return res.status(405).json({ 
-      error: 'Method not allowed',
-      allowedMethods: ['GET']
-    });
-  }
-
-  // Simple cache to avoid too many external requests
-  const cacheKey = 'network-metrics';
-  const cacheTimeout = 10000; // 10 seconds
-  
-  // Simple in-memory cache (reset on each cold start)
-  if (!global.networkCache) {
-    global.networkCache = {};
-  }
-  
-  const cached = global.networkCache[cacheKey];
-  if (cached && (Date.now() - cached.timestamp) < cacheTimeout) {
-    return res.status(200).json(cached.data);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const tests = [
-      { name: 'Supabase', url: process.env.VITE_SUPABASE_URL || 'https://httpbin.org/status/200' },
-      { name: 'External API', url: 'https://httpbin.org/status/200' }
-    ];
-
-    const networkResults = [];
+    // Measure latency to a reliable external service
+    const startTime = Date.now();
     
-    for (const test of tests) {
-      const startTime = Date.now();
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
-        const response = await fetch(test.url, {
-          method: 'HEAD', // Use HEAD to minimize data transfer
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'System-Health-Monitor/1.0'
-          }
-        });
-        
-        clearTimeout(timeoutId);
-        const latency = Date.now() - startTime;
-        
-        // Determine status based on response AND latency
-        let testStatus;
-        if (!response.ok) {
-          testStatus = 'degraded';
-        } else if (latency > 1000) {
-          testStatus = 'degraded'; // >1000ms = too slow even if it works
-        } else {
-          testStatus = 'healthy';
-        }
-
-        networkResults.push({
-          name: test.name,
-          latency: `${latency}ms`,
-          status: testStatus,
-          statusCode: response.status
-        });
-        
-      } catch (error) {
-        const latency = Date.now() - startTime;
-        networkResults.push({
-          name: test.name,
-          latency: `${latency}ms`,
-          status: 'failed',
-          error: error.name === 'AbortError' ? 'Timeout' : 'Connection failed'
-        });
+    try {
+      // Test latency to Google's DNS (reliable and fast)
+      const response = await fetch('https://dns.google/resolve?name=google.com&type=A', {
+        method: 'GET',
+        headers: { 'Accept': 'application/dns-json' },
+        // 5 second timeout
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`DNS lookup failed: ${response.status}`);
       }
+      
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+      
+      // Determine status based on latency
+      let status;
+      if (latency < 1000) {
+        status = 'good';
+      } else if (latency < 1500) {
+        status = 'warning';  
+      } else {
+        status = 'poor';
+      }
+      
+      console.log(`🌐 Network test completed: ${latency}ms (${status})`);
+      
+      return res.status(200).json({
+        latency: `${latency}ms`,
+        status: status,
+        timestamp: new Date().toISOString(),
+        testEndpoint: 'dns.google',
+        method: 'DNS lookup'
+      });
+      
+    } catch (networkError) {
+      console.error('❌ Network test failed:', networkError.message);
+      
+      // Return high latency for timeout/error cases
+      return res.status(200).json({
+        latency: 'timeout',
+        status: 'poor',
+        timestamp: new Date().toISOString(),
+        error: 'Network test timeout or failure',
+        testEndpoint: 'dns.google'
+      });
     }
-
-    // Calculate overall network health with more forgiving threshold
-    const healthyCount = networkResults.filter(result => result.status === 'healthy').length;
-    const totalTests = networkResults.length;
     
-    let overallStatus;
-    if (healthyCount >= Math.ceil(totalTests * 0.5)) { // 50%+ healthy = overall healthy
-      overallStatus = 'healthy';
-    } else if (healthyCount > 0) { // Some healthy = degraded
-      overallStatus = 'degraded';
-    } else { // None healthy = critical
-      overallStatus = 'critical';
-    }
-
-    // Calculate average latency for successful tests
-    const successfulTests = networkResults.filter(result => result.status === 'healthy');
-    const avgLatency = successfulTests.length > 0 
-      ? Math.round(successfulTests.reduce((sum, test) => 
-          sum + parseInt(test.latency), 0) / successfulTests.length)
-      : 0;
-
-    const result = {
-      overallStatus,
-      averageLatency: `${avgLatency}ms`,
-      tests: networkResults,
-      environment: 'serverless',
-      timestamp: new Date().toISOString(),
-      note: 'Testing from serverless function environment',
-      // Debug info to see what's causing degraded status
-      debug: {
-        totalTests: networkResults.length,
-        healthyTests: healthyCount,
-        testDetails: networkResults.map(test => ({
-          name: test.name,
-          status: test.status,
-          latency: test.latency,
-          error: test.error || 'none'
-        }))
-      }
-    };
-
-    // Cache the result
-    global.networkCache[cacheKey] = {
-      data: result,
-      timestamp: Date.now()
-    };
-
-    res.status(200).json(result);
-
   } catch (error) {
     console.error('❌ Network monitoring error:', error);
-    res.status(500).json({ 
-      error: 'Failed to test network connectivity', 
-      details: error.message,
-      environment: 'serverless'
+    return res.status(500).json({
+      error: 'Internal server error',
+      latency: 'error',
+      status: 'error',
+      timestamp: new Date().toISOString()
     });
   }
 } 

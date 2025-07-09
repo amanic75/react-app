@@ -12,6 +12,7 @@ import RawMaterialsPage from './pages/RawMaterialsPage';
 import RawMaterialDetailPage from './pages/RawMaterialDetailPage';
 import UserManagementPage from './pages/UserManagementPage';
 import SettingsPage from './pages/SettingsPage';
+import SystemHealthPage from './pages/SystemHealthPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Component to handle scroll restoration
@@ -66,6 +67,11 @@ function App() {
             <Route path="/user-management" element={
               <ProtectedRoute>
                 <UserManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/system-health" element={
+              <ProtectedRoute>
+                <SystemHealthPage />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

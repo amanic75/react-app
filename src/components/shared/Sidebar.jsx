@@ -41,7 +41,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
     ...employeeLinks,
     { icon: Atom, label: 'Chemformation', action: () => console.log('Chemformation - No dedicated page yet') },
     { icon: Users, label: 'User Management', action: () => handleNavigation('/user-management') },
-    { icon: Activity, label: 'System Health', action: () => console.log('System Health clicked') }
+    { icon: Activity, label: 'System Health', action: () => handleNavigation('/system-health') }
   ];
 
   const nsightAdminLinks = [

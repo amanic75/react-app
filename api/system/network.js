@@ -74,10 +74,18 @@ export default async function handler(req, res) {
       }
     }
 
-    // Calculate overall network health
+    // Calculate overall network health with more forgiving threshold
     const healthyCount = networkResults.filter(result => result.status === 'healthy').length;
-    const overallStatus = healthyCount === networkResults.length ? 'healthy' : 
-                         healthyCount > 0 ? 'degraded' : 'critical';
+    const totalTests = networkResults.length;
+    
+    let overallStatus;
+    if (healthyCount >= Math.ceil(totalTests * 0.5)) { // 50%+ healthy = overall healthy
+      overallStatus = 'healthy';
+    } else if (healthyCount > 0) { // Some healthy = degraded
+      overallStatus = 'degraded';
+    } else { // None healthy = critical
+      overallStatus = 'critical';
+    }
 
     // Calculate average latency for successful tests
     const successfulTests = networkResults.filter(result => result.status === 'healthy');

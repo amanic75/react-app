@@ -103,15 +103,15 @@ export default async function handler(req, res) {
       .select('updated_at')
       .gte('updated_at', yesterday.toISOString());
 
-    // Get currently active users (updated in last 5 minutes for more responsive tracking)
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    // Get currently active users (updated in last 1 minute for more responsive tracking)
+    const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000);
     const { data: currentlyActive, error: currentError } = await supabase
       .from('user_profiles')
       .select('id, email, updated_at')
-      .gte('updated_at', fiveMinutesAgo.toISOString());
+      .gte('updated_at', oneMinuteAgo.toISOString());
       
     console.log('🔍 Active user query:', {
-      fiveMinutesAgo: fiveMinutesAgo.toISOString(),
+      oneMinuteAgo: oneMinuteAgo.toISOString(),
       currentlyActive: currentlyActive ? currentlyActive.map(u => ({ id: u.id, email: u.email, updated_at: u.updated_at })) : null,
       count: currentlyActive ? currentlyActive.length : 0,
       error: currentError

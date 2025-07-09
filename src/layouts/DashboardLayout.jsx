@@ -20,6 +20,50 @@ const DashboardLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
+  // Global activity tracking for all authenticated users
+  useEffect(() => {
+    const trackUserActivity = async () => {
+      if (userProfile?.email) {
+        try {
+          // Use correct API base URL for development vs production
+          const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+            ? 'http://localhost:3001/api/track-activity'
+            : '/api/track-activity';
+            
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userEmail: userProfile.email,
+              userName: `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || userProfile.email.split('@')[0],
+              userRole: userProfile.role || 'Employee',
+              page: location.pathname,
+              timestamp: new Date().toISOString()
+            }),
+          });
+
+          if (!response.ok) {
+            console.warn('Failed to track user activity:', response.status);
+          }
+        } catch (error) {
+          console.warn('Error tracking user activity:', error);
+        }
+      }
+    };
+
+    // Track activity when component mounts or location changes
+    trackUserActivity();
+
+    // Set up heartbeat to track activity every 30 seconds
+    const heartbeatInterval = setInterval(trackUserActivity, 30000);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+    };
+  }, [userProfile, location.pathname]);
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Global Header */}

@@ -25,49 +25,61 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, page } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID required' });
+    const { userId, userEmail, userName, userRole, page, timestamp } = req.body;
+    
+    // Support both userId (old format) and userEmail (new format)
+    const trackingId = userId || userEmail;
+    
+    if (!trackingId) {
+      return res.status(400).json({ error: 'User ID or email required' });
     }
 
-    // Update user activity
-    userActivity.set(userId, {
+    // Update user activity with enhanced data
+    userActivity.set(trackingId, {
       lastSeen: Date.now(),
       page: page || 'unknown',
-      timestamp: new Date().toISOString()
+      userName: userName || 'Unknown User',
+      userRole: userRole || 'Employee',
+      userEmail: userEmail || trackingId,
+      timestamp: timestamp || new Date().toISOString()
     });
 
-    // Clean up old activity (remove users inactive for more than 5 minutes)
-    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    // Clean up old activity (remove users inactive for more than 1 minute)
+    const oneMinuteAgo = Date.now() - (1 * 60 * 1000);
     let cleanedUp = 0;
     for (const [id, activity] of userActivity.entries()) {
-      if (activity.lastSeen < fiveMinutesAgo) {
+      if (activity.lastSeen < oneMinuteAgo) {
         userActivity.delete(id);
         cleanedUp++;
       }
     }
 
-    // Try to update user profile updated_at timestamp as well
+    // Try to update user profile updated_at timestamp as well (if we have userEmail)
     let dbUpdateSuccess = false;
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', userId)
-        .select();
-        
-      if (error) {
-        console.error('❌ Database update error:', error);
-      } else {
-        dbUpdateSuccess = true;
-        console.log('✅ Database updated for user:', userId);
+    if (userEmail) {
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('email', userEmail)
+          .select();
+          
+        if (error) {
+          console.error('❌ Database update error:', error);
+        } else {
+          dbUpdateSuccess = true;
+          console.log('✅ Database updated for user:', userEmail);
+        }
+      } catch (dbError) {
+        console.error('❌ Database update failed:', dbError.message);
       }
-    } catch (dbError) {
-      console.error('❌ Database update failed:', dbError.message);
     }
 
-    console.log(`👤 Activity tracked for user ${userId} on page ${page}:`, {
+    console.log(`👤 Activity tracked for ${userName || trackingId} (${userRole}) on page ${page}:`, {
+      trackingId,
+      userEmail,
+      userName,
+      userRole,
       inMemoryActiveUsers: userActivity.size,
       dbUpdateSuccess,
       cleanedUpUsers: cleanedUp,
@@ -91,11 +103,11 @@ export default async function handler(req, res) {
 
 // Export the activity map for use by usage analytics
 export const getActiveUsers = () => {
-  const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+  const oneMinuteAgo = Date.now() - (1 * 60 * 1000);
   
   // Clean up old activity
   for (const [id, activity] of userActivity.entries()) {
-    if (activity.lastSeen < fiveMinutesAgo) {
+    if (activity.lastSeen < oneMinuteAgo) {
       userActivity.delete(id);
     }
   }

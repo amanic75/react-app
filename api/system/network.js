@@ -56,10 +56,20 @@ export default async function handler(req, res) {
         clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
         
+        // Determine status based on response AND latency
+        let testStatus;
+        if (!response.ok) {
+          testStatus = 'degraded';
+        } else if (latency > 1000) {
+          testStatus = 'degraded'; // >1000ms = too slow even if it works
+        } else {
+          testStatus = 'healthy';
+        }
+
         networkResults.push({
           name: test.name,
           latency: `${latency}ms`,
-          status: response.ok ? 'healthy' : 'degraded',
+          status: testStatus,
           statusCode: response.status
         });
         

@@ -92,7 +92,18 @@ export default async function handler(req, res) {
       tests: networkResults,
       environment: 'serverless',
       timestamp: new Date().toISOString(),
-      note: 'Testing from serverless function environment'
+      note: 'Testing from serverless function environment',
+      // Debug info to see what's causing degraded status
+      debug: {
+        totalTests: networkResults.length,
+        healthyTests: healthyCount,
+        testDetails: networkResults.map(test => ({
+          name: test.name,
+          status: test.status,
+          latency: test.latency,
+          error: test.error || 'none'
+        }))
+      }
     };
 
     // Cache the result

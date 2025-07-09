@@ -38,26 +38,41 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     });
 
-    // Clean up old activity (remove users inactive for more than 10 minutes)
-    const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+    // Clean up old activity (remove users inactive for more than 5 minutes)
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    let cleanedUp = 0;
     for (const [id, activity] of userActivity.entries()) {
-      if (activity.lastSeen < tenMinutesAgo) {
+      if (activity.lastSeen < fiveMinutesAgo) {
         userActivity.delete(id);
+        cleanedUp++;
       }
     }
 
     // Try to update user profile updated_at timestamp as well
+    let dbUpdateSuccess = false;
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('user_profiles')
         .update({ updated_at: new Date().toISOString() })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
+        
+      if (error) {
+        console.error('❌ Database update error:', error);
+      } else {
+        dbUpdateSuccess = true;
+        console.log('✅ Database updated for user:', userId);
+      }
     } catch (dbError) {
-      // Don't fail if database update fails
-      console.log('Database update failed (non-critical):', dbError.message);
+      console.error('❌ Database update failed:', dbError.message);
     }
 
-    console.log(`👤 Activity tracked for user ${userId} on page ${page}. Active users: ${userActivity.size}`);
+    console.log(`👤 Activity tracked for user ${userId} on page ${page}:`, {
+      inMemoryActiveUsers: userActivity.size,
+      dbUpdateSuccess,
+      cleanedUpUsers: cleanedUp,
+      timestamp: new Date().toISOString()
+    });
 
     res.status(200).json({ 
       success: true,
@@ -76,11 +91,11 @@ export default async function handler(req, res) {
 
 // Export the activity map for use by usage analytics
 export const getActiveUsers = () => {
-  const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+  const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
   
   // Clean up old activity
   for (const [id, activity] of userActivity.entries()) {
-    if (activity.lastSeen < tenMinutesAgo) {
+    if (activity.lastSeen < fiveMinutesAgo) {
       userActivity.delete(id);
     }
   }

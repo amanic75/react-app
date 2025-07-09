@@ -103,12 +103,19 @@ export default async function handler(req, res) {
       .select('updated_at')
       .gte('updated_at', yesterday.toISOString());
 
-    // Get currently active users (updated in last 10 minutes)
-    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    // Get currently active users (updated in last 5 minutes for more responsive tracking)
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     const { data: currentlyActive, error: currentError } = await supabase
       .from('user_profiles')
-      .select('updated_at')
-      .gte('updated_at', tenMinutesAgo.toISOString());
+      .select('id, email, updated_at')
+      .gte('updated_at', fiveMinutesAgo.toISOString());
+      
+    console.log('🔍 Active user query:', {
+      fiveMinutesAgo: fiveMinutesAgo.toISOString(),
+      currentlyActive: currentlyActive ? currentlyActive.map(u => ({ id: u.id, email: u.email, updated_at: u.updated_at })) : null,
+      count: currentlyActive ? currentlyActive.length : 0,
+      error: currentError
+    });
 
     // Calculate peak usage times based on profile creation/update patterns
     const { data: hourlyActivity, error: hourlyError } = await supabase
@@ -149,7 +156,7 @@ export default async function handler(req, res) {
       status: 'healthy',
       activeUsers: {
         current: currentlyActive ? currentlyActive.length : 0,
-        peakToday: Math.max((currentlyActive ? currentlyActive.length : 0), Math.floor(Math.random() * 3) + (currentlyActive ? currentlyActive.length : 0)),
+        peakToday: Math.max((currentlyActive ? currentlyActive.length : 0), (recentlyActive ? recentlyActive.length : 0), 1),
         peakHour: peakHour.hour,
         peakHourLabel: `${peakHour.hour}:00 - ${peakHour.hour + 1}:00`,
         recentlyActive: recentlyActive ? recentlyActive.length : 0

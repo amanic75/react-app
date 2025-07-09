@@ -120,7 +120,11 @@ const SystemHealthPage = () => {
         })
       });
       
-      console.log('👤 User activity tracked for System Health page');
+      console.log('👤 User activity tracked for System Health page:', {
+        userId: userProfile.id,
+        email: userProfile.email,
+        page: 'system-health'
+      });
     } catch (error) {
       console.log('⚠️ Activity tracking failed (non-critical):', error.message);
     }

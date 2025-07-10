@@ -55,8 +55,6 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const getLinks = () => {
     if (!userProfile) return employeeLinks;
     
-    console.log('Sidebar - User Role:', userProfile.role); // Debug log
-    
     switch (userProfile.role) {
       case 'Capacity Admin':
         return adminLinks;

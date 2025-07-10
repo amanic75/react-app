@@ -22,8 +22,36 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
-  Info
+  Info,
+  Calendar
 } from 'lucide-react';
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const SystemHealthPage = () => {
   const { userProfile, loading, getDashboardRoute } = useAuth();
@@ -81,6 +109,36 @@ const SystemHealthPage = () => {
       accessPatterns: '--',
       rlsStatus: 'loading',
       diagnostics: null
+    },
+    status: 'loading'
+  });
+  const [historicalData, setHistoricalData] = useState({
+    userGrowth: {
+      dailyGrowth: [],
+      totalUsers: '--',
+      growthRate: '--',
+      last30Days: '--',
+      last7Days: '--'
+    },
+    peakUsagePatterns: {
+      byDayOfWeek: [],
+      byHour: [],
+      peakDay: '--',
+      peakHour: '--'
+    },
+    growthMetrics: {
+      userGrowthRate: '--',
+      dataGrowthEstimate: '--',
+      recentDataGrowth: '--',
+      averageUsersPerDay: '--'
+    },
+    performanceOverTime: {
+      avgResponseTime: [],
+      errorRate: []
+    },
+    summary: {
+      trendsAvailable: false,
+      dataQuality: 'loading'
     },
     status: 'loading'
   });
@@ -265,6 +323,27 @@ const SystemHealthPage = () => {
       } catch (supabaseError) {
         console.error('❌ Failed to fetch Supabase metrics:', supabaseError);
         setSupabaseMetrics(prev => ({
+          ...prev,
+          status: 'error'
+        }));
+      }
+
+      // Fetch historical trends and analytics data
+      try {
+        const historicalRes = await fetch(`${baseUrl}/historical-data`);
+        const historicalDataRes = await historicalRes.json();
+
+        setHistoricalData({
+          userGrowth: historicalDataRes.userGrowth,
+          peakUsagePatterns: historicalDataRes.peakUsagePatterns,
+          growthMetrics: historicalDataRes.growthMetrics,
+          performanceOverTime: historicalDataRes.performanceOverTime,
+          summary: historicalDataRes.summary,
+          status: 'healthy'
+        });
+      } catch (historicalError) {
+        console.error('❌ Failed to fetch historical data:', historicalError);
+        setHistoricalData(prev => ({
           ...prev,
           status: 'error'
         }));
@@ -1113,6 +1192,425 @@ const SystemHealthPage = () => {
               />
             </Card>
           </div>
+        </div>
+
+        {/* Trends & Historical Data Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="h-6 w-6 text-indigo-400" />
+              <h2 className="text-xl font-semibold text-slate-100">Trends & Historical Data</h2>
+            </div>
+            {historicalData.status === 'error' && (
+              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Unable to fetch historical data</span>
+              </div>
+            )}
+          </div>
+
+          {/* Growth Metrics Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-blue-400" />
+                  <h3 className="font-semibold text-slate-100">Total Users</h3>
+                </div>
+                <TrendingUp className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="text-2xl font-bold text-slate-100 mb-2">
+                {historicalData.userGrowth.totalUsers}
+              </div>
+              <div className="text-sm text-slate-400">
+                +{historicalData.userGrowth.last7Days} this week
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-green-400" />
+                  <h3 className="font-semibold text-slate-100">Growth Rate</h3>
+                </div>
+                <TrendingUp className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="text-2xl font-bold text-slate-100 mb-2">
+                {historicalData.userGrowth.growthRate}
+              </div>
+              <div className="text-sm text-slate-400">
+                Last 30 days
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-5 w-5 text-purple-400" />
+                  <h3 className="font-semibold text-slate-100">Peak Day</h3>
+                </div>
+                <Calendar className="h-5 w-5 text-purple-400" />
+              </div>
+              <div className="text-2xl font-bold text-slate-100 mb-2">
+                {historicalData.peakUsagePatterns.peakDay}
+              </div>
+              <div className="text-sm text-slate-400">
+                Most registrations
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-5 w-5 text-orange-400" />
+                  <h3 className="font-semibold text-slate-100">Peak Hour</h3>
+                </div>
+                <Clock className="h-5 w-5 text-orange-400" />
+              </div>
+              <div className="text-2xl font-bold text-slate-100 mb-2">
+                {historicalData.peakUsagePatterns.peakHour}
+              </div>
+              <div className="text-sm text-slate-400">
+                Busiest time
+              </div>
+            </Card>
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* User Growth Chart */}
+            <Card className="p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <TrendingUp className="h-5 w-5 text-blue-400" />
+                <h3 className="font-semibold text-slate-100">User Growth Over Time</h3>
+              </div>
+              {historicalData.userGrowth.dailyGrowth.length > 0 ? (
+                <div className="h-64">
+                  <Line
+                    data={{
+                      labels: historicalData.userGrowth.dailyGrowth.map(item => 
+                        new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      ),
+                      datasets: [
+                        {
+                          label: 'Total Users',
+                          data: historicalData.userGrowth.dailyGrowth.map(item => item.totalUsers),
+                          borderColor: 'rgb(59, 130, 246)',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          fill: true,
+                          tension: 0.4
+                        },
+                        {
+                          label: 'New Users',
+                          data: historicalData.userGrowth.dailyGrowth.map(item => item.newUsers),
+                          borderColor: 'rgb(34, 197, 94)',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          fill: false,
+                          tension: 0.4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: 'rgb(148, 163, 184)'
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        },
+                        y: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Loading growth data...</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Peak Usage by Day of Week */}
+            <Card className="p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Calendar className="h-5 w-5 text-purple-400" />
+                <h3 className="font-semibold text-slate-100">Peak Usage by Day</h3>
+              </div>
+              {historicalData.peakUsagePatterns.byDayOfWeek.length > 0 ? (
+                <div className="h-64">
+                  <Bar
+                    data={{
+                      labels: historicalData.peakUsagePatterns.byDayOfWeek.map(item => item.day),
+                      datasets: [
+                        {
+                          label: 'User Registrations',
+                          data: historicalData.peakUsagePatterns.byDayOfWeek.map(item => item.registrations),
+                          backgroundColor: 'rgba(147, 51, 234, 0.6)',
+                          borderColor: 'rgb(147, 51, 234)',
+                          borderWidth: 1
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: 'rgb(148, 163, 184)'
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        },
+                        y: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Loading usage patterns...</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Performance Over Time */}
+            <Card className="p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Activity className="h-5 w-5 text-green-400" />
+                <h3 className="font-semibold text-slate-100">Performance Over Time</h3>
+              </div>
+              {historicalData.performanceOverTime.avgResponseTime.length > 0 ? (
+                <div className="h-64">
+                  <Line
+                    data={{
+                      labels: historicalData.performanceOverTime.avgResponseTime.map(item => 
+                        new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      ),
+                      datasets: [
+                        {
+                          label: 'Avg Response Time (ms)',
+                          data: historicalData.performanceOverTime.avgResponseTime.map(item => item.responseTime),
+                          borderColor: 'rgb(34, 197, 94)',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          fill: false,
+                          tension: 0.4,
+                          yAxisID: 'y'
+                        },
+                        {
+                          label: 'Error Rate (%)',
+                          data: historicalData.performanceOverTime.errorRate.map(item => item.errorRate),
+                          borderColor: 'rgb(239, 68, 68)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          fill: false,
+                          tension: 0.4,
+                          yAxisID: 'y1'
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: 'rgb(148, 163, 184)'
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        },
+                        y: {
+                          type: 'linear',
+                          display: true,
+                          position: 'left',
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        },
+                        y1: {
+                          type: 'linear',
+                          display: true,
+                          position: 'right',
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            drawOnChartArea: false
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Loading performance data...</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Peak Usage by Hour */}
+            <Card className="p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Clock className="h-5 w-5 text-orange-400" />
+                <h3 className="font-semibold text-slate-100">Peak Usage by Hour</h3>
+              </div>
+              {historicalData.peakUsagePatterns.byHour.length > 0 ? (
+                <div className="h-64">
+                  <Line
+                    data={{
+                      labels: historicalData.peakUsagePatterns.byHour.map(item => item.hour),
+                      datasets: [
+                        {
+                          label: 'User Registrations',
+                          data: historicalData.peakUsagePatterns.byHour.map(item => item.registrations),
+                          borderColor: 'rgb(251, 146, 60)',
+                          backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                          fill: true,
+                          tension: 0.4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          labels: {
+                            color: 'rgb(148, 163, 184)'
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)',
+                            maxTicksLimit: 12
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        },
+                        y: {
+                          ticks: {
+                            color: 'rgb(148, 163, 184)'
+                          },
+                          grid: {
+                            color: 'rgba(148, 163, 184, 0.1)'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Loading hourly patterns...</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Growth Metrics Summary */}
+          <Card className="p-6">
+            <div className="flex items-center space-x-2 mb-6">
+              <BarChart3 className="h-5 w-5 text-indigo-400" />
+              <h3 className="font-semibold text-slate-100">Growth Metrics Summary</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <div className="text-sm text-slate-400 mb-1">Average Users Per Day</div>
+                <div className="text-xl font-semibold text-slate-100">
+                  {historicalData.growthMetrics.averageUsersPerDay}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-slate-400 mb-1">Data Growth Estimate</div>
+                <div className="text-xl font-semibold text-slate-100">
+                  {historicalData.growthMetrics.dataGrowthEstimate}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-slate-400 mb-1">Recent Data Growth</div>
+                <div className="text-xl font-semibold text-slate-100">
+                  {historicalData.growthMetrics.recentDataGrowth}
+                </div>
+              </div>
+            </div>
+
+            {historicalData.summary.dataQuality === 'real_data' && (
+              <div className="mt-4 p-3 bg-green-900/20 border border-green-700 rounded-lg">
+                <div className="flex items-center space-x-2 text-green-400 text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>
+                    Displaying real data from {historicalData.summary.totalDataPoints} data points
+                    {historicalData.summary.oldestRecord && (
+                      ` • Since ${new Date(historicalData.summary.oldestRecord).toLocaleDateString()}`
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
       </div>
     </DashboardLayout>

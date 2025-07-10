@@ -19,7 +19,10 @@ import {
   AlertCircle,
   XCircle,
   TrendingDown,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 
 const SystemHealthPage = () => {
@@ -60,7 +63,33 @@ const SystemHealthPage = () => {
     recentErrors: [],
     status: 'loading'
   });
+  const [supabaseMetrics, setSupabaseMetrics] = useState({
+    apiHealth: {
+      responseTime: '--',
+      rateLimits: '--',
+      status: 'loading',
+      diagnostics: null
+    },
+    databaseConnections: {
+      activeConnections: '--',
+      connectionPoolStatus: '--',
+      poolHealth: 'loading',
+      diagnostics: null
+    },
+    rowLevelSecurity: {
+      policyPerformance: '--',
+      accessPatterns: '--',
+      rlsStatus: 'loading',
+      diagnostics: null
+    },
+    status: 'loading'
+  });
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [diagnosticsExpanded, setDiagnosticsExpanded] = useState({
+    apiHealth: false,
+    databaseConnections: false,
+    rowLevelSecurity: false
+  });
 
   // Role-based access control - only Capacity Admin can access
   useEffect(() => {
@@ -221,6 +250,25 @@ const SystemHealthPage = () => {
           status: 'error'
         }));
       }
+
+      // Fetch Supabase-specific metrics
+      try {
+        const supabaseRes = await fetch(`${baseUrl}/supabase-metrics`);
+        const supabaseData = await supabaseRes.json();
+
+        setSupabaseMetrics({
+          apiHealth: supabaseData.apiHealth,
+          databaseConnections: supabaseData.databaseConnections,
+          rowLevelSecurity: supabaseData.rowLevelSecurity,
+          status: supabaseData.status || 'healthy'
+        });
+      } catch (supabaseError) {
+        console.error('❌ Failed to fetch Supabase metrics:', supabaseError);
+        setSupabaseMetrics(prev => ({
+          ...prev,
+          status: 'error'
+        }));
+      }
       
       setRefreshTime(new Date());
     } catch (error) {
@@ -275,6 +323,110 @@ const SystemHealthPage = () => {
       default:
         return <Activity className="h-5 w-5 text-slate-400" />;
     }
+  };
+
+  const toggleDiagnostics = (section) => {
+    setDiagnosticsExpanded(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const DiagnosticDetail = ({ title, diagnostics, sectionKey }) => {
+    const isExpanded = diagnosticsExpanded[sectionKey];
+    const isLoading = !diagnostics;
+    
+    return (
+      <div className="mt-4 border-t border-slate-700 pt-4">
+        <button
+          onClick={() => !isLoading && toggleDiagnostics(sectionKey)}
+          disabled={isLoading}
+          className={`flex items-center space-x-2 text-sm transition-colors ${
+            isLoading 
+              ? 'text-slate-500 cursor-not-allowed' 
+              : 'text-slate-400 hover:text-slate-300'
+          }`}
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <Info className="h-4 w-4" />
+          <span>
+            {isLoading ? 'Loading diagnostics...' : 'Diagnostic Details'}
+          </span>
+        </button>
+        
+        {isExpanded && !isLoading && (
+          <div className="mt-3 space-y-3">
+            <div className="text-xs text-slate-500">
+              {diagnostics.totalTests && `${diagnostics.totalTests} tests performed`}
+              {diagnostics.totalDbTests && `${diagnostics.totalDbTests} database tests performed`}
+              {diagnostics.totalRlsTests && `${diagnostics.totalRlsTests} RLS tests performed`}
+              {diagnostics.errorCount > 0 && ` • ${diagnostics.errorCount} errors`}
+              {diagnostics.slowTestCount > 0 && ` • ${diagnostics.slowTestCount} slow tests`}
+              {diagnostics.slowQueryCount > 0 && ` • ${diagnostics.slowQueryCount} slow queries`}
+            </div>
+            
+            {diagnostics.issueType && diagnostics.issueType !== 'none' && (
+              <div className="text-xs text-yellow-400">
+                <span className="font-semibold">Issue Type:</span> {diagnostics.issueType}
+              </div>
+            )}
+            
+            {diagnostics.poolHealthReason && (
+              <div className="text-xs text-slate-400">
+                <span className="font-semibold">Pool Status:</span> {diagnostics.poolHealthReason}
+              </div>
+            )}
+            
+            {diagnostics.rlsStatusReason && (
+              <div className="text-xs text-slate-400">
+                <span className="font-semibold">RLS Status:</span> {diagnostics.rlsStatusReason}
+              </div>
+            )}
+            
+            {diagnostics.individualTests && (
+              <div>
+                <div className="text-xs font-semibold text-slate-400 mb-2">Individual Test Results:</div>
+                <div className="space-y-1">
+                  {diagnostics.individualTests.map((test, index) => (
+                    <div key={index} className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">{test.name}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-slate-400">{test.responseTime}</span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          test.status === 'healthy' ? 'bg-green-900 text-green-300' :
+                          test.status === 'slow' ? 'bg-yellow-900 text-yellow-300' :
+                          'bg-red-900 text-red-300'
+                        }`}>
+                          {test.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {diagnostics.roleDistribution && Object.keys(diagnostics.roleDistribution).length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-slate-400 mb-2">Role Distribution:</div>
+                <div className="space-y-1">
+                  {Object.entries(diagnostics.roleDistribution).map(([role, count]) => (
+                    <div key={role} className="flex justify-between text-xs">
+                      <span className="text-slate-500">{role}</span>
+                      <span className="text-slate-400">{count} users</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -635,7 +787,7 @@ const SystemHealthPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-6 w-6 text-red-400" />
-              <h2 className="text-xl font-semibold text-slate-100">🚨 Error Monitoring</h2>
+              <h2 className="text-xl font-semibold text-slate-100">Error Monitoring</h2>
             </div>
             {errorMonitoring.status === 'error' && (
               <div className="flex items-center space-x-2 text-red-400 text-sm">
@@ -815,6 +967,150 @@ const SystemHealthPage = () => {
                   </div>
                 )}
               </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Supabase Specific Metrics Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Database className="h-6 w-6 text-purple-400" />
+              <h2 className="text-xl font-semibold text-slate-100">Supabase Specific Metrics</h2>
+            </div>
+            {supabaseMetrics.status === 'error' && (
+              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Unable to fetch Supabase metrics</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Supabase API Health */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Server className="h-5 w-5 text-purple-400" />
+                  <h3 className="font-semibold text-slate-100">Supabase API Health</h3>
+                </div>
+                {getStatusIcon(supabaseMetrics.apiHealth.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Response Times</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.apiHealth.responseTime}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Rate Limits</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.apiHealth.rateLimits}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Status</span>
+                    <span className={`font-semibold capitalize ${getStatusColor(supabaseMetrics.apiHealth.status)}`}>
+                      {supabaseMetrics.apiHealth.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <DiagnosticDetail 
+                title="API Health Diagnostics" 
+                diagnostics={supabaseMetrics.apiHealth?.diagnostics} 
+                sectionKey="apiHealth" 
+              />
+            </Card>
+
+            {/* Database Connections */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Database className="h-5 w-5 text-blue-400" />
+                  <h3 className="font-semibold text-slate-100">Database Connections</h3>
+                </div>
+                {getStatusIcon(supabaseMetrics.databaseConnections.poolHealth)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Active Connections</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.databaseConnections.activeConnections}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Connection Pool Status</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.databaseConnections.connectionPoolStatus}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Pool Health</span>
+                    <span className={`font-semibold capitalize ${getStatusColor(supabaseMetrics.databaseConnections.poolHealth)}`}>
+                      {supabaseMetrics.databaseConnections.poolHealth}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <DiagnosticDetail 
+                title="Database Connection Diagnostics" 
+                diagnostics={supabaseMetrics.databaseConnections?.diagnostics} 
+                sectionKey="databaseConnections" 
+              />
+            </Card>
+
+            {/* Row Level Security */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-orange-400" />
+                  <h3 className="font-semibold text-slate-100">Row Level Security</h3>
+                </div>
+                {getStatusIcon(supabaseMetrics.rowLevelSecurity.rlsStatus)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Policy Performance</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.rowLevelSecurity.policyPerformance}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Access Patterns</span>
+                    <span className="text-slate-100 font-mono">{supabaseMetrics.rowLevelSecurity.accessPatterns}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">RLS Status</span>
+                    <span className={`font-semibold capitalize ${getStatusColor(supabaseMetrics.rowLevelSecurity.rlsStatus)}`}>
+                      {supabaseMetrics.rowLevelSecurity.rlsStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <DiagnosticDetail 
+                title="Row Level Security Diagnostics" 
+                diagnostics={supabaseMetrics.rowLevelSecurity?.diagnostics} 
+                sectionKey="rowLevelSecurity" 
+              />
             </Card>
           </div>
         </div>

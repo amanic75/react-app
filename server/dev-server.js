@@ -583,6 +583,38 @@ app.get('/api/system/error-monitoring', async (req, res) => {
   }
 });
 
+// Supabase Metrics - Real Supabase-specific monitoring
+app.get('/api/system/supabase-metrics', async (req, res) => {
+  try {
+    // Import the handler function (this will have access to env vars)
+    const { default: handler } = await import('../api/system/supabase-metrics.js');
+    
+    // Create a mock response object that matches Vercel's API format
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      },
+      json: (data) => {
+        res.json(data);
+      }
+    };
+
+    // Call the handler with request and mock response
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Supabase Metrics Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get Supabase metrics data', 
+      details: error.message
+    });
+  }
+});
+
 // Activity tracking endpoint 
 app.post('/api/track-activity', async (req, res) => {
   try {
@@ -649,6 +681,7 @@ app.listen(PORT, () => {
   console.log(`   GET  http://localhost:${PORT}/api/system/network`);
   console.log(`   GET  http://localhost:${PORT}/api/system/usage-analytics`);
   console.log(`   GET  http://localhost:${PORT}/api/system/error-monitoring`);
+  console.log(`   GET  http://localhost:${PORT}/api/system/supabase-metrics`);
 });
 
 // Graceful shutdown

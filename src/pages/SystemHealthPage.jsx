@@ -149,6 +149,15 @@ const SystemHealthPage = () => {
     rowLevelSecurity: false
   });
 
+  // Add state for section visibility
+  const [sectionsExpanded, setSectionsExpanded] = useState({
+    infrastructure: true,    // expanded
+    errors: true,           // expanded  
+    supabaseMetrics: true,  // expanded
+    userAnalytics: false,   // collapsed
+    historicalTrends: false // collapsed
+  });
+
   // Role-based access control - only Capacity Admin can access
   useEffect(() => {
     if (!loading && userProfile) {
@@ -411,6 +420,166 @@ const SystemHealthPage = () => {
     }));
   };
 
+  // Add function to toggle section visibility
+  const toggleSection = (section) => {
+    setSectionsExpanded(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // CollapsibleSection component
+  const CollapsibleSection = ({ sectionKey, title, icon, isExpanded, children, errorIndicator }) => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => toggleSection(sectionKey)}
+          className="flex items-center space-x-2 hover:text-blue-300 transition-colors"
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-5 w-5 text-blue-400" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-blue-400" />
+          )}
+          {icon}
+          <h2 className="text-xl font-semibold text-slate-100">{title}</h2>
+        </button>
+        {errorIndicator}
+      </div>
+      
+      {isExpanded && children}
+    </div>
+  );
+
+  // Add new function to calculate overall system health
+  const calculateOverallHealth = () => {
+    const statuses = [
+      infrastructureMetrics.serverStatus.status,
+      infrastructureMetrics.database.status,
+      infrastructureMetrics.network.status,
+      usageAnalytics.status,
+      errorMonitoring.status,
+      supabaseMetrics.status
+    ];
+
+    // Count status types
+    const errorCount = statuses.filter(status => status === 'error').length;
+    const warningCount = statuses.filter(status => status === 'warning').length;
+    const loadingCount = statuses.filter(status => status === 'loading').length;
+
+    // Determine overall status
+    if (errorCount > 0) return 'critical';
+    if (warningCount > 1) return 'warning';
+    if (loadingCount > 0) return 'loading';
+    return 'healthy';
+  };
+
+  const getOverallHealthColor = (status) => {
+    switch (status) {
+      case 'healthy': return 'text-green-400';
+      case 'warning': return 'text-yellow-400';
+      case 'critical': return 'text-red-400';
+      case 'loading': return 'text-blue-400';
+      default: return 'text-slate-400';
+    }
+  };
+
+  const getOverallHealthIcon = (status) => {
+    switch (status) {
+      case 'healthy': return <CheckCircle className="h-12 w-12" />;
+      case 'warning': return <AlertTriangle className="h-12 w-12" />;
+      case 'critical': return <XCircle className="h-12 w-12" />;
+      case 'loading': return <Activity className="h-12 w-12 animate-pulse" />;
+      default: return <AlertCircle className="h-12 w-12" />;
+    }
+  };
+
+  const getOverallHealthMessage = (status) => {
+    switch (status) {
+      case 'healthy': return 'All systems operational';
+      case 'warning': return 'Some systems need attention';
+      case 'critical': return 'Critical issues detected';
+      case 'loading': return 'Checking system status...';
+      default: return 'System status unknown';
+    }
+  };
+
+  // Add function to collect critical alerts
+  const getCriticalAlerts = () => {
+    const alerts = [];
+
+    // Check for server issues
+    if (infrastructureMetrics.serverStatus.status === 'error') {
+      alerts.push({
+        type: 'critical',
+        title: 'Server Connection Failed',
+        message: 'Unable to connect to monitoring endpoints',
+        icon: <Server className="h-5 w-5" />,
+        action: 'Check server status'
+      });
+    }
+
+    // Check for database issues
+    if (infrastructureMetrics.database.status === 'error') {
+      alerts.push({
+        type: 'critical',
+        title: 'Database Connection Issues',
+        message: 'Database health check failed',
+        icon: <Database className="h-5 w-5" />,
+        action: 'Verify database connection'
+      });
+    }
+
+    // Check for high error rates
+    if (errorMonitoring.systemAlerts.criticalAlerts !== '--' && 
+        parseInt(errorMonitoring.systemAlerts.criticalAlerts) > 0) {
+      alerts.push({
+        type: 'critical',
+        title: `${errorMonitoring.systemAlerts.criticalAlerts} Critical System Alerts`,
+        message: `Last critical: ${errorMonitoring.systemAlerts.lastCriticalAlert}`,
+        icon: <AlertTriangle className="h-5 w-5" />,
+        action: 'Review alert details'
+      });
+    }
+
+    // Check for authentication errors
+    if (errorMonitoring.failedOperations.authenticationErrors !== '--' && 
+        parseInt(errorMonitoring.failedOperations.authenticationErrors) > 5) {
+      alerts.push({
+        type: 'warning',
+        title: 'High Authentication Failures',
+        message: `${errorMonitoring.failedOperations.authenticationErrors} auth errors detected`,
+        icon: <XCircle className="h-5 w-5" />,
+        action: 'Check authentication system'
+      });
+    }
+
+    // Check for API errors
+    if (errorMonitoring.failedOperations.apiErrors !== '--' && 
+        parseInt(errorMonitoring.failedOperations.apiErrors) > 10) {
+      alerts.push({
+        type: 'warning',
+        title: 'High API Error Rate',
+        message: `${errorMonitoring.failedOperations.apiErrors} API errors in recent period`,
+        icon: <Zap className="h-5 w-5" />,
+        action: 'Investigate API issues'
+      });
+    }
+
+    // Check for Supabase issues
+    if (supabaseMetrics.status === 'error') {
+      alerts.push({
+        type: 'warning',
+        title: 'Supabase Metrics Unavailable',
+        message: 'Unable to fetch Supabase-specific metrics',
+        icon: <Database className="h-5 w-5" />,
+        action: 'Check Supabase connection'
+      });
+    }
+
+    return alerts.slice(0, 4); // Limit to 4 most critical alerts
+  };
+
   const DiagnosticDetail = ({ title, diagnostics, sectionKey }) => {
     const isExpanded = diagnosticsExpanded[sectionKey];
     const isLoading = !diagnostics;
@@ -542,21 +711,87 @@ const SystemHealthPage = () => {
           </div>
         </div>
 
-        {/* Infrastructure & Performance Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Server className="h-6 w-6 text-blue-400" />
-              <h2 className="text-xl font-semibold text-slate-100">Infrastructure & Performance</h2>
+        {/* Overall System Health Indicator */}
+        <div className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+          <div className="flex items-center space-x-3">
+            {getOverallHealthIcon(calculateOverallHealth())}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-100">Overall System Health</h3>
+              <p className={`text-sm ${getOverallHealthColor(calculateOverallHealth())}`}>
+                {getOverallHealthMessage(calculateOverallHealth())}
+              </p>
             </div>
-            {infrastructureMetrics.serverStatus.status === 'error' && (
+          </div>
+          <div className="text-sm text-slate-400">
+            Last checked: {refreshTime.toLocaleTimeString()}
+          </div>
+        </div>
+
+        {/* Critical Alerts Banner - Only show if there are alerts */}
+        {getCriticalAlerts().length > 0 && (
+          <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2 text-red-400">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-semibold">Critical Alerts ({getCriticalAlerts().length})</span>
+              </div>
+              <div className="text-xs text-red-300">
+                Requires immediate attention
+              </div>
+            </div>
+            <div className="space-y-3">
+              {getCriticalAlerts().map((alert, index) => (
+                <div key={index} className={`flex items-start space-x-3 p-3 rounded-lg ${
+                  alert.type === 'critical' ? 'bg-red-900/30' : 'bg-yellow-900/30'
+                }`}>
+                  <div className={`flex-shrink-0 p-2 rounded-full ${
+                    alert.type === 'critical' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-black'
+                  }`}>
+                    {alert.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`font-semibold ${
+                      alert.type === 'critical' ? 'text-red-200' : 'text-yellow-200'
+                    }`}>
+                      {alert.title}
+                    </div>
+                    <div className="text-sm text-slate-300 mt-1">{alert.message}</div>
+                    <button className={`text-sm mt-2 hover:underline ${
+                      alert.type === 'critical' ? 'text-red-400' : 'text-yellow-400'
+                    }`}>
+                      → {alert.action}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No Critical Alerts - Success State */}
+        {getCriticalAlerts().length === 0 && calculateOverallHealth() === 'healthy' && (
+          <div className="bg-green-900/20 border border-green-700 rounded-lg p-4">
+            <div className="flex items-center space-x-2 text-green-400">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-semibold">No Critical Alerts</span>
+              <span className="text-sm text-green-300">• All systems operating normally</span>
+            </div>
+          </div>
+        )}
+
+        {/* 1. Infrastructure & Performance Section (Expanded) */}
+        <CollapsibleSection
+          sectionKey="infrastructure"
+          title="Infrastructure & Performance"
+          icon={<Server className="h-6 w-6 text-blue-400" />}
+          isExpanded={sectionsExpanded.infrastructure}
+          errorIndicator={infrastructureMetrics.serverStatus.status === 'error' && (
               <div className="flex items-center space-x-2 text-red-400 text-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Unable to connect to monitoring endpoints</span>
               </div>
             )}
-          </div>
-
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Server Status */}
             <Card className="p-6">
@@ -674,208 +909,21 @@ const SystemHealthPage = () => {
               </div>
             </Card>
           </div>
-        </div>
+        </CollapsibleSection>
 
-        {/* Usage Analytics Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-6 w-6 text-purple-400" />
-              <h2 className="text-xl font-semibold text-slate-100">Usage Analytics</h2>
-            </div>
-            {usageAnalytics.status === 'error' && (
-              <div className="flex items-center space-x-2 text-red-400 text-sm">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Unable to fetch usage analytics</span>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Active Users */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Users className="h-5 w-5 text-blue-400" />
-                  <h3 className="font-semibold text-slate-100">Active Users</h3>
-                </div>
-                {getStatusIcon(usageAnalytics.status)}
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Current Online</span>
-                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers.current}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Peak Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.peakToday}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Peak Hour</span>
-                    <span className="text-slate-100 font-mono text-xs">{usageAnalytics.activeUsers.peakHourLabel}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Recently Active</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.recentlyActive}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* API Call Volume */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-yellow-400" />
-                  <h3 className="font-semibold text-slate-100">API Calls</h3>
-                </div>
-                {getStatusIcon(usageAnalytics.status)}
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Per Minute</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerMinute}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Per Hour</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerHour}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Total Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.totalRequests}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Most Used:</div>
-                  <div className="text-xs text-slate-300 font-mono truncate">
-                    {usageAnalytics.apiCallVolume.mostUsedEndpoints.length > 0 
-                      ? usageAnalytics.apiCallVolume.mostUsedEndpoints[0]?.endpoint?.split('/').pop() || 'N/A'
-                      : 'Loading...'
-                    }
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Database Operations */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-green-400" />
-                  <h3 className="font-semibold text-slate-100">DB Operations</h3>
-                </div>
-                {getStatusIcon(usageAnalytics.status)}
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Read Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.readOperations}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Write Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.writeOperations}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Total Queries</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.queryCount}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Total Users</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.totalUsers}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Storage Usage */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <HardDrive className="h-5 w-5 text-orange-400" />
-                  <h3 className="font-semibold text-slate-100">Storage</h3>
-                </div>
-                {getStatusIcon(usageAnalytics.status)}
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Database Size</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.databaseSize}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-400">Tables</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.tableCount}</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Index Size</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.indexSize}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Growth Rate</span>
-                    <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage.growthRate}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* Error Monitoring Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-6 w-6 text-red-400" />
-              <h2 className="text-xl font-semibold text-slate-100">Error Monitoring</h2>
-            </div>
-            {errorMonitoring.status === 'error' && (
+        {/* 2. Error Monitoring Section (Expanded) */}
+        <CollapsibleSection
+          sectionKey="errors"
+          title="Error Monitoring"
+          icon={<AlertCircle className="h-6 w-6 text-red-400" />}
+          isExpanded={sectionsExpanded.errors}
+          errorIndicator={errorMonitoring.status === 'error' && (
               <div className="flex items-center space-x-2 text-red-400 text-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Unable to fetch error monitoring data</span>
               </div>
             )}
-          </div>
-
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Error Rates */}
             <Card className="p-6">
@@ -1048,23 +1096,21 @@ const SystemHealthPage = () => {
               </div>
             </Card>
           </div>
-        </div>
+        </CollapsibleSection>
 
-        {/* Supabase Specific Metrics Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Database className="h-6 w-6 text-purple-400" />
-              <h2 className="text-xl font-semibold text-slate-100">Supabase Specific Metrics</h2>
-            </div>
-            {supabaseMetrics.status === 'error' && (
+        {/* 3. Supabase Specific Metrics Section (Expanded) */}
+        <CollapsibleSection
+          sectionKey="supabaseMetrics"
+          title="Supabase Specific Metrics"
+          icon={<Database className="h-6 w-6 text-purple-400" />}
+          isExpanded={sectionsExpanded.supabaseMetrics}
+          errorIndicator={supabaseMetrics.status === 'error' && (
               <div className="flex items-center space-x-2 text-red-400 text-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Unable to fetch Supabase metrics</span>
               </div>
             )}
-          </div>
-
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Supabase API Health */}
             <Card className="p-6">
@@ -1154,7 +1200,7 @@ const SystemHealthPage = () => {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="h-5 w-5 text-orange-400" />
+                  <Activity className="h-5 w-5 text-green-400" />
                   <h3 className="font-semibold text-slate-100">Row Level Security</h3>
                 </div>
                 {getStatusIcon(supabaseMetrics.rowLevelSecurity.rlsStatus)}
@@ -1186,29 +1232,210 @@ const SystemHealthPage = () => {
               </div>
               
               <DiagnosticDetail 
-                title="Row Level Security Diagnostics" 
+                title="RLS Diagnostics" 
                 diagnostics={supabaseMetrics.rowLevelSecurity?.diagnostics} 
                 sectionKey="rowLevelSecurity" 
               />
             </Card>
           </div>
+        </CollapsibleSection>
+
+        {/* 4. Usage Analytics Section (Collapsed) */}
+        <CollapsibleSection
+          sectionKey="userAnalytics"
+          title="Usage Analytics"
+          icon={<BarChart3 className="h-6 w-6 text-purple-400" />}
+          isExpanded={sectionsExpanded.userAnalytics}
+          errorIndicator={usageAnalytics.status === 'error' && (
+            <div className="flex items-center space-x-2 text-red-400 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Unable to fetch usage analytics</span>
+            </div>
+          )}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Active Users */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-blue-400" />
+                  <h3 className="font-semibold text-slate-100">Active Users</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
         </div>
 
-        {/* Trends & Historical Data Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Current Online</span>
+                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers.current}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Peak Today</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.peakToday}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Peak Hour</span>
+                    <span className="text-slate-100 font-mono text-xs">{usageAnalytics.activeUsers.peakHourLabel}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Recently Active</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.recentlyActive}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* API Call Volume */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <BarChart3 className="h-6 w-6 text-indigo-400" />
-              <h2 className="text-xl font-semibold text-slate-100">Trends & Historical Data</h2>
+                  <Zap className="h-5 w-5 text-yellow-400" />
+                  <h3 className="font-semibold text-slate-100">API Calls</h3>
             </div>
-            {historicalData.status === 'error' && (
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Per Minute</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerMinute}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Per Hour</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerHour}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Today</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.totalRequests}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Most Used:</div>
+                  <div className="text-xs text-slate-300 font-mono truncate">
+                    {usageAnalytics.apiCallVolume.mostUsedEndpoints.length > 0 
+                      ? usageAnalytics.apiCallVolume.mostUsedEndpoints[0]?.endpoint?.split('/').pop() || 'N/A'
+                      : 'Loading...'
+                    }
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Database Operations */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Database className="h-5 w-5 text-green-400" />
+                  <h3 className="font-semibold text-slate-100">DB Operations</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Read Ops</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.readOperations}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Write Ops</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.writeOperations}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Queries</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.queryCount}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total Users</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.totalUsers}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Storage Usage */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <HardDrive className="h-5 w-5 text-orange-400" />
+                  <h3 className="font-semibold text-slate-100">Storage</h3>
+                </div>
+                {getStatusIcon(usageAnalytics.status)}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Database Size</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.databaseSize}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-400">Tables</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.tableCount}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Index Size</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.indexSize}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Growth Rate</span>
+                    <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage.growthRate}</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </CollapsibleSection>
+
+        {/* 5. Trends & Historical Data Section (Collapsed) */}
+        <CollapsibleSection
+          sectionKey="historicalTrends"
+          title="Trends & Historical Data"
+          icon={<BarChart3 className="h-6 w-6 text-indigo-400" />}
+          isExpanded={sectionsExpanded.historicalTrends}
+          errorIndicator={historicalData.status === 'error' && (
               <div className="flex items-center space-x-2 text-red-400 text-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <span>Unable to fetch historical data</span>
               </div>
             )}
-          </div>
-
+        >
           {/* Growth Metrics Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="p-6">
@@ -1611,7 +1838,7 @@ const SystemHealthPage = () => {
               </div>
             )}
           </Card>
-        </div>
+        </CollapsibleSection>
       </div>
     </DashboardLayout>
   );

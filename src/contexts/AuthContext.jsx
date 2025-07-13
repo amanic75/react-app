@@ -197,6 +197,14 @@ export const AuthProvider = ({ children }) => {
         role = 'NSight Admin';
       }
       
+      // Prioritize role from user_metadata (set during admin creation) over domain-based detection
+      const finalRole = user.user_metadata?.role || role;
+      
+      console.log('🔍 Role determination for user:', email);
+      console.log('  - Domain-based role:', role);
+      console.log('  - User metadata role:', user.user_metadata?.role);
+      console.log('  - Final role:', finalRole);
+      
       const insertPromise = supabase
         .from('user_profiles')
         .insert([
@@ -205,7 +213,7 @@ export const AuthProvider = ({ children }) => {
             email: email,
             first_name: firstName,
             last_name: lastName,
-            role: user.user_metadata?.role || role,
+            role: finalRole,
             department: user.user_metadata?.department || '',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -433,6 +441,20 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsSigningIn(true);
       console.log('🔧 Admin creating user:', email);
+      console.log('📋 UserData being sent to API:', userData);
+      
+      const requestBody = {
+        email,
+        password,
+        userData: {
+          first_name: userData.firstName || '',
+          last_name: userData.lastName || '',
+          department: userData.department || '',
+          role: userData.role || 'Employee'
+        }
+      };
+      
+      console.log('📤 Request body being sent:', requestBody);
       
       // Use the API endpoint which uses service role key
       const response = await fetch('/api/admin/create-user', {
@@ -440,19 +462,12 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          password,
-          userData: {
-            first_name: userData.firstName || '',
-            last_name: userData.lastName || '',
-            department: userData.department || '',
-            role: userData.role || 'Employee'
-          }
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const result = await response.json();
+      
+      console.log('📥 API response:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create user');

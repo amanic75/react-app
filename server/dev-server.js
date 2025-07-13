@@ -26,6 +26,38 @@ console.log('  SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_
 console.log('  VITE_SUPABASE_ANON_KEY:', !!process.env.VITE_SUPABASE_ANON_KEY);
 
 // Import and handle API routes
+app.post('/api/admin/create-user', async (req, res) => {
+  try {
+    // Import the handler function (this will now have access to env vars)
+    const { default: handler } = await import('../api/admin/create-user.js');
+    
+    // Create a mock response object that matches Vercel's API format
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        },
+        end: () => {
+          res.end();
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    // Call the handler with request and mock response
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Create User API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 app.post('/api/admin/change-password', async (req, res) => {
   try {
     // Import the handler function (this will now have access to env vars)
@@ -700,6 +732,7 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Development API server running on http://localhost:${PORT}`);
   console.log(`🔗 API endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/admin/create-user`);
   console.log(`   POST http://localhost:${PORT}/api/admin/change-password`);
   console.log(`   POST http://localhost:${PORT}/api/debug/check-profile`);
   console.log(`   POST http://localhost:${PORT}/api/debug/fix-admin-profile`);

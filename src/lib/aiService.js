@@ -1,12 +1,22 @@
-// AI Service for handling OpenAI API integration
-import OpenAI from 'openai';
+// AI Service for handling AI chat requests
+// This version uses a backend API for production security
 
 class AIService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true // Only for demo - use backend in production
-    });
+    // Check if we're in development or production
+    this.isDevelopment = import.meta.env.DEV;
+    this.apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/ai-chat';
+    
+    // Only initialize OpenAI client in development
+    if (this.isDevelopment && import.meta.env.VITE_OPENAI_API_KEY) {
+      // Dynamic import to avoid loading OpenAI in production
+      import('openai').then(({ default: OpenAI }) => {
+        this.openai = new OpenAI({
+          apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+          dangerouslyAllowBrowser: true // Only for development
+        });
+      });
+    }
     
     this.systemPrompt = `You are a specialized AI assistant for Capacity Chemical's internal platform. You have expertise in:
     - Chemical formulas and molecular structures
@@ -23,6 +33,16 @@ class AIService {
 
   async generateResponse(userMessage, files = null, conversationHistory = []) {
     try {
+      // In production, use backend API
+      if (!this.isDevelopment) {
+        return await this.generateResponseFromAPI(userMessage, files, conversationHistory);
+      }
+      
+      // In development, use direct OpenAI calls
+      if (!this.openai) {
+        throw new Error('OpenAI client not initialized. Check your API key.');
+      }
+      
       const messages = [
         { role: 'system', content: this.systemPrompt },
         ...conversationHistory,
@@ -42,6 +62,29 @@ class AIService {
       console.error('AI Service Error:', error);
       throw new Error('Failed to generate AI response. Please try again.');
     }
+  }
+
+  async generateResponseFromAPI(userMessage, files, conversationHistory) {
+    const response = await fetch(this.apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authentication header if needed
+        // 'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        files: files,
+        conversationHistory: conversationHistory
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.response;
   }
 
   buildUserMessage(text, files) {
@@ -77,8 +120,12 @@ class AIService {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // For streaming responses (optional)
+  // For streaming responses (development only)
   async *generateStreamingResponse(userMessage, files = null, conversationHistory = []) {
+    if (!this.isDevelopment || !this.openai) {
+      throw new Error('Streaming only available in development mode');
+    }
+
     try {
       const messages = [
         { role: 'system', content: this.systemPrompt },

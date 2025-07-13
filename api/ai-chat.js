@@ -1,21 +1,11 @@
-// Production-ready AI Chat API endpoint
+// Production-ready AI Chat API endpoint for Vercel Functions
 // This should be used instead of calling OpenAI directly from the frontend
 
 import OpenAI from 'openai';
-import rateLimit from 'express-rate-limit';
 
 // Initialize OpenAI with server-side API key
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // Server-side environment variable
-});
-
-// Rate limiting middleware
-const aiChatLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 requests per windowMs
-  message: 'Too many AI requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 // System prompt for chemical industry specialization
@@ -31,6 +21,26 @@ Always prioritize safety in your responses and provide accurate, professional in
 
 When users upload files, analyze them for chemical data, safety information, formulas, or specifications.`;
 
+// Simple rate limiting for Vercel Functions
+const requestCounts = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 minutes
+  const maxRequests = 50;
+  
+  const userRequests = requestCounts.get(ip) || [];
+  const validRequests = userRequests.filter(timestamp => now - timestamp < windowMs);
+  
+  if (validRequests.length >= maxRequests) {
+    return true;
+  }
+  
+  validRequests.push(now);
+  requestCounts.set(ip, validRequests);
+  return false;
+}
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -38,15 +48,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Apply rate limiting
-    await new Promise((resolve, reject) => {
-      aiChatLimiter(req, res, (result) => {
-        if (result instanceof Error) {
-          return reject(result);
-        }
-        resolve(result);
+    // Simple rate limiting
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    if (isRateLimited(clientIP)) {
+      return res.status(429).json({ 
+        error: 'Too many AI requests from this IP, please try again later.' 
       });
-    });
+    }
 
     // Validate user authentication (implement your auth logic here)
     // const user = await validateAuthToken(req.headers.authorization);
@@ -154,14 +162,5 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Alternative implementation using Express.js
-/*
-import express from 'express';
-const router = express.Router();
-
-router.post('/ai-chat', aiChatLimiter, async (req, res) => {
-  // Same logic as above
-});
-
-export default router;
-*/ 
+// Vercel Functions deployment ready
+// Environment variables: OPENAI_API_KEY 

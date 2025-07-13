@@ -10,7 +10,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, signUp, changePassword, getDashboardRoute, loading } = useAuth();
+  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, adminCreateUser, changePassword, getDashboardRoute, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -375,8 +375,10 @@ const UserManagementPage = () => {
 
   const handleSaveNewUser = async (newUser) => {
     try {
-      // Use the signUp function from auth context to create the user
-      const { data, error } = await signUp(newUser.email, newUser.password, {
+      console.log('🔧 Admin creating new user:', newUser.email);
+      
+      // Use the adminCreateUser function to create user without affecting current session
+      const { data, error } = await adminCreateUser(newUser.email, newUser.password, {
         firstName: newUser.name.split(' ')[0] || '',
         lastName: newUser.name.split(' ').slice(1).join(' ') || '',
         role: newUser.role,
@@ -384,11 +386,12 @@ const UserManagementPage = () => {
       });
 
       if (error) {
-        console.error('Error creating user:', error);
-        alert(`Failed to create user: ${error.message}`);
+        console.error('❌ Error creating user:', error);
+        alert(`Failed to create user: ${error.message || error}`);
         return;
       }
 
+      console.log('✅ User created successfully:', data);
       alert(`User created successfully! Email: ${newUser.email}\nPassword: ${newUser.password}\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
       
       // Refresh the users list
@@ -396,7 +399,7 @@ const UserManagementPage = () => {
       
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('Error in handleSaveNewUser:', error);
+      console.error('❌ Error in handleSaveNewUser:', error);
       alert(`Unexpected error: ${error.message}`);
     }
   };

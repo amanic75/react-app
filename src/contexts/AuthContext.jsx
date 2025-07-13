@@ -428,6 +428,46 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Admin-only user creation using service role key (doesn't affect current session)
+  const adminCreateUser = async (email, password, userData = {}) => {
+    try {
+      setIsSigningIn(true);
+      console.log('🔧 Admin creating user:', email);
+      
+      // Use the API endpoint which uses service role key
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          userData: {
+            first_name: userData.firstName || '',
+            last_name: userData.lastName || '',
+            department: userData.department || '',
+            role: userData.role || 'Employee'
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      console.log('✅ Admin user creation successful:', result);
+      return { data: result.user, error: null };
+    } catch (error) {
+      console.error('❌ Admin user creation error:', error);
+      return { data: null, error };
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
   // Sign in with email and password
   const signIn = async (email, password) => {
     try {
@@ -746,6 +786,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isSigningIn,
     signUp,
+    adminCreateUser,
     signIn,
     signOut,
     updateProfile,

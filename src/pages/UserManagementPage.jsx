@@ -88,13 +88,13 @@ const UserManagementPage = () => {
       const transformedUsers = data.map((profile, index) => ({
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
-        email: profile.email,
+        email: profile.email || '',
         role: profile.role || 'Employee',
         status: 'Active', // Default status since user_profiles doesn't have status field
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
-        appAccess: getAppAccessByRole(profile.role || 'Employee'),
-        credentials: getRoleCredentials(profile.role || 'Employee'),
+        appAccess: getAppAccessByRole(profile.role || 'Employee') || [],
+        credentials: getRoleCredentials(profile.role || 'Employee') || '',
         department: profile.department || '',
         created_at: profile.created_at,
         updated_at: profile.updated_at
@@ -169,9 +169,9 @@ const UserManagementPage = () => {
   const filteredUsers = users.filter(user => {
     // Search filter
     const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.id.toString().includes(searchTerm);
+      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.id || '').toString().includes(searchTerm);
     
     // Role filter
     const matchesRole = filterRole === 'all' || user.role === filterRole;
@@ -180,14 +180,14 @@ const UserManagementPage = () => {
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     
     // Domain filter
-    const userDomain = user.email.split('@')[1];
+    const userDomain = (user.email || '').split('@')[1];
     const matchesDomain = filterDomain === 'all' || 
       (filterDomain === 'capacity.com' && userDomain === 'capacity.com') ||
       (filterDomain === 'nsight-inc.com' && userDomain === 'nsight-inc.com') ||
       (filterDomain === 'other' && userDomain !== 'capacity.com' && userDomain !== 'nsight-inc.com');
     
     // App filter
-    const matchesApp = filterApp === 'all' || user.appAccess.includes(filterApp);
+    const matchesApp = filterApp === 'all' || (user.appAccess || []).includes(filterApp);
     
     return matchesSearch && matchesRole && matchesStatus && matchesDomain && matchesApp;
   });
@@ -198,8 +198,8 @@ const UserManagementPage = () => {
     
     switch (sortBy) {
       case 'name':
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
+        aValue = (a.name || '').toLowerCase();
+        bValue = (b.name || '').toLowerCase();
         break;
       case 'role':
         // Custom role order: Employee, Admin, NSight Admin
@@ -212,28 +212,28 @@ const UserManagementPage = () => {
         bValue = new Date(b.lastLogin);
         break;
       case 'email':
-        aValue = a.email.toLowerCase();
-        bValue = b.email.toLowerCase();
+        aValue = (a.email || '').toLowerCase();
+        bValue = (b.email || '').toLowerCase();
         break;
       case 'id':
         aValue = a.id;
         bValue = b.id;
         break;
       case 'domain':
-        aValue = a.email.split('@')[1];
-        bValue = b.email.split('@')[1];
+        aValue = (a.email || '').split('@')[1];
+        bValue = (b.email || '').split('@')[1];
         break;
       case 'appAccess':
-        aValue = a.appAccess.length;
-        bValue = b.appAccess.length;
+        aValue = (a.appAccess || []).length;
+        bValue = (b.appAccess || []).length;
         break;
       case 'status':
         aValue = a.status;
         bValue = a.status;
         break;
       default:
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
+        aValue = (a.name || '').toLowerCase();
+        bValue = (b.name || '').toLowerCase();
     }
     
     if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -845,25 +845,25 @@ const UserManagementPage = () => {
                 <tbody>
                   {sortedUsers.map((employee, index) => (
                     <tr 
-                      key={employee.id} 
+                      key={employee.id || `user-${index}`} 
                       className="border-b border-slate-700 hover:bg-slate-700 transition-colors"
                     >
-                      <td className="px-6 py-4 text-sm text-slate-100 font-medium truncate" title={employee.name}>
-                        {employee.name}
+                      <td className="px-6 py-4 text-sm text-slate-100 font-medium truncate" title={employee.name || ''}>
+                        {employee.name || ''}
                       </td>
                                              <td className="px-6 py-4">
                          <span className="inline-flex items-center px-2 py-1 bg-slate-700 text-slate-200 text-xs font-mono rounded border border-slate-600">
-                           #{employee.id}
+                           #{employee.id || ''}
                          </span>
                        </td>
-                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.email}>
-                        <a href={`mailto:${employee.email}`} className="text-blue-400 hover:text-blue-300 underline truncate block">
-                          {employee.email}
+                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.email || ''}>
+                        <a href={`mailto:${employee.email || ''}`} className="text-blue-400 hover:text-blue-300 underline truncate block">
+                          {employee.email || ''}
                         </a>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium truncate ${getRoleColor(employee.role)}`}>
-                          {employee.role}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium truncate ${getRoleColor(employee.role || 'Employee')}`}>
+                          {employee.role || 'Employee'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.contact || ''}>
@@ -871,19 +871,19 @@ const UserManagementPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-1 overflow-x-auto">
-                          {employee.appAccess.map((app, appIndex) => (
+                          {(employee.appAccess || []).map((app, appIndex) => (
                             <div
-                              key={app}
+                              key={`${app}-${appIndex}`}
                               className="w-8 h-8 bg-slate-700 rounded-md flex items-center justify-center hover:bg-slate-600 transition-colors flex-shrink-0"
-                              title={app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              title={typeof app === 'string' ? app.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) : ''}
                             >
                               {getAppIcon(app)}
                             </div>
                           ))}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.credentials}>
-                        {employee.credentials}
+                      <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.credentials || ''}>
+                        {employee.credentials || ''}
                       </td>
                       <td className="px-6 py-4">
                         <button 

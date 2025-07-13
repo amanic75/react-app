@@ -376,7 +376,7 @@ const UserManagementPage = () => {
   const handleSaveNewUser = async (newUser) => {
     try {
       // Use the signUp function from auth context to create the user
-      const { data, error } = await signUp(newUser.email, 'TemporaryPassword123!', {
+      const { data, error } = await signUp(newUser.email, newUser.password, {
         firstName: newUser.name.split(' ')[0] || '',
         lastName: newUser.name.split(' ').slice(1).join(' ') || '',
         role: newUser.role,
@@ -389,7 +389,7 @@ const UserManagementPage = () => {
         return;
       }
 
-      alert(`User created successfully! Email: ${newUser.email}\nTemporary Password: TemporaryPassword123!\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
+      alert(`User created successfully! Email: ${newUser.email}\nPassword: ${newUser.password}\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
       
       // Refresh the users list
       await loadUsers();

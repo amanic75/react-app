@@ -9,7 +9,8 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
     contact: '',
     role: 'Employee',
     credentials: 'user/temporary pass',
-    appAccess: ['formulas']
+    appAccess: ['formulas'],
+    password: ''
   });
 
   const roleOptions = [
@@ -87,6 +88,16 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       return;
     }
 
+    if (!formData.password.trim()) {
+      alert('Password is required');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
     const newUser = {
       id: Date.now(), // Simple ID generation
       name: formData.name.trim(),
@@ -96,7 +107,8 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       credentials: formData.credentials,
       appAccess: formData.appAccess,
       status: 'Active',
-      lastLogin: 'Never'
+      lastLogin: 'Never',
+      password: formData.password.trim()
     };
 
     onSave(newUser);
@@ -108,7 +120,8 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       contact: '',
       role: 'Employee',
       credentials: 'user/temporary pass',
-      appAccess: ['formulas']
+      appAccess: ['formulas'],
+      password: ''
     });
     
     onClose();
@@ -122,7 +135,8 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
       contact: '',
       role: 'Employee',
       credentials: 'user/temporary pass',
-      appAccess: ['formulas']
+      appAccess: ['formulas'],
+      password: ''
     });
     onClose();
   };
@@ -198,6 +212,23 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
                   placeholder="Phone number (optional)"
                   className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  placeholder="Create password for this user"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                  Minimum 6 characters
+                </p>
               </div>
             </div>
 

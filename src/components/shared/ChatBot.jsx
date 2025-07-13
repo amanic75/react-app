@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { MessageCircle, X, Send, Minimize2, Paperclip, File, Image } from 'lucide-react';
 import Card from '../ui/Card';
+import aiService from '../../lib/aiService';
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -8,7 +9,7 @@ const ChatBot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your AI assistant. I can help with chemical formulas, safety protocols, and analyze documents you upload. How can I help you today?",
+      text: "Hello! I'm your AI assistant specialized in chemical engineering and safety. I can help with chemical formulas, safety protocols, material specifications, regulatory compliance, and analyze documents you upload. How can I help you today?",
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -68,47 +69,46 @@ const ChatBot = () => {
     };
 
     setMessages(prev => [...prev, newMessage]);
+    const userInput = inputText;
+    const userFiles = [...attachedFiles];
     setInputText('');
     setAttachedFiles([]);
     setIsTyping(true);
 
-    // Simulate AI response with file analysis
-    setTimeout(() => {
+    try {
+      // Build conversation history for AI context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
+      // Generate AI response
+      const aiResponse = await aiService.generateResponse(userInput, userFiles, conversationHistory);
+      
       const botResponse = {
         id: messages.length + 2,
-        text: getBotResponse(inputText, newMessage.files),
+        text: aiResponse,
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
+      
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('AI Response Error:', error);
+      const errorResponse = {
+        id: messages.length + 2,
+        text: 'I apologize, but I encountered an error processing your request. Please try again. If the issue persists, please contact technical support.',
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
-  };
-
-  const getBotResponse = (userMessage, files) => {
-    if (files && files.length > 0) {
-      const fileTypes = files.map(f => f.type);
-      if (fileTypes.some(type => type.includes('pdf'))) {
-        return "I've analyzed your PDF document. Based on the content, I can help you understand chemical formulas, safety protocols, or material specifications. What specific information would you like me to extract or explain?";
-      }
-      if (fileTypes.some(type => type.includes('image'))) {
-        return "I've processed your image. If it contains chemical diagrams, formulas, or lab equipment, I can help explain what I see. Would you like me to analyze any specific aspects?";
-      }
-      if (fileTypes.some(type => type.includes('csv') || type.includes('excel'))) {
-        return "I've reviewed your data file. I can help analyze chemical data, material properties, or safety metrics. What insights are you looking for?";
-      }
-      return `I've received your ${files.length} file(s). I can analyze chemical documents, safety data sheets, formulas, and lab results. How would you like me to help with this content?`;
     }
-
-    const responses = [
-      "I can help you with chemical formulas, safety protocols, and material information. What specific topic would you like to explore?",
-      "Based on our database, I can provide information about chemical compounds, their properties, and safety guidelines. What would you like to know?",
-      "I'm here to assist with your chemical engineering questions. Feel free to ask about formulas, raw materials, or supplier information.",
-      "That's an interesting question! Let me search our knowledge base for relevant information about chemical processes and safety protocols.",
-      "I can help you understand chemical reactions, material properties, and regulatory compliance. What specific area interests you?"
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
   };
+
+
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -172,7 +172,7 @@ const ChatBot = () => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-slate-100">AI Assistant</h3>
-              <p className="text-xs text-slate-400">Online • File uploads supported</p>
+              <p className="text-xs text-slate-400">AI-Powered • File analysis supported</p>
             </div>
           </div>
           <div className="flex items-center space-x-1">
@@ -204,6 +204,8 @@ const ChatBot = () => {
                     className={`max-w-xs rounded-lg p-3 ${
                       message.sender === 'user'
                         ? 'bg-blue-600 text-white'
+                        : message.isError 
+                        ? 'bg-red-600 text-white border border-red-500'
                         : 'bg-slate-700 text-slate-100'
                     }`}
                   >

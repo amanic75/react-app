@@ -87,6 +87,150 @@ app.post('/api/admin/change-password', async (req, res) => {
   }
 });
 
+// Companies API endpoints
+app.get('/api/admin/companies/list', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/companies/list.js');
+    
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Companies List API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+app.post('/api/admin/companies/create', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/companies/create.js');
+    
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        },
+        end: () => {
+          res.end();
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Companies Create API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Individual company operations (GET, PUT, DELETE)
+app.get('/api/admin/companies/:id', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/companies/[id].js');
+    
+    // Add the id parameter to the request query
+    req.query = { ...req.query, id: req.params.id };
+    
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Company Get API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+app.put('/api/admin/companies/:id', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/companies/[id].js');
+    
+    // Add the id parameter to the request query
+    req.query = { ...req.query, id: req.params.id };
+    
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Company Update API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+app.delete('/api/admin/companies/:id', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/companies/[id].js');
+    
+    // Add the id parameter to the request query
+    req.query = { ...req.query, id: req.params.id };
+    
+    const mockRes = {
+      status: (code) => ({
+        json: (data) => {
+          res.status(code).json(data);
+        }
+      }),
+      setHeader: (name, value) => {
+        res.setHeader(name, value);
+      }
+    };
+
+    await handler(req, mockRes);
+  } catch (error) {
+    console.error('❌ Company Delete API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // Debug endpoint to check user profile
 app.post('/api/debug/check-profile', async (req, res) => {
   try {

@@ -14,23 +14,20 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import Card from '../ui/Card';
+import CreateCompanyModal from './CreateCompanyModal';
 
 const NsightAdminDashboard = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Get current mode from URL query parameters
   const searchParams = new URLSearchParams(location.search);
   const currentMode = searchParams.get('mode');
-
-  // Mock companies data
-  const companies = [
-    { id: 1, name: 'Capacity Chemical', users: 12, apps: ['Formulas', 'Suppliers', 'Raw Materials'] },
-    { id: 2, name: 'Industrial Solutions Inc', users: 8, apps: ['Formulas', 'Suppliers'] },
-    { id: 3, name: 'ChemTech Corp', users: 15, apps: ['Formulas', 'Raw Materials'] },
-    { id: 4, name: 'Precision Chemicals', users: 6, apps: ['Formulas'] }
-  ];
 
   const availableApps = [
     { id: 'formulas', name: 'Formulas', icon: Database, description: 'Chemical formula management' },
@@ -38,6 +35,43 @@ const NsightAdminDashboard = ({ userData }) => {
     { id: 'raw-materials', name: 'Raw Materials', icon: Zap, description: 'Raw material inventory' },
     { id: 'analytics', name: 'Analytics', icon: Settings, description: 'Data analytics and reporting' }
   ];
+
+  // Fetch companies from backend API
+  const fetchCompanies = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/admin/companies/list');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch companies');
+      }
+      
+      if (data.success) {
+        setCompanies(data.companies);
+        console.log('✅ Loaded companies from database:', data.companies.length);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch companies:', error);
+      setError(error.message);
+      // Fallback to sample data if API fails
+      setCompanies([
+        { id: 'sample-1', name: 'Capacity Chemical', users: 12, apps: ['Formulas', 'Suppliers', 'Raw Materials'] },
+        { id: 'sample-2', name: 'Industrial Solutions Inc', users: 8, apps: ['Formulas', 'Suppliers'] }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load companies on component mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
 
   // Reset selected company when mode changes
   useEffect(() => {
@@ -54,6 +88,41 @@ const NsightAdminDashboard = ({ userData }) => {
 
   const handleCompanySelection = (company) => {
     setSelectedCompany(company);
+  };
+
+  const handleCreateCompany = async (newCompany) => {
+    try {
+      console.log('🏢 Creating company via API:', newCompany.companyName);
+      
+      const response = await fetch('/api/admin/companies/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCompany)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create company');
+      }
+      
+      if (data.success) {
+        console.log('✅ Company created successfully:', data.company.company_name);
+        
+        // Refresh the companies list from the database
+        await fetchCompanies();
+        
+        // Show success message (you can enhance this with a toast notification)
+        alert(`Company "${data.company.company_name}" created successfully!`);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to create company:', error);
+      alert(`Failed to create company: ${error.message}`);
+    }
   };
 
   const renderModeSelection = () => (
@@ -146,7 +215,10 @@ const NsightAdminDashboard = ({ userData }) => {
               <p className="text-slate-400 text-sm">Set up a new client company</p>
             </div>
           </div>
-          <button className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={() => setIsCreateCompanyModalOpen(true)}
+            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Create Company
           </button>
         </Card>
@@ -206,29 +278,66 @@ const NsightAdminDashboard = ({ userData }) => {
 
       {!selectedCompany ? (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">Select Company</h3>
-          <div className="space-y-3">
-            {companies.map((company) => (
-              <div
-                key={company.id}
-                onClick={() => handleCompanySelection(company)}
-                className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-100">Select Company</h3>
+            {error && (
+              <button
+                onClick={fetchCompanies}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-slate-200 font-medium">{company.name}</h4>
-                    <div className="flex items-center space-x-4 mt-1">
-                      <span className="text-slate-400 text-sm">{company.users} users</span>
-                      <span className="text-slate-400 text-sm">
-                        Apps: {company.apps.join(', ')}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
-                </div>
-              </div>
-            ))}
+                Retry
+              </button>
+            )}
           </div>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
+              <p className="text-red-300 text-sm">⚠️ {error}</p>
+              <p className="text-red-400 text-xs mt-1">Showing sample data</p>
+            </div>
+          )}
+          
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <span className="ml-3 text-slate-400">Loading companies...</span>
+            </div>
+          ) : companies.length === 0 ? (
+            <div className="text-center py-8">
+              <Building2 className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <h4 className="text-slate-300 font-medium mb-2">No Companies Found</h4>
+              <p className="text-slate-400 text-sm mb-4">Create your first company to get started</p>
+              <button
+                onClick={() => navigate('/dashboard?mode=developer')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Create Company
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {companies.map((company) => (
+                <div
+                  key={company.id}
+                  onClick={() => handleCompanySelection(company)}
+                  className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-slate-200 font-medium">{company.name}</h4>
+                      <div className="flex items-center space-x-4 mt-1">
+                        <span className="text-slate-400 text-sm">{company.users} users</span>
+                        <span className="text-slate-400 text-sm">
+                          Apps: {Array.isArray(company.apps) ? company.apps.join(', ') : 'None'}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       ) : (
         renderCompanyManagement()
@@ -319,13 +428,20 @@ const NsightAdminDashboard = ({ userData }) => {
   );
 
   // Determine which view to render based on URL mode
-  if (currentMode === 'developer') {
-    return renderDeveloperMode();
-  } else if (currentMode === 'existing') {
-    return renderExistingCompanyMode();
-  } else {
-    return renderModeSelection();
-  }
+  return (
+    <>
+      {currentMode === 'developer' ? renderDeveloperMode() : 
+       currentMode === 'existing' ? renderExistingCompanyMode() : 
+       renderModeSelection()}
+      
+      {/* Create Company Modal */}
+      <CreateCompanyModal
+        isOpen={isCreateCompanyModalOpen}
+        onClose={() => setIsCreateCompanyModalOpen(false)}
+        onSave={handleCreateCompany}
+      />
+    </>
+  );
 };
 
 export default NsightAdminDashboard; 

@@ -204,11 +204,7 @@ const SystemHealthPage = () => {
 
   // Get environment-aware API base URL
   const getApiBaseUrl = () => {
-    // In development, use local Express server
-    if (import.meta.env.DEV || window.location.hostname === 'localhost') {
-      return 'http://localhost:3001/api/system';
-    }
-    // In production, use Vercel serverless functions
+    // Use proxy in both development and production
     return '/api/system';
   };
 

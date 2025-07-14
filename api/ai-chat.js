@@ -416,6 +416,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       response: processedResponse.response,
       materialAdded: processedResponse.materialAdded,
+      materialData: processedResponse.materialData,
       successMessage: processedResponse.successMessage,
       errorMessage: processedResponse.errorMessage,
       tokensUsed: completion.usage.total_tokens,

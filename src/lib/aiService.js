@@ -143,10 +143,9 @@ class AIService {
 
   async generateResponse(userMessage, files = null, conversationHistory = []) {
     try {
-      // In production, use backend API
+      // In production, use backend API (Level 2 verification handled by backend)
       if (!this.isDevelopment) {
-        const response = await this.generateResponseFromAPI(userMessage, files, conversationHistory);
-        return await this.processResponse(response);
+        return await this.generateResponseFromAPI(userMessage, files, conversationHistory);
       }
       
       // In development, use direct OpenAI calls
@@ -355,6 +354,29 @@ class AIService {
     }
 
     const data = await response.json();
+    
+    // Handle Level 2 backend response format
+    if (data.materialAdded) {
+      // Backend already processed the material with verification
+      const validatedData = this.validateMaterialData(data.materialData);
+      const savedMaterial = await addMaterial(validatedData);
+      
+      if (savedMaterial) {
+        return {
+          response: data.response,
+          materialAdded: true,
+          materialData: savedMaterial,
+          successMessage: data.successMessage || `✅ Successfully added "${validatedData.materialName}" with backend verification!`
+        };
+      } else {
+        return {
+          response: data.response,
+          materialAdded: false,
+          errorMessage: "❌ Failed to save the verified material to the database. Please try again."
+        };
+      }
+    }
+    
     return data.response;
   }
 

@@ -1,5 +1,5 @@
 // Production-ready AI Chat API endpoint for Vercel Functions
-// This should be used instead of calling OpenAI directly from the frontend
+// Enhanced with Level 2 chemical database verification
 
 import OpenAI from 'openai';
 
@@ -7,6 +7,180 @@ import OpenAI from 'openai';
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // Server-side environment variable
 });
+
+// Level 2 Chemical Database Integration
+class ChemicalDatabaseService {
+  constructor() {
+    this.pubchemBaseUrl = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug';
+  }
+
+  // Get verified chemical data from PubChem (free, no API key needed)
+  async getPubChemData(chemicalName, casNumber = null) {
+    try {
+      let searchUrl;
+      
+      if (casNumber) {
+        searchUrl = `${this.pubchemBaseUrl}/compound/name/${encodeURIComponent(casNumber)}/property/MolecularFormula,MolecularWeight,IUPACName,CanonicalSMILES/JSON`;
+      } else {
+        searchUrl = `${this.pubchemBaseUrl}/compound/name/${encodeURIComponent(chemicalName)}/property/MolecularFormula,MolecularWeight,IUPACName,CanonicalSMILES/JSON`;
+      }
+
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        throw new Error(`PubChem API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.PropertyTable && data.PropertyTable.Properties.length > 0) {
+        const props = data.PropertyTable.Properties[0];
+        return {
+          source: 'PubChem',
+          confidence: 'HIGH',
+          data: {
+            molecularFormula: props.MolecularFormula,
+            molecularWeight: props.MolecularWeight,
+            iupacName: props.IUPACName,
+            canonicalSMILES: props.CanonicalSMILES,
+            cid: props.CID
+          }
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('PubChem lookup error:', error);
+      return null;
+    }
+  }
+
+  // Enhanced chemical lookup
+  async getEnhancedChemicalData(chemicalName, casNumber = null) {
+    const results = {
+      name: chemicalName,
+      casNumber: casNumber,
+      sources: [],
+      confidence: {},
+      properties: {}
+    };
+
+    const pubchemData = await this.getPubChemData(chemicalName, casNumber);
+    if (pubchemData) {
+      results.sources.push('PubChem');
+      results.confidence.basic = 'HIGH';
+      results.properties = { ...results.properties, ...pubchemData.data };
+    }
+
+    return results;
+  }
+}
+
+const chemicalDB = new ChemicalDatabaseService();
+
+// Level 2 Response Processing with Chemical Verification
+async function processResponseWithVerification(response) {
+  // Check if the response contains a material addition request
+  if (response.includes('**[ADD_MATERIAL]**')) {
+    try {
+      const parts = response.split('**[ADD_MATERIAL]**');
+      const informationPart = parts[0].trim();
+      const jsonPart = parts[1].trim();
+      
+      // Extract JSON from the response
+      const jsonMatch = jsonPart.match(/\{[\s\S]*?\}/);
+      if (jsonMatch) {
+        // Clean JSON by removing comments (// text) that AI includes for confidence indicators
+        const cleanedJson = jsonMatch[0].replace(/\/\/[^\r\n]*/g, '').trim();
+        const materialData = JSON.parse(cleanedJson);
+        
+        console.log('🔍 Backend: Verifying chemical data with PubChem for:', materialData.materialName);
+        
+        // LEVEL 2 ENHANCEMENT: Verify chemical data with PubChem
+        const enhancedData = await enhanceWithChemicalVerification(materialData);
+        
+        // Return enhanced response (frontend will handle database saving)
+        return {
+          response: informationPart,
+          materialAdded: true,
+          materialData: enhancedData,
+          successMessage: `✅ Chemical data verified with ${enhancedData.confidenceLevel} confidence!`,
+        };
+      }
+    } catch (error) {
+      console.error('Backend material processing error:', error);
+      return {
+        response: response.replace('**[ADD_MATERIAL]**', ''),
+        materialAdded: false,
+        errorMessage: "❌ Error processing chemical verification. Using AI estimates only."
+      };
+    }
+  }
+  
+  // Return regular response if no material addition
+  return { response };
+}
+
+// Level 2 Chemical Enhancement Function
+async function enhanceWithChemicalVerification(materialData) {
+  try {
+    console.log('🔍 Backend: PubChem verification starting for:', materialData.materialName);
+    
+    // Get enhanced chemical data from PubChem (with timeout)
+    const enhancedData = await Promise.race([
+      chemicalDB.getEnhancedChemicalData(materialData.materialName, materialData.casNumber),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('PubChem timeout')), 10000) // 10 second timeout
+      )
+    ]);
+    
+    if (enhancedData && enhancedData.sources.length > 0) {
+      console.log('✅ Backend: PubChem verification successful:', enhancedData.sources);
+      
+      // Merge verified data with AI estimates
+      return {
+        ...materialData,
+        // Override with verified data where available
+        casNumber: enhancedData.casNumber || materialData.casNumber,
+        molecularFormula: enhancedData.properties.molecularFormula,
+        molecularWeight: enhancedData.properties.molecularWeight,
+        iupacName: enhancedData.properties.iupacName,
+        
+        // Enhanced confidence and source tracking
+        dataSourceNotes: `Verified via ${enhancedData.sources.join(', ')} databases. Chemical properties confirmed. Pricing and supplier info estimated from AI.`,
+        confidenceLevel: 'HIGH', // Chemical data verified
+        verificationSources: enhancedData.sources,
+        lastVerified: new Date().toISOString(),
+        
+        // Add new verified fields
+        pubchemCID: enhancedData.properties.cid,
+        canonicalSMILES: enhancedData.properties.canonicalSMILES
+      };
+    } else {
+      console.log('⚠️ Backend: PubChem verification failed, using AI estimates');
+      
+      // Fallback to AI estimates with lower confidence
+      return {
+        ...materialData,
+        dataSourceNotes: (materialData.dataSourceNotes || '') + ' Chemical verification attempted but not found in databases.',
+        confidenceLevel: 'LOW', // No verification possible
+        verificationSources: [],
+        lastVerified: new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Backend chemical verification error:', error);
+    
+    // Fallback to original data with error note
+    return {
+      ...materialData,
+      dataSourceNotes: (materialData.dataSourceNotes || '') + ' Chemical verification failed due to network error.',
+      confidenceLevel: 'LOW',
+      verificationSources: [],
+      lastVerified: new Date().toISOString()
+    };
+  }
+}
 
 // Enhanced system prompt with confidence levels for chemical industry specialization
 const SYSTEM_PROMPT = `You are a specialized AI assistant for Capacity Chemical's internal platform. You ONLY answer questions related to chemistry, chemical engineering, and chemical safety.
@@ -184,27 +358,39 @@ export default async function handler(req, res) {
       { role: 'user', content: buildUserMessage(message, files) }
     ];
 
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: messages,
-      max_tokens: 1000,
-      temperature: 0.7,
-      user: 'user-123', // Replace with actual user ID for monitoring
-    });
+    // Call OpenAI API with timeout
+    const completion = await Promise.race([
+      openai.chat.completions.create({
+        model: 'gpt-4o', // Use faster model
+        messages: messages,
+        max_tokens: 1000,
+        temperature: 0.7,
+        user: 'user-123', // Replace with actual user ID for monitoring
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OpenAI request timeout')), 25000) // 25 second timeout
+      )
+    ]);
 
     const aiResponse = completion.choices[0].message.content;
+
+    // LEVEL 2 ENHANCEMENT: Process material addition with chemical verification
+    const processedResponse = await processResponseWithVerification(aiResponse);
 
     // Log usage for monitoring (optional)
     console.log('AI Chat Request:', {
       timestamp: new Date().toISOString(),
       tokensUsed: completion.usage.total_tokens,
       model: completion.model,
+      hasVerification: processedResponse.materialAdded || false,
       // userId: user.id,
     });
 
     return res.status(200).json({
-      response: aiResponse,
+      response: processedResponse.response,
+      materialAdded: processedResponse.materialAdded,
+      successMessage: processedResponse.successMessage,
+      errorMessage: processedResponse.errorMessage,
       tokensUsed: completion.usage.total_tokens,
       model: completion.model,
     });

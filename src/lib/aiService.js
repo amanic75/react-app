@@ -34,9 +34,16 @@ class AIService {
     - Industrial chemistry applications
 
     SPECIAL FEATURE - RAW MATERIAL ADDITION:
-    When a user asks you to add a chemical or raw material to their database, you should:
+    CRITICAL: When a user asks you to add a chemical or raw material to their database using phrases like:
+    - "Add [chemical name] to my raw materials"
+    - "I need to add [chemical name] to the database"
+    - "Add [chemical name] to our materials"
+    - "Please add [chemical name]"
+    - "Add [chemical name] to the system"
+    
+    YOU MUST:
     1. Provide helpful information about the chemical
-    2. Format your response with a special marker: **[ADD_MATERIAL]**
+    2. ALWAYS include the special marker: **[ADD_MATERIAL]**
     3. Include all known details about the material in this exact JSON format after the marker:
     {
       "materialName": "Chemical Name (keep under 100 chars)",
@@ -59,6 +66,33 @@ class AIService {
       "shelfLife": "Shelf life (keep under 50 chars, e.g. '2 years')"
     }
 
+    EXAMPLE MATERIAL ADDITION RESPONSE:
+    When user says "Add sodium chloride to my raw materials", respond exactly like this:
+    
+    "I'll add sodium chloride (NaCl) to your raw materials database. Sodium chloride is commonly used in chemical processes as a reagent, preservative, and for ionic strength adjustment. It's generally safe to handle but should be stored in a dry environment.
+    
+    **[ADD_MATERIAL]**
+    {
+      "materialName": "Sodium Chloride",
+      "casNumber": "7647-14-5",
+      "supplierName": "ChemSupply Co.",
+      "manufacture": "Sigma-Aldrich",
+      "tradeName": "NaCl",
+      "supplierCost": "15.50",
+      "weightVolume": "2.16 lbs/gal",
+      "activityPercentage": "99%",
+      "density": "2.17 g/cm³",
+      "viscosity": "N/A",
+      "cost": "18.75",
+      "physicalForm": "Crystalline Solid",
+      "hazardClass": "Non-hazardous",
+      "purity": "99.5%",
+      "country": "USA",
+      "description": "High purity sodium chloride for industrial and laboratory applications",
+      "storageConditions": "Store in dry place, avoid moisture",
+      "shelfLife": "5 years"
+    }
+    
     IMPORTANT: 
     - Research and provide accurate chemical data including CAS numbers, densities, hazard classifications, and typical uses
     - Include supplier cost and cost information when possible (use reasonable estimates based on market data)

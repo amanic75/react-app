@@ -3,7 +3,7 @@ import { MessageCircle, X, Send, Minimize2, Paperclip, File, Image } from 'lucid
 import Card from '../ui/Card';
 import aiService from '../../lib/aiService';
 
-const ChatBot = () => {
+const ChatBot = ({ onMaterialAdded }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
@@ -85,14 +85,24 @@ const ChatBot = () => {
       // Generate AI response
       const aiResponse = await aiService.generateResponse(userInput, userFiles, conversationHistory);
       
+      // Handle different response types
       const botResponse = {
         id: messages.length + 2,
-        text: aiResponse,
+        text: aiResponse.response || aiResponse,
         sender: 'bot',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        materialAdded: aiResponse.materialAdded || false,
+        materialData: aiResponse.materialData || null,
+        successMessage: aiResponse.successMessage || null,
+        errorMessage: aiResponse.errorMessage || null
       };
       
       setMessages(prev => [...prev, botResponse]);
+      
+      // Call refresh callback if material was added successfully
+      if (botResponse.materialAdded && onMaterialAdded) {
+        onMaterialAdded(botResponse.materialData);
+      }
     } catch (error) {
       console.error('AI Response Error:', error);
       const errorResponse = {
@@ -210,6 +220,25 @@ const ChatBot = () => {
                     }`}
                   >
                     {message.text && <p className="text-sm mb-2">{message.text}</p>}
+                    
+                    {/* Material Addition Success/Error Messages */}
+                    {message.successMessage && (
+                      <div className="mt-2 p-2 bg-green-600 bg-opacity-20 border border-green-500 rounded text-green-200">
+                        <p className="text-sm">{message.successMessage}</p>
+                        {message.materialData && (
+                          <p className="text-xs mt-1 text-green-300">
+                            Added to Raw Materials • ID: {message.materialData.id}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {message.errorMessage && (
+                      <div className="mt-2 p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-red-200">
+                        <p className="text-sm">{message.errorMessage}</p>
+                      </div>
+                    )}
+                    
                     {message.files && (
                       <div className="space-y-2">
                         {message.files.map(file => renderFileAttachment(file, true))}

@@ -5,7 +5,7 @@ import Sidebar from '../components/shared/Sidebar';
 import ChatBot from '../components/shared/ChatBot';
 import HeaderControls from '../components/shared/HeaderControls';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children, onMaterialAdded }) => {
   const { userProfile } = useAuth();
   const location = useLocation();
   
@@ -87,7 +87,7 @@ const DashboardLayout = ({ children }) => {
           {children}
         </main>
       </div>
-      <ChatBot />
+      <ChatBot onMaterialAdded={onMaterialAdded} />
     </div>
   );
 };

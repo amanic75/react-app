@@ -14,11 +14,7 @@ export const getAllMaterials = async () => {
   try {
     const { data, error } = await supabase
       .from('raw_materials')
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -33,7 +29,10 @@ export const getAllMaterials = async () => {
       supplierCost: material.supplier_cost,
       casNumber: material.cas_number,
       weightVolume: material.weight_volume,
+      activityPercentage: material.activity_percentage,
       density: material.density,
+      viscosity: material.viscosity,
+      cost: material.cost,
       country: material.country,
       description: material.description,
       physicalForm: material.physical_form,
@@ -41,15 +40,13 @@ export const getAllMaterials = async () => {
       storageConditions: material.storage_conditions,
       hazardClass: material.hazard_class,
       shelfLife: material.shelf_life,
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: material.created_by,
       assigned_to: material.assigned_to,
       created_at: material.created_at,
       updated_at: material.updated_at,
-      createdByUser: material.created_by_profile ? 
-        `${material.created_by_profile.first_name} ${material.created_by_profile.last_name}` : null,
-      assignedToUser: material.assigned_to_profile ? 
-        `${material.assigned_to_profile.first_name} ${material.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     }));
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -61,11 +58,7 @@ export const getMaterialById = async (id) => {
   try {
     const { data, error } = await supabase
       .from('raw_materials')
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -81,7 +74,10 @@ export const getMaterialById = async (id) => {
       supplierCost: data.supplier_cost,
       casNumber: data.cas_number,
       weightVolume: data.weight_volume,
+      activityPercentage: data.activity_percentage,
       density: data.density,
+      viscosity: data.viscosity,
+      cost: data.cost,
       country: data.country,
       description: data.description,
       physicalForm: data.physical_form,
@@ -89,15 +85,13 @@ export const getMaterialById = async (id) => {
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
       shelfLife: data.shelf_life,
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error fetching material:', error);
@@ -118,7 +112,10 @@ export const updateMaterial = async (materialId, updatedData) => {
       supplier_cost: updatedData.supplierCost,
       cas_number: updatedData.casNumber,
       weight_volume: updatedData.weightVolume,
+      activity_percentage: updatedData.activityPercentage,
       density: updatedData.density,
+      viscosity: updatedData.viscosity,
+      cost: updatedData.cost,
       country: updatedData.country,
       description: updatedData.description,
       physical_form: updatedData.physicalForm,
@@ -138,11 +135,7 @@ export const updateMaterial = async (materialId, updatedData) => {
       .from('raw_materials')
       .update(dbData)
       .eq('id', materialId)
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -157,7 +150,10 @@ export const updateMaterial = async (materialId, updatedData) => {
       supplierCost: data.supplier_cost,
       casNumber: data.cas_number,
       weightVolume: data.weight_volume,
+      activityPercentage: data.activity_percentage,
       density: data.density,
+      viscosity: data.viscosity,
+      cost: data.cost,
       country: data.country,
       description: data.description,
       physicalForm: data.physical_form,
@@ -165,15 +161,13 @@ export const updateMaterial = async (materialId, updatedData) => {
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
       shelfLife: data.shelf_life,
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error updating material:', error);
@@ -195,7 +189,10 @@ export const addMaterial = async (materialData) => {
       supplier_cost: materialData.supplierCost,
       cas_number: materialData.casNumber,
       weight_volume: materialData.weightVolume,
+      activity_percentage: materialData.activityPercentage,
       density: materialData.density,
+      viscosity: materialData.viscosity,
+      cost: materialData.cost,
       country: materialData.country,
       description: materialData.description,
       physical_form: materialData.physicalForm,
@@ -210,11 +207,7 @@ export const addMaterial = async (materialData) => {
     const { data, error } = await supabase
       .from('raw_materials')
       .insert([dbData])
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -229,7 +222,10 @@ export const addMaterial = async (materialData) => {
       supplierCost: data.supplier_cost,
       casNumber: data.cas_number,
       weightVolume: data.weight_volume,
+      activityPercentage: data.activity_percentage,
       density: data.density,
+      viscosity: data.viscosity,
+      cost: data.cost,
       country: data.country,
       description: data.description,
       physicalForm: data.physical_form,
@@ -237,15 +233,13 @@ export const addMaterial = async (materialData) => {
       storageConditions: data.storage_conditions,
       hazardClass: data.hazard_class,
       shelfLife: data.shelf_life,
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error adding material:', error);
@@ -261,11 +255,7 @@ export const getAllFormulas = async () => {
   try {
     const { data, error } = await supabase
       .from('formulas')
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -278,15 +268,13 @@ export const getAllFormulas = async () => {
       finalSalePriceDrum: formula.final_sale_price_drum,
       finalSalePriceTote: formula.final_sale_price_tote,
       ingredients: formula.ingredients || [],
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: formula.created_by,
       assigned_to: formula.assigned_to,
       created_at: formula.created_at,
       updated_at: formula.updated_at,
-      createdByUser: formula.created_by_profile ? 
-        `${formula.created_by_profile.first_name} ${formula.created_by_profile.last_name}` : null,
-      assignedToUser: formula.assigned_to_profile ? 
-        `${formula.assigned_to_profile.first_name} ${formula.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     }));
   } catch (error) {
     console.error('Error fetching formulas:', error);
@@ -298,11 +286,7 @@ export const getFormulaById = async (id) => {
   try {
     const { data, error } = await supabase
       .from('formulas')
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -315,15 +299,13 @@ export const getFormulaById = async (id) => {
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
       ingredients: data.ingredients || [],
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error fetching formula:', error);
@@ -353,11 +335,7 @@ export const updateFormula = async (formulaId, updatedData) => {
       .from('formulas')
       .update(dbData)
       .eq('id', formulaId)
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -369,15 +347,13 @@ export const updateFormula = async (formulaId, updatedData) => {
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
       ingredients: data.ingredients || [],
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error updating formula:', error);
@@ -404,11 +380,7 @@ export const addFormula = async (formulaData) => {
     const { data, error } = await supabase
       .from('formulas')
       .insert([dbData])
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -420,15 +392,13 @@ export const addFormula = async (formulaData) => {
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
       ingredients: data.ingredients || [],
-      // User tracking fields
+      // User tracking fields (simplified for now)
       created_by: data.created_by,
       assigned_to: data.assigned_to,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      createdByUser: data.created_by_profile ? 
-        `${data.created_by_profile.first_name} ${data.created_by_profile.last_name}` : null,
-      assignedToUser: data.assigned_to_profile ? 
-        `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
+      createdByUser: null, // Will be populated when user_profiles is set up
+      assignedToUser: null // Will be populated when user_profiles is set up
     };
   } catch (error) {
     console.error('Error adding formula:', error);
@@ -444,11 +414,7 @@ export const getAllSuppliers = async () => {
   try {
     const { data, error } = await supabase
       .from('suppliers')
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+              .select('*')
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -496,11 +462,7 @@ export const addSupplier = async (supplierData) => {
     const { data, error } = await supabase
       .from('suppliers')
       .insert([dbData])
-      .select(`
-        *,
-        created_by_profile:user_profiles!created_by(first_name, last_name, email),
-        assigned_to_profile:user_profiles!assigned_to(first_name, last_name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;

@@ -61,23 +61,30 @@ const RawMaterialsPage = () => {
   });
 
   // Load raw materials from Supabase on component mount
-  useEffect(() => {
-    const loadMaterials = async () => {
-      try {
-        setLoading(true);
-        const data = await getAllMaterials();
-        setRawMaterials(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading materials:', err);
-        setError('Failed to load raw materials');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadMaterials = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllMaterials();
+      setRawMaterials(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading materials:', err);
+      setError('Failed to load raw materials');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadMaterials();
   }, []);
+
+  // Callback to refresh materials when added via chat
+  const handleMaterialAdded = (materialData) => {
+    console.log('Material added via chat:', materialData);
+    // Refresh the materials list
+    loadMaterials();
+  };
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -314,7 +321,7 @@ const RawMaterialsPage = () => {
   // Show loading state
   if (loading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout onMaterialAdded={handleMaterialAdded}>
         <div className="space-y-8">
           <div className="flex items-center space-x-4">
             <button
@@ -339,7 +346,7 @@ const RawMaterialsPage = () => {
   // Show error state
   if (error) {
   return (
-    <DashboardLayout>
+    <DashboardLayout onMaterialAdded={handleMaterialAdded}>
         <div className="space-y-8">
           <div className="flex items-center space-x-4">
             <button
@@ -362,7 +369,7 @@ const RawMaterialsPage = () => {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout onMaterialAdded={handleMaterialAdded}>
       <div className="space-y-8">
           {/* Header with Back Button and Title */}
           <div className="flex items-center space-x-4">

@@ -42,7 +42,7 @@ const NsightAdminDashboard = ({ userData }) => {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/admin/companies/list');
+      const response = await fetch('/api/admin/companies');
       const data = await response.json();
       
       if (!response.ok) {
@@ -94,7 +94,7 @@ const NsightAdminDashboard = ({ userData }) => {
     try {
       console.log('🏢 Creating company via API:', newCompany.companyName);
       
-      const response = await fetch('/api/admin/companies/create', {
+      const response = await fetch('/api/admin/companies', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

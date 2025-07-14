@@ -46,7 +46,18 @@ export const getAllMaterials = async () => {
       created_at: material.created_at,
       updated_at: material.updated_at,
       createdByUser: null, // Will be populated when user_profiles is set up
-      assignedToUser: null // Will be populated when user_profiles is set up
+      assignedToUser: null, // Will be populated when user_profiles is set up
+      // New verification tracking fields
+      dataSourceNotes: material.data_source_notes,
+      confidenceLevel: material.confidence_level,
+      verificationSources: material.verification_sources,
+      lastVerified: material.last_verified,
+      // Level 2 enhanced chemical fields
+      molecularFormula: material.molecular_formula,
+      molecularWeight: material.molecular_weight,
+      iupacName: material.iupac_name,
+      pubchemCID: material.pubchem_cid,
+      canonicalSMILES: material.canonical_smiles
     }));
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -201,7 +212,18 @@ export const addMaterial = async (materialData) => {
       hazard_class: materialData.hazardClass,
       shelf_life: materialData.shelfLife,
       created_by: user.id,
-      assigned_to: materialData.assigned_to || user.id // Assign to creator by default
+      assigned_to: materialData.assigned_to || user.id, // Assign to creator by default
+      // New verification tracking fields
+      data_source_notes: materialData.dataSourceNotes,
+      confidence_level: materialData.confidenceLevel,
+      verification_sources: materialData.verificationSources,
+      last_verified: materialData.lastVerified || new Date().toISOString(),
+      // Level 2 enhanced chemical fields
+      molecular_formula: materialData.molecularFormula,
+      molecular_weight: materialData.molecularWeight,
+      iupac_name: materialData.iupacName,
+      pubchem_cid: materialData.pubchemCID,
+      canonical_smiles: materialData.canonicalSMILES
     };
 
     const { data, error } = await supabase
@@ -239,7 +261,18 @@ export const addMaterial = async (materialData) => {
       created_at: data.created_at,
       updated_at: data.updated_at,
       createdByUser: null, // Will be populated when user_profiles is set up
-      assignedToUser: null // Will be populated when user_profiles is set up
+      assignedToUser: null, // Will be populated when user_profiles is set up
+      // New verification tracking fields
+      dataSourceNotes: data.data_source_notes,
+      confidenceLevel: data.confidence_level,
+      verificationSources: data.verification_sources,
+      lastVerified: data.last_verified,
+      // Level 2 enhanced chemical fields
+      molecularFormula: data.molecular_formula,
+      molecularWeight: data.molecular_weight,
+      iupacName: data.iupac_name,
+      pubchemCID: data.pubchem_cid,
+      canonicalSMILES: data.canonical_smiles
     };
   } catch (error) {
     console.error('Error adding material:', error);

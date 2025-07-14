@@ -357,22 +357,45 @@ class AIService {
     
     // Handle Level 2 backend response format
     if (data.materialAdded) {
-      // Backend already processed the material with verification
-      const validatedData = this.validateMaterialData(data.materialData);
-      const savedMaterial = await addMaterial(validatedData);
+      console.log('📦 Frontend: Received backend verification response:', data);
       
-      if (savedMaterial) {
-        return {
-          response: data.response,
-          materialAdded: true,
-          materialData: savedMaterial,
-          successMessage: data.successMessage || `✅ Successfully added "${validatedData.materialName}" with backend verification!`
-        };
-      } else {
+      // Check if backend provided material data
+      if (!data.materialData) {
+        console.error('❌ Frontend: Backend returned materialAdded=true but no materialData');
         return {
           response: data.response,
           materialAdded: false,
-          errorMessage: "❌ Failed to save the verified material to the database. Please try again."
+          errorMessage: data.errorMessage || "❌ Backend verification failed. Please try again."
+        };
+      }
+      
+      try {
+        // Backend already processed the material with verification
+        const validatedData = this.validateMaterialData(data.materialData);
+        console.log('✅ Frontend: Material validated, saving to database:', validatedData.materialName);
+        
+        const savedMaterial = await addMaterial(validatedData);
+        
+        if (savedMaterial) {
+          return {
+            response: data.response,
+            materialAdded: true,
+            materialData: savedMaterial,
+            successMessage: data.successMessage || `✅ Successfully added "${validatedData.materialName}" with backend verification!`
+          };
+        } else {
+          return {
+            response: data.response,
+            materialAdded: false,
+            errorMessage: "❌ Failed to save the verified material to the database. Please try again."
+          };
+        }
+      } catch (error) {
+        console.error('❌ Frontend: Error processing backend material data:', error);
+        return {
+          response: data.response,
+          materialAdded: false,
+          errorMessage: "❌ Error processing verified material data. Please try again."
         };
       }
     }

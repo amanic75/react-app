@@ -99,6 +99,18 @@ async function processResponseWithVerification(response) {
         // LEVEL 2 ENHANCEMENT: Verify chemical data with PubChem
         const enhancedData = await enhanceWithChemicalVerification(materialData);
         
+        // Ensure we have valid enhanced data
+        if (!enhancedData || !enhancedData.materialName) {
+          console.error('❌ Backend: Enhanced data is invalid:', enhancedData);
+          return {
+            response: informationPart,
+            materialAdded: false,
+            errorMessage: "❌ Chemical verification failed. Using AI estimates only."
+          };
+        }
+        
+        console.log('✅ Backend: Enhanced data ready:', enhancedData.materialName, 'confidence:', enhancedData.confidenceLevel);
+        
         // Return enhanced response (frontend will handle database saving)
         return {
           response: informationPart,
@@ -123,6 +135,12 @@ async function processResponseWithVerification(response) {
 
 // Level 2 Chemical Enhancement Function
 async function enhanceWithChemicalVerification(materialData) {
+  // Ensure we have valid input data
+  if (!materialData || !materialData.materialName) {
+    console.error('❌ Backend: Invalid material data provided:', materialData);
+    return null;
+  }
+
   try {
     console.log('🔍 Backend: PubChem verification starting for:', materialData.materialName);
     
@@ -134,17 +152,17 @@ async function enhanceWithChemicalVerification(materialData) {
       )
     ]);
     
-    if (enhancedData && enhancedData.sources.length > 0) {
+    if (enhancedData && enhancedData.sources && enhancedData.sources.length > 0) {
       console.log('✅ Backend: PubChem verification successful:', enhancedData.sources);
       
       // Merge verified data with AI estimates
-      return {
+      const result = {
         ...materialData,
         // Override with verified data where available
         casNumber: enhancedData.casNumber || materialData.casNumber,
-        molecularFormula: enhancedData.properties.molecularFormula,
-        molecularWeight: enhancedData.properties.molecularWeight,
-        iupacName: enhancedData.properties.iupacName,
+        molecularFormula: enhancedData.properties?.molecularFormula || null,
+        molecularWeight: enhancedData.properties?.molecularWeight || null,
+        iupacName: enhancedData.properties?.iupacName || null,
         
         // Enhanced confidence and source tracking
         dataSourceNotes: `Verified via ${enhancedData.sources.join(', ')} databases. Chemical properties confirmed. Pricing and supplier info estimated from AI.`,
@@ -153,32 +171,41 @@ async function enhanceWithChemicalVerification(materialData) {
         lastVerified: new Date().toISOString(),
         
         // Add new verified fields
-        pubchemCID: enhancedData.properties.cid,
-        canonicalSMILES: enhancedData.properties.canonicalSMILES
+        pubchemCID: enhancedData.properties?.cid || null,
+        canonicalSMILES: enhancedData.properties?.canonicalSMILES || null
       };
+      
+      console.log('✅ Backend: Enhanced result prepared for:', result.materialName);
+      return result;
     } else {
       console.log('⚠️ Backend: PubChem verification failed, using AI estimates');
       
       // Fallback to AI estimates with lower confidence
-      return {
+      const result = {
         ...materialData,
         dataSourceNotes: (materialData.dataSourceNotes || '') + ' Chemical verification attempted but not found in databases.',
         confidenceLevel: 'LOW', // No verification possible
         verificationSources: [],
         lastVerified: new Date().toISOString()
       };
+      
+      console.log('⚠️ Backend: Fallback result prepared for:', result.materialName);
+      return result;
     }
   } catch (error) {
-    console.error('Backend chemical verification error:', error);
+    console.error('❌ Backend: Chemical verification error:', error);
     
     // Fallback to original data with error note
-    return {
+    const result = {
       ...materialData,
       dataSourceNotes: (materialData.dataSourceNotes || '') + ' Chemical verification failed due to network error.',
       confidenceLevel: 'LOW',
       verificationSources: [],
       lastVerified: new Date().toISOString()
     };
+    
+    console.log('❌ Backend: Error fallback result for:', result.materialName);
+    return result;
   }
 }
 

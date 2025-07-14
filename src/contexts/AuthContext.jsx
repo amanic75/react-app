@@ -456,8 +456,8 @@ export const AuthProvider = ({ children }) => {
       
       console.log('📤 Request body being sent:', requestBody);
       
-      // Use the API endpoint which uses service role key
-      const response = await fetch('/api/admin/create-user', {
+      // Use the consolidated API endpoint which uses service role key
+      const response = await fetch('/api/admin/users?action=create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -525,8 +525,8 @@ const UserManagementPage = () => {
           };
         }
 
-        // Call the secure backend API
-        const response = await fetch('/api/admin/change-password', {
+        // Call the consolidated secure backend API
+        const response = await fetch('/api/admin/users?action=change-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

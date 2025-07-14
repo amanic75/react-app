@@ -284,10 +284,10 @@ const SystemHealthPage = () => {
         const analyticsData = await analyticsRes.json();
 
         setUsageAnalytics({
-          activeUsers: analyticsData.activeUsers,
-          apiCallVolume: analyticsData.apiCallVolume,
-          databaseOperations: analyticsData.databaseOperations,
-          storageUsage: analyticsData.storageUsage,
+          activeUsers: analyticsData.activeUsers || { current: '--', peakToday: '--', peakHourLabel: 'Loading...', recentlyActive: '--' },
+          apiCallVolume: analyticsData.apiCallVolume || { requestsPerMinute: '--', requestsPerHour: '--', totalRequests: '--', mostUsedEndpoints: [] },
+          databaseOperations: analyticsData.databaseOperations || { readOperations: '--', writeOperations: '--', queryCount: '--', totalUsers: '--' },
+          storageUsage: analyticsData.storageUsage || { databaseSize: 'Loading...', tableCount: 'Loading...', indexSize: 'Loading...', growthRate: 'Loading...' },
           status: analyticsData.status || 'healthy'
         });
       } catch (analyticsError) {
@@ -1268,28 +1268,28 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Current Online</span>
-                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers.current}</span>
+                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers?.current || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Peak Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.peakToday}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.peakToday || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Peak Hour</span>
-                    <span className="text-slate-100 font-mono text-xs">{usageAnalytics.activeUsers.peakHourLabel}</span>
+                    <span className="text-slate-100 font-mono text-xs">{usageAnalytics.activeUsers?.peakHourLabel || 'Loading...'}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Recently Active</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers.recentlyActive}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.recentlyActive || '--'}</span>
                   </div>
                 </div>
               </div>
@@ -1309,28 +1309,28 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Per Minute</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerMinute}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerMinute || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Per Hour</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.requestsPerHour}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerHour || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume.totalRequests}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.totalRequests || '--'}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="text-xs text-slate-400 mb-1">Most Used:</div>
                   <div className="text-xs text-slate-300 font-mono truncate">
-                    {usageAnalytics.apiCallVolume.mostUsedEndpoints.length > 0 
+                    {usageAnalytics.apiCallVolume?.mostUsedEndpoints?.length > 0 
                       ? usageAnalytics.apiCallVolume.mostUsedEndpoints[0]?.endpoint?.split('/').pop() || 'N/A'
                       : 'Loading...'
                     }
@@ -1353,28 +1353,28 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Read Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.readOperations}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.readOperations || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Write Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.writeOperations}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.writeOperations || '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Queries</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.queryCount}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.queryCount || '--'}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Users</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations.totalUsers}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.totalUsers || '--'}</span>
                   </div>
                 </div>
               </div>
@@ -1394,28 +1394,28 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Database Size</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.databaseSize}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage?.databaseSize || 'Loading...'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Tables</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.tableCount}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage?.tableCount || 'Loading...'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Index Size</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage.indexSize}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.storageUsage?.indexSize || 'Loading...'}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Growth Rate</span>
-                    <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage.growthRate}</span>
+                    <span className="text-green-400 font-mono text-xs">{usageAnalytics.storageUsage?.growthRate || 'Loading...'}</span>
                   </div>
                 </div>
               </div>

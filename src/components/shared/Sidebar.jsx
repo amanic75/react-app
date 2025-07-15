@@ -9,8 +9,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Code,
-  Building2,
   Atom
 } from 'lucide-react';
 import Logo from '../ui/Logo';
@@ -46,10 +44,8 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const nsightAdminLinks = [
     { icon: LayoutDashboard, label: 'NSight Dashboard', action: () => handleNavigation('/dashboard') },
-    { icon: Code, label: 'Developer Tools', action: () => console.log('Developer Tools clicked') },
-    { icon: Building2, label: 'Company Management', action: () => console.log('Company Management clicked') },
-    { icon: Users, label: 'Global User Management', action: () => console.log('Global User Management clicked') },
-    { icon: Activity, label: 'Platform Health', action: () => console.log('Platform Health clicked') }
+    { icon: Users, label: 'Global User Management', action: () => handleNavigation('/user-management') },
+    { icon: Activity, label: 'Platform Health', action: () => handleNavigation('/system-health') }
   ];
 
   const getLinks = () => {

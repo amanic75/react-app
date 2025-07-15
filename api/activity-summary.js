@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getLoginEventsSummary } from './login-events.js';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -35,51 +36,37 @@ export default async function handler(req, res) {
       console.error('Error fetching online users:', onlineError);
     }
 
-    // Get activity data from localStorage fallback and user creation data
-    // Since we don't have a login_activity table yet, we'll use user_profiles creation times
-    const { data: users, error: usersError } = await supabase
-      .from('user_profiles')
-      .select('email, created_at, updated_at')
-      .gte('created_at', cutoffTime.toISOString());
-
-    if (usersError) {
-      console.error('Error fetching user activity:', usersError);
+    // Get login/logout events from database using the new login-events API
+    let loginEventsSummary;
+    try {
+      loginEventsSummary = await getLoginEventsSummary(hoursBack);
+      console.log('📊 Login events summary:', loginEventsSummary);
+    } catch (error) {
+      console.error('Error fetching login events summary:', error);
+      loginEventsSummary = {
+        totalLogins: 0,
+        totalLogouts: 0,
+        uniqueUsers: 0,
+        recentActivity: []
+      };
     }
 
     // Calculate activity summary
     const currentTime = new Date();
     const onlineCount = onlineUsers?.length || 0;
 
-    // For now, use user registrations as login events since we don't have login history
-    // In a real system, you'd have an auth_events table
-    const recentRegistrations = users?.filter(user => 
-      new Date(user.created_at) > cutoffTime
-    ) || [];
-
-    const loginCount = recentRegistrations.length;
-    
-    // For logout count, we'll start with 0 and build this up as users actually log out
-    const logoutCount = 0;
-
-    // Recent activity simulation based on user activity
-    const recentActivity = onlineUsers?.map(user => ({
-      id: Date.now() + Math.random(),
-      type: 'login',
-      userEmail: user.user_email,
-      userName: user.user_name,
-      userRole: user.user_role,
-      timestamp: user.last_seen
-    })) || [];
+    // Combine online users with login events unique users
+    const allUniqueUsers = new Set([
+      ...(onlineUsers?.map(u => u.user_email) || []),
+      ...loginEventsSummary.recentActivity.map(a => a.userEmail)
+    ]);
 
     const summary = {
-      totalLogins: loginCount,
-      totalLogouts: logoutCount,
-      uniqueUsers: new Set([
-        ...recentRegistrations.map(u => u.email),
-        ...(onlineUsers?.map(u => u.user_email) || [])
-      ]).size,
+      totalLogins: loginEventsSummary.totalLogins,
+      totalLogouts: loginEventsSummary.totalLogouts,
+      uniqueUsers: allUniqueUsers.size,
       onlineUsers: onlineCount,
-      recentActivity: recentActivity.slice(0, 10),
+      recentActivity: loginEventsSummary.recentActivity,
       hoursBack: hoursBack,
       timestamp: currentTime.toISOString()
     };
@@ -90,7 +77,8 @@ export default async function handler(req, res) {
       onlineUsers: onlineUsers || [],
       debug: {
         cutoffTime: cutoffTime.toISOString(),
-        recentRegistrations: recentRegistrations.length,
+        loginEventsCount: loginEventsSummary.totalLogins,
+        logoutEventsCount: loginEventsSummary.totalLogouts,
         onlineUsersCount: onlineCount
       }
     });

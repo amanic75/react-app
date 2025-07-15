@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
 
 const AuthContext = createContext();
 
@@ -517,6 +518,41 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem(`deleted_user_${data.user.id}`);
           }
         }
+
+        // Record successful login activity (both localStorage and database)
+        const profile = await getUserProfile(data.user.id, data.user);
+        const userData = {
+          name: profile?.first_name && profile?.last_name 
+            ? `${profile.first_name} ${profile.last_name}` 
+            : data.user.email.split('@')[0],
+          role: profile?.role || 'Employee'
+        };
+
+        // Store in localStorage for immediate UI updates
+        recordActivity(ACTIVITY_TYPES.LOGIN, data.user.email, userData);
+        
+        // Store in database for persistence and cross-session tracking
+        try {
+          const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+            ? 'http://localhost:3001/api/login-events'
+            : '/api/login-events';
+
+          await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userEmail: data.user.email,
+              userName: userData.name,
+              userRole: userData.role,
+              eventType: 'login'
+            })
+          });
+          console.log('📝 Login event stored in database for:', data.user.email);
+        } catch (dbError) {
+          console.warn('⚠️ Failed to store login event in database:', dbError.message);
+        }
+        
+        console.log('📝 Login activity recorded for:', data.user.email);
       }
 
       return { data, error: null };
@@ -531,6 +567,42 @@ export const AuthProvider = ({ children }) => {
   // Sign out
   const signOut = async () => {
     try {
+      // Record logout activity before signing out (both localStorage and database)
+      if (user && userProfile) {
+        const userData = {
+          name: userProfile.first_name && userProfile.last_name 
+            ? `${userProfile.first_name} ${userProfile.last_name}` 
+            : user.email.split('@')[0],
+          role: userProfile.role || 'Employee'
+        };
+
+        // Store in localStorage for immediate UI updates
+        recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, userData);
+        
+        // Store in database for persistence and cross-session tracking
+        try {
+          const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+            ? 'http://localhost:3001/api/login-events'
+            : '/api/login-events';
+
+          await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userEmail: user.email,
+              userName: userData.name,
+              userRole: userData.role,
+              eventType: 'logout'
+            })
+          });
+          console.log('📝 Logout event stored in database for:', user.email);
+        } catch (dbError) {
+          console.warn('⚠️ Failed to store logout event in database:', dbError.message);
+        }
+        
+        console.log('📝 Logout activity recorded for:', user.email);
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         // If session is already missing, treat as successful logout

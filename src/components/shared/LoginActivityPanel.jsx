@@ -45,9 +45,9 @@ const LoginActivityPanel = () => {
 
   const ActivityIcon = ({ type }) => {
     if (type === ACTIVITY_TYPES.LOGIN) {
-      return <LogIn className="w-4 h-4 text-green-400" />;
+      return React.createElement(LogIn, { className: "w-4 h-4 text-green-400" });
     } else {
-      return <LogOut className="w-4 h-4 text-orange-400" />;
+      return React.createElement(LogOut, { className: "w-4 h-4 text-orange-400" });
     }
   };
 

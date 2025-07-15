@@ -244,15 +244,15 @@ const UserManagementPage = () => {
   const getAppIcon = (appName) => {
     switch (appName) {
       case 'formulas':
-        return <FolderOpen className="w-4 h-4 text-blue-500" />;
+        return React.createElement(FolderOpen, { className: "w-4 h-4 text-blue-500" });
       case 'raw-materials':
-        return <FlaskConical className="w-4 h-4 text-blue-500" />;
+        return React.createElement(FlaskConical, { className: "w-4 h-4 text-blue-500" });
       case 'suppliers':
-        return <Users className="w-4 h-4 text-blue-500" />;
+        return React.createElement(Users, { className: "w-4 h-4 text-blue-500" });
       case 'developer-mode':
-        return <Code className="w-4 h-4 text-blue-500" />;
+        return React.createElement(Code, { className: "w-4 h-4 text-blue-500" });
       case 'existing-company-mode':
-        return <Building2 className="w-4 h-4 text-green-500" />;
+        return React.createElement(Building2, { className: "w-4 h-4 text-green-500" });
       default:
         return null;
     }

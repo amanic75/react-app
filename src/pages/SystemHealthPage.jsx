@@ -676,20 +676,20 @@ const SystemHealthPage = () => {
   };
 
   const getStatusIcon = (status) => {
-    if (!status) return <Activity className="h-5 w-5 text-slate-400" />;
+    if (!status) return React.createElement(Activity, { className: "h-5 w-5 text-slate-400" });
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'good':
       case 'normal':
-        return <CheckCircle className="h-5 w-5 text-green-400" />;
+        return React.createElement(CheckCircle, { className: "h-5 w-5 text-green-400" });
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-400" />;
+        return React.createElement(AlertTriangle, { className: "h-5 w-5 text-yellow-400" });
       case 'critical':
       case 'error':
       case 'poor':
-        return <AlertTriangle className="h-5 w-5 text-red-400" />;
+        return React.createElement(AlertTriangle, { className: "h-5 w-5 text-red-400" });
       default:
-        return <Activity className="h-5 w-5 text-slate-400" />;
+        return React.createElement(Activity, { className: "h-5 w-5 text-slate-400" });
     }
   };
 
@@ -807,11 +807,11 @@ const SystemHealthPage = () => {
 
   const getOverallHealthIcon = (status) => {
     switch (status) {
-      case 'healthy': return <CheckCircle className="h-12 w-12" />;
-      case 'warning': return <AlertTriangle className="h-12 w-12" />;
-      case 'critical': return <XCircle className="h-12 w-12" />;
-      case 'loading': return <Activity className="h-12 w-12 animate-pulse" />;
-      default: return <AlertCircle className="h-12 w-12" />;
+      case 'healthy': return React.createElement(CheckCircle, { className: "h-12 w-12" });
+      case 'warning': return React.createElement(AlertTriangle, { className: "h-12 w-12" });
+      case 'critical': return React.createElement(XCircle, { className: "h-12 w-12" });
+      case 'loading': return React.createElement(Activity, { className: "h-12 w-12 animate-pulse" });
+      default: return React.createElement(AlertCircle, { className: "h-12 w-12" });
     }
   };
 

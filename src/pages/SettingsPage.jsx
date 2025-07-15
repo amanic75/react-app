@@ -51,7 +51,7 @@ const SettingsPage = () => {
               <ArrowLeft className="h-5 w-5 text-slate-400" />
             </button>
             <div className="flex items-center space-x-3">
-              <Settings className="h-8 w-8 text-blue-500" />
+                              {React.createElement(Settings, { className: "h-8 w-8 text-blue-500" })}
               <h1 className="text-3xl font-bold text-slate-100">Settings</h1>
             </div>
           </div>

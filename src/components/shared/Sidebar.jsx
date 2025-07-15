@@ -138,9 +138,11 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                      rounded-md transition-colors duration-200 group relative"
             title={isCollapsed ? 'Settings' : ''}
           >
-            <Settings className={`h-5 w-5 text-slate-400 group-hover:text-slate-200 ${
-              isCollapsed ? 'mx-auto' : 'mr-2'
-            }`} />
+            {React.createElement(Settings, { 
+              className: `h-5 w-5 text-slate-400 group-hover:text-slate-200 ${
+                isCollapsed ? 'mx-auto' : 'mr-2'
+              }` 
+            })}
             {!isCollapsed && (
               <span className="transition-opacity duration-200">Settings</span>
             )}

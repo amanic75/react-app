@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Database, 
@@ -27,11 +27,16 @@ import {
 } from 'lucide-react';
 import Button from '../ui/Button';
 
-const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => {
+const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null, companies = [] }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [draggedItem, setDraggedItem] = useState(null);
   const [formFields, setFormFields] = useState([]);
   const dragCounter = useRef(0);
+
+  // Debug logging (remove in production)
+  // console.log('🔍 CreateAppModal - selectedCompany:', selectedCompany);
+  // console.log('🔍 CreateAppModal - selectedCompany.id:', selectedCompany?.id);
+  // console.log('🔍 CreateAppModal - companies:', companies);
 
   const [formData, setFormData] = useState({
     // Step 1: Basic App Information
@@ -40,7 +45,7 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
     appIcon: 'Database',
     appColor: '#3B82F6',
     category: 'business',
-    targetCompany: selectedCompany?.id || '',
+    companyId: selectedCompany?.id || '',
     
     // Step 2: Database Schema
     tableName: '',
@@ -57,6 +62,16 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
     userAccess: ['read'],
     managerAccess: ['create', 'read', 'update']
   });
+
+  // Update companyId when selectedCompany changes
+  useEffect(() => {
+    if (selectedCompany?.id) {
+      setFormData(prev => ({
+        ...prev,
+        companyId: selectedCompany.id
+      }));
+    }
+  }, [selectedCompany]);
 
   const totalSteps = 4;
 
@@ -216,7 +231,7 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
   const handleSave = () => {
     // Validate required fields
     const requiredFields = {
-      1: ['appName', 'appDescription'],
+      1: ['appName', 'appDescription', 'companyId'],
       2: ['tableName'],
       3: [], // All have defaults
       4: [] // All have defaults
@@ -226,6 +241,15 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
     const missing = required.filter(field => !formData[field]?.trim?.());
     
     if (missing.length > 0) {
+      // Special case for companyId validation
+      if (missing.includes('companyId')) {
+        if (companies.length === 0) {
+          alert('No companies available. Please create a company first before creating apps.');
+        } else {
+          alert('Please select a target company for your app.');
+        }
+        return;
+      }
       alert(`Please fill in all required fields: ${missing.join(', ')}`);
       return;
     }
@@ -270,7 +294,7 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
       appIcon: 'Database',
       appColor: '#3B82F6',
       category: 'business',
-      targetCompany: selectedCompany?.id || '',
+      companyId: selectedCompany?.id || '',
       tableName: '',
       fields: [],
       showInDashboard: true,
@@ -285,6 +309,8 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
   };
 
   if (!isOpen) return null;
+
+  // Debug logging removed - component working correctly
 
   // Step 1: Basic App Information
   const renderStep1 = () => (
@@ -321,6 +347,27 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+
+        {/* Company Selector - only show if no company is pre-selected */}
+        {!selectedCompany && companies.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-slate-200 mb-2">
+              Target Company *
+            </label>
+            <select
+              value={formData.companyId}
+              onChange={(e) => handleInputChange('companyId', e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a company...</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name || company.company_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -592,7 +639,7 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null }) => 
               >
                 {(() => {
                   const IconComponent = appIcons.find(icon => icon.name === formData.appIcon)?.icon || Database;
-                  return <IconComponent className="w-5 h-5 text-white" />;
+                  return React.createElement(IconComponent, { className: "w-5 h-5 text-white" });
                 })()}
               </div>
               <div>

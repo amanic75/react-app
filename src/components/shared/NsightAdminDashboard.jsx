@@ -22,6 +22,7 @@ import CreateAppModal from './CreateAppModal';
 const NsightAdminDashboard = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  // Force refresh to clear cache - fixed JSX icon usage
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
   const [isCreateAppModalOpen, setIsCreateAppModalOpen] = useState(false);
@@ -243,6 +244,19 @@ const NsightAdminDashboard = ({ userData }) => {
       }
       
       if (data.success) {
+        // Helper function to convert icon string to component
+        const getIconComponent = (iconString) => {
+          switch(iconString) {
+            case 'Database': return Database;
+            case 'Building2': return Building2;
+            case 'Settings': return Settings;
+            case 'Table': return Table;
+            case 'Users': return Users;
+            case 'Zap': return Zap;
+            default: return Database;
+          }
+        };
+
         // Combine predefined templates with existing apps from other companies
         const existingApps = data.apps
           .filter(app => app.company.id !== selectedCompany?.id) // Exclude current company's apps
@@ -250,7 +264,7 @@ const NsightAdminDashboard = ({ userData }) => {
             id: `existing-${app.id}`,
             name: app.appName,
             description: app.appDescription,
-            icon: app.appIcon,
+            icon: getIconComponent(app.appIcon),
             color: app.appColor,
             schema: app.schema,
             uiConfig: app.uiConfig,
@@ -279,6 +293,17 @@ const NsightAdminDashboard = ({ userData }) => {
     }
   };
 
+  // Helper function to convert icon component to string
+  const getIconString = (iconComponent) => {
+    if (iconComponent === Database) return 'Database';
+    if (iconComponent === Building2) return 'Building2';
+    if (iconComponent === Zap) return 'Zap';
+    if (iconComponent === Settings) return 'Settings';
+    if (iconComponent === Table) return 'Table';
+    if (iconComponent === Users) return 'Users';
+    return 'Database'; // Default fallback
+  };
+
   // Handle adding existing app template to company
   const handleAddExistingApp = async (appTemplate) => {
     try {
@@ -288,10 +313,7 @@ const NsightAdminDashboard = ({ userData }) => {
         companyId: selectedCompany.id,
         appName: appTemplate.name,
         appDescription: appTemplate.description,
-        appIcon: appTemplate.icon === 'Database' ? 'Database' : 
-                appTemplate.icon === 'Building2' ? 'Building2' : 
-                appTemplate.icon === 'Zap' ? 'Zap' : 
-                appTemplate.icon === 'Settings' ? 'Settings' : 'Database',
+        appIcon: getIconString(appTemplate.icon),
         appColor: appTemplate.color || '#3B82F6',
         tableName: (appTemplate.isTemplate ? appTemplate.id : appTemplate.originalApp?.tableName || appTemplate.id) + '_data',
         schema: appTemplate.schema || {
@@ -477,7 +499,7 @@ const NsightAdminDashboard = ({ userData }) => {
                   transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                 }}
               >
-                <Code className="h-8 w-8 text-white" />
+                {React.createElement(Code, { className: "h-8 w-8 text-white" })}
               </div>
               <h3 className="text-xl font-semibold text-slate-100">Developer Mode</h3>
               <p className="text-slate-400 text-sm">
@@ -491,7 +513,7 @@ const NsightAdminDashboard = ({ userData }) => {
                     transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                   }}
                 >
-                  <Plus className="h-3 w-3" />
+                                        {React.createElement(Plus, { className: "h-3 w-3" })}
                   <span>Create New Company</span>
                 </div>
                 <div 
@@ -501,7 +523,7 @@ const NsightAdminDashboard = ({ userData }) => {
                     transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                   }}
                 >
-                  <Database className="h-3 w-3" />
+                                        {React.createElement(Database, { className: "h-3 w-3" })}
                   <span>Create Apps</span>
                 </div>
               </div>
@@ -545,7 +567,7 @@ const NsightAdminDashboard = ({ userData }) => {
                   transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                 }}
               >
-                <Building2 className="h-8 w-8 text-white" />
+                {React.createElement(Building2, { className: "h-8 w-8 text-white" })}
               </div>
               <h3 className="text-xl font-semibold text-slate-100">Existing Company Mode</h3>
               <p className="text-slate-400 text-sm">
@@ -559,7 +581,7 @@ const NsightAdminDashboard = ({ userData }) => {
                     transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                   }}
                 >
-                  <Users className="h-3 w-3" />
+                                        {React.createElement(Users, { className: "h-3 w-3" })}
                   <span>Manage Users</span>
                 </div>
                 <div 
@@ -569,7 +591,7 @@ const NsightAdminDashboard = ({ userData }) => {
                     transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                   }}
                 >
-                  <Edit3 className="h-3 w-3" />
+                                        {React.createElement(Edit3, { className: "h-3 w-3" })}
                   <span>Edit/Add Apps</span>
                 </div>
               </div>
@@ -587,7 +609,7 @@ const NsightAdminDashboard = ({ userData }) => {
           onClick={handleBackToModeSelection}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-slate-400" />
+          {React.createElement(ArrowLeft, { className: "h-5 w-5 text-slate-400" })}
         </button>
         <div>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Developer Mode</h1>
@@ -600,7 +622,7 @@ const NsightAdminDashboard = ({ userData }) => {
         <Card className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Plus className="h-6 w-6 text-white" />
+                                {React.createElement(Plus, { className: "h-6 w-6 text-white" })}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-100">Create New Company</h3>
@@ -619,7 +641,7 @@ const NsightAdminDashboard = ({ userData }) => {
         <Card className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Database className="h-6 w-6 text-white" />
+                                {React.createElement(Database, { className: "h-6 w-6 text-white" })}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-100">Create Apps</h3>
@@ -644,7 +666,7 @@ const NsightAdminDashboard = ({ userData }) => {
             return (
               <div key={app.id} className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">
                 <div className="flex items-center space-x-3 mb-2">
-                  <IconComponent className="h-5 w-5 text-blue-400" />
+                  {IconComponent && React.createElement(IconComponent, { className: "h-5 w-5 text-blue-400" })}
                   <span className="text-slate-200 font-medium">{app.name}</span>
                 </div>
                 <p className="text-slate-400 text-xs">{app.description}</p>
@@ -663,7 +685,7 @@ const NsightAdminDashboard = ({ userData }) => {
           onClick={handleBackToModeSelection}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-slate-400" />
+          {React.createElement(ArrowLeft, { className: "h-5 w-5 text-slate-400" })}
         </button>
         <div>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Existing Company Mode</h1>
@@ -699,7 +721,7 @@ const NsightAdminDashboard = ({ userData }) => {
           </div>
         ) : companies.length === 0 ? (
           <div className="text-center py-8">
-            <Building2 className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+            {React.createElement(Building2, { className: "h-12 w-12 text-slate-600 mx-auto mb-3" })}
             <h4 className="text-slate-300 font-medium mb-2">No Companies Found</h4>
             <p className="text-slate-400 text-sm mb-4">Create your first company to get started</p>
             <button
@@ -732,9 +754,9 @@ const NsightAdminDashboard = ({ userData }) => {
                     </div>
                   </div>
                   {selectedCompany?.id === company.id ? (
-                    <Check className="h-5 w-5 text-blue-400" />
+                    React.createElement(Check, { className: "h-5 w-5 text-blue-400" })
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                    React.createElement(ChevronRight, { className: "h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" })
                   )}
                 </div>
               </div>
@@ -774,7 +796,7 @@ const NsightAdminDashboard = ({ userData }) => {
             </div>
           ) : apps.length === 0 ? (
             <div className="text-center py-8">
-              <Database className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              {React.createElement(Database, { className: "h-12 w-12 text-slate-600 mx-auto mb-3" })}
               <h4 className="text-slate-300 font-medium mb-2">No Apps Found</h4>
               <p className="text-slate-400 text-sm mb-4">Create your first app for {selectedCompany.name}</p>
               <button
@@ -808,7 +830,7 @@ const NsightAdminDashboard = ({ userData }) => {
                         className="w-10 h-10 rounded-lg flex items-center justify-center"
                         style={{ backgroundColor: app.appColor }}
                       >
-                        <IconComponent className="w-5 h-5 text-white" />
+                        {React.createElement(IconComponent, { className: "w-5 h-5 text-white" })}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-slate-200 font-medium truncate">{app.appName}</h4>
@@ -821,7 +843,7 @@ const NsightAdminDashboard = ({ userData }) => {
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                      {React.createElement(ChevronRight, { className: "h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" })}
                     </div>
                   </div>
                 );
@@ -855,7 +877,7 @@ const NsightAdminDashboard = ({ userData }) => {
         <Card className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-              <Users className="h-6 w-6 text-white" />
+                                {React.createElement(Users, { className: "h-6 w-6 text-white" })}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-100">Manage Users</h3>
@@ -865,7 +887,7 @@ const NsightAdminDashboard = ({ userData }) => {
           <div className="space-y-2 mb-4">
             <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
               <div className="flex items-center justify-center space-x-2">
-                <UserPlus className="h-4 w-4" />
+                {React.createElement(UserPlus, { className: "h-4 w-4" })}
                 <span>Add New User</span>
               </div>
             </button>
@@ -879,7 +901,7 @@ const NsightAdminDashboard = ({ userData }) => {
         <Card className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center">
-              <Edit3 className="h-6 w-6 text-white" />
+                                {React.createElement(Edit3, { className: "h-6 w-6 text-white" })}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-100">Edit/Add Apps</h3>
@@ -912,7 +934,7 @@ const NsightAdminDashboard = ({ userData }) => {
               <div className="flex items-center justify-between">
                 <span className="text-slate-200 font-medium">{appName}</span>
                 <button className="text-slate-400 hover:text-slate-200 transition-colors">
-                  <Settings className="h-4 w-4" />
+                  {React.createElement(Settings, { className: "h-4 w-4" })}
                 </button>
               </div>
               <p className="text-slate-400 text-xs mt-1">Active</p>
@@ -945,6 +967,7 @@ const NsightAdminDashboard = ({ userData }) => {
         onClose={() => setIsCreateAppModalOpen(false)}
         onSave={handleCreateApp}
         selectedCompany={selectedCompany}
+        companies={companies}
       />
 
       {/* Add Existing App Modal */}
@@ -985,7 +1008,7 @@ const NsightAdminDashboard = ({ userData }) => {
                         className="w-10 h-10 rounded-lg flex items-center justify-center"
                         style={{ backgroundColor: appTemplate.color }}
                       >
-                        <IconComponent className="w-5 h-5 text-white" />
+                        {IconComponent && React.createElement(IconComponent, { className: "w-5 h-5 text-white" })}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-slate-200 font-medium">{appTemplate.name}</h4>

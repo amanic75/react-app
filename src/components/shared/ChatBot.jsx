@@ -52,9 +52,9 @@ const ChatBot = ({ onMaterialAdded }) => {
 
   const getFileIcon = (fileType) => {
     if (fileType.startsWith('image/')) {
-      return <Image className="h-4 w-4" />;
+      return React.createElement(Image, { className: "h-4 w-4" });
     }
-    return <File className="h-4 w-4" />;
+    return React.createElement(File, { className: "h-4 w-4" });
   };
 
   const handleSendMessage = async () => {

@@ -229,7 +229,7 @@ const AppDetailPage = () => {
           {/* UI Configuration */}
           <Card className="p-6">
             <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center">
-              <Settings className="h-5 w-5 mr-2" />
+                              {React.createElement(Settings, { className: "h-5 w-5 mr-2" })}
               UI Configuration
             </h3>
             <div className="space-y-4">

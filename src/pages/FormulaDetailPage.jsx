@@ -206,9 +206,9 @@ const FormulaDetailPage = () => {
 
   const getFileIcon = (fileType) => {
     if (fileType.startsWith('image/')) {
-      return <Image className="h-5 w-5 text-blue-400" />;
+      return React.createElement(Image, { className: "h-5 w-5 text-blue-400" });
     }
-    return <File className="h-5 w-5 text-slate-400" />;
+    return React.createElement(File, { className: "h-5 w-5 text-slate-400" });
   };
 
   const handleEditToggle = () => {

@@ -7,9 +7,9 @@ const ChemformationMockModule = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'Approved':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return React.createElement(CheckCircle, { className: "h-4 w-4 text-green-600" });
       case 'Under Review':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return React.createElement(Clock, { className: "h-4 w-4 text-yellow-600" });
       default:
         return null;
     }

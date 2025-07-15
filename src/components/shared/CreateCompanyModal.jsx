@@ -230,7 +230,7 @@ const CreateCompanyModal = ({ isOpen, onClose, onSave }) => {
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <Building2 className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+        {React.createElement(Building2, { className: "w-12 h-12 text-blue-500 mx-auto mb-3" })}
         <h3 className="text-lg font-semibold text-slate-100">Company Information</h3>
         <p className="text-slate-400">Basic details about the new client company</p>
       </div>

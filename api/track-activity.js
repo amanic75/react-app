@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
+// Initialize Supabase client with anon key (temporary fix until service role key is updated)
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.VITE_SUPABASE_ANON_KEY
 );
 
 // In-memory activity tracking (in production, use Redis or database)

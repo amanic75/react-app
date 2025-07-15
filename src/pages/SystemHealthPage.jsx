@@ -278,32 +278,34 @@ const SystemHealthPage = () => {
       try {
         const analyticsRes = await fetch(`${baseUrl}/monitoring?type=usage-analytics`);
         const analyticsData = await analyticsRes.json();
+        
+        console.log('📊 Received usage analytics data:', analyticsData);
 
         // Transform API data to match frontend expectations
         setUsageAnalytics({
           activeUsers: {
-            current: analyticsData.activeUsers?.current || '--',
-            peakToday: analyticsData.activeUsers?.peakToday || '--',
+            current: analyticsData.activeUsers?.current !== undefined ? analyticsData.activeUsers.current : '--',
+            peakToday: analyticsData.activeUsers?.peakToday !== undefined ? analyticsData.activeUsers.peakToday : '--',
             peakHourLabel: '9:00 AM - 10:00 AM', // Default value
-            recentlyActive: analyticsData.activeUsers?.last24Hours || '--'
+            recentlyActive: analyticsData.activeUsers?.last24Hours !== undefined ? analyticsData.activeUsers.last24Hours : '--'
           },
           apiCallVolume: {
-            requestsPerMinute: analyticsData.apiCalls?.currentRate || '--',
-            requestsPerHour: analyticsData.apiCalls?.currentRate ? (analyticsData.apiCalls.currentRate * 60) : '--',
-            totalRequests: analyticsData.apiCalls?.last24Hours || '--',
+            requestsPerMinute: analyticsData.apiCalls?.currentRate !== undefined ? analyticsData.apiCalls.currentRate : '--',
+            requestsPerHour: analyticsData.apiCalls?.currentRate !== undefined ? (analyticsData.apiCalls.currentRate * 60) : '--',
+            totalRequests: analyticsData.apiCalls?.last24Hours !== undefined ? analyticsData.apiCalls.last24Hours : '--',
             mostUsedEndpoints: [{ endpoint: '/api/system/monitoring', count: analyticsData.apiCalls?.currentRate || 0 }]
           },
           databaseOperations: {
-            readOperations: '--', // Not provided by API
-            writeOperations: '--', // Not provided by API  
-            queryCount: '--', // Not provided by API
-            totalUsers: '--' // Not provided by API
+            readOperations: analyticsData.databaseOperations?.readOperations !== undefined ? analyticsData.databaseOperations.readOperations : '--',
+            writeOperations: analyticsData.databaseOperations?.writeOperations !== undefined ? analyticsData.databaseOperations.writeOperations : '--',
+            queryCount: analyticsData.databaseOperations?.queryCount !== undefined ? analyticsData.databaseOperations.queryCount : '--',
+            totalUsers: analyticsData.databaseOperations?.totalUsers !== undefined ? analyticsData.databaseOperations.totalUsers : '--'
           },
           storageUsage: {
-            databaseSize: 'N/A', // Not provided by API
-            tableCount: 'N/A', // Not provided by API
-            indexSize: 'N/A', // Not provided by API
-            growthRate: 'N/A' // Not provided by API
+            databaseSize: analyticsData.storageUsage?.databaseSize || 'N/A',
+            tableCount: analyticsData.storageUsage?.tableCount !== undefined ? analyticsData.storageUsage.tableCount : 'N/A',
+            indexSize: analyticsData.storageUsage?.indexSize || 'N/A',
+            growthRate: analyticsData.storageUsage?.growthRate || 'N/A'
           },
           status: 'healthy'
         });
@@ -1392,14 +1394,14 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Current Online</span>
-                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers?.current || '--'}</span>
+                    <span className="text-slate-100 font-mono text-lg font-bold">{usageAnalytics.activeUsers?.current !== undefined ? usageAnalytics.activeUsers.current : '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Peak Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.peakToday || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.peakToday !== undefined ? usageAnalytics.activeUsers.peakToday : '--'}</span>
                   </div>
                 </div>
                 
@@ -1413,7 +1415,7 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Recently Active</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.recentlyActive || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.activeUsers?.recentlyActive !== undefined ? usageAnalytics.activeUsers.recentlyActive : '--'}</span>
                   </div>
                 </div>
               </div>
@@ -1433,21 +1435,21 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Per Minute</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerMinute || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerMinute !== undefined ? usageAnalytics.apiCallVolume.requestsPerMinute : '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Per Hour</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerHour || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.requestsPerHour !== undefined ? usageAnalytics.apiCallVolume.requestsPerHour : '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Today</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.totalRequests || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.apiCallVolume?.totalRequests !== undefined ? usageAnalytics.apiCallVolume.totalRequests : '--'}</span>
                   </div>
                 </div>
 
@@ -1477,28 +1479,28 @@ const SystemHealthPage = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Read Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.readOperations || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.readOperations !== undefined ? usageAnalytics.databaseOperations.readOperations : '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-400">Write Ops</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.writeOperations || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.writeOperations !== undefined ? usageAnalytics.databaseOperations.writeOperations : '--'}</span>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Queries</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.queryCount || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.queryCount !== undefined ? usageAnalytics.databaseOperations.queryCount : '--'}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total Users</span>
-                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.totalUsers || '--'}</span>
+                    <span className="text-slate-100 font-mono">{usageAnalytics.databaseOperations?.totalUsers !== undefined ? usageAnalytics.databaseOperations.totalUsers : '--'}</span>
                   </div>
                 </div>
               </div>

@@ -107,6 +107,20 @@ app.post('/api/track-activity', async (req, res) => {
   }
 });
 
+// 6. Database test endpoint (debugging)
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/test-db.js');
+    await handler(req, createMockResponse(res));
+  } catch (error) {
+    console.error('❌ Test DB API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
+});
+
 // LEGACY COMPATIBILITY ROUTES (for backward compatibility - route to consolidated APIs)
 
 // Legacy user management routes

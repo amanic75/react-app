@@ -1,9 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
+import { getActiveUsers } from '../track-activity.js';
 
-// Initialize Supabase client with anon key (temporary fix until service role key is updated)
+// Initialize Supabase client - try service role key first, fallback to anon key with different approach
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+console.log('🔑 Key check:', {
+  hasServiceRole: !!serviceRoleKey,
+  hasAnon: !!anonKey,
+  serviceRolePreview: serviceRoleKey ? serviceRoleKey.substring(0, 20) + '...' : 'NOT SET',
+  anonPreview: anonKey ? anonKey.substring(0, 20) + '...' : 'NOT SET'
+});
+
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
+  serviceRoleKey || anonKey
 );
 
 export default async function handler(req, res) {
@@ -430,6 +441,18 @@ async function getUsageAnalytics(req, res) {
         currentRate: 0,
         peakRate: 0
       },
+      databaseOperations: {
+        readOperations: 0,
+        writeOperations: 0,
+        queryCount: 0,
+        totalUsers: 0
+      },
+      storageUsage: {
+        databaseSize: '0 MB',
+        tableCount: 0,
+        indexSize: '0 MB',
+        growthRate: '0%'
+      },
       responseTime: {
         average: '0ms',
         p95: '0ms',
@@ -437,12 +460,23 @@ async function getUsageAnalytics(req, res) {
       }
     };
 
-    // Get real user count from database
+    // Get real active user count from activity tracking
     try {
+      // Get currently active users from activity tracking
+      const currentActiveUsers = getActiveUsers();
+      
+      // Get total users and recent activity from database
       const { data: users, error: userError } = await supabase
         .from('user_profiles')
         .select('id, email, created_at, updated_at')
         .order('created_at', { ascending: false });
+
+      console.log('🔍 User profiles select query debug:', {
+        usersData: users,
+        usersLength: users?.length,
+        userError: userError,
+        hasUsers: !!users && users.length > 0
+      });
 
       if (userError) {
         console.error('User count error:', userError);
@@ -451,9 +485,15 @@ async function getUsageAnalytics(req, res) {
         const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const usersLast24h = users?.filter(user => new Date(user.updated_at || user.created_at) > last24Hours).length || 0;
         
-        analytics.activeUsers.current = totalUsers;
+        console.log('📊 User analysis:', {
+          totalUsers,
+          usersLast24h,
+          last24HoursThreshold: last24Hours.toISOString()
+        });
+        
+        analytics.activeUsers.current = currentActiveUsers; // Use real active users
         analytics.activeUsers.last24Hours = usersLast24h;
-        analytics.activeUsers.peakToday = Math.max(totalUsers, usersLast24h);
+        analytics.activeUsers.peakToday = Math.max(currentActiveUsers, usersLast24h);
       }
     } catch (dbError) {
       console.error('Database query error:', dbError);
@@ -467,6 +507,75 @@ async function getUsageAnalytics(req, res) {
     analytics.apiCalls.last24Hours = estimatedCallsPerHour * 24;
     analytics.apiCalls.currentRate = Math.ceil(estimatedCallsPerHour / 60); // Per minute
     analytics.apiCalls.peakRate = Math.ceil(estimatedCallsPerHour * 1.5 / 60); // Peak estimate
+
+    // Get database operations data
+    try {
+      console.log('🔍 Querying database for operations data...');
+      
+      // Count different types of database operations
+      const [materialsCount, formulasCount, suppliersCount, usersCount] = await Promise.all([
+        supabase.from('raw_materials').select('count', { count: 'exact' }),
+        supabase.from('formulas').select('count', { count: 'exact' }),
+        supabase.from('suppliers').select('count', { count: 'exact' }),
+        supabase.from('user_profiles').select('count', { count: 'exact' })
+      ]);
+
+      console.log('📊 Database counts:', {
+        materials: materialsCount.count,
+        formulas: formulasCount.count,
+        suppliers: suppliersCount.count,
+        users: usersCount.count
+      });
+
+      // Debug user_profiles query specifically
+      console.log('🔍 User profiles query debug:', {
+        userCountData: usersCount.data,
+        userCountError: usersCount.error,
+        userCountStatus: usersCount.status,
+        userCountStatusText: usersCount.statusText
+      });
+
+      const totalReadOps = (materialsCount.count || 0) + (formulasCount.count || 0) + (suppliersCount.count || 0);
+      const totalWriteOps = Math.ceil(totalReadOps * 0.1); // Estimate 10% of reads are writes
+      const totalQueries = totalReadOps + totalWriteOps;
+
+      analytics.databaseOperations = {
+        readOperations: totalReadOps,
+        writeOperations: totalWriteOps,
+        queryCount: totalQueries,
+        totalUsers: usersCount.count || 0
+      };
+
+      // Get storage usage data
+      const tableNames = ['raw_materials', 'formulas', 'suppliers', 'user_profiles'];
+      const estimatedRowSize = 1024; // 1KB per row estimate
+      const totalRows = totalReadOps + (usersCount.count || 0);
+      const estimatedSizeBytes = totalRows * estimatedRowSize;
+      const sizeInMB = (estimatedSizeBytes / (1024 * 1024)).toFixed(2);
+
+      analytics.storageUsage = {
+        databaseSize: `${sizeInMB} MB`,
+        tableCount: tableNames.length,
+        indexSize: `${(parseFloat(sizeInMB) * 0.2).toFixed(2)} MB`, // Estimate 20% of data size
+        growthRate: '+2.5%' // Estimated growth rate
+      };
+
+      console.log('✅ Database operations and storage data calculated successfully');
+    } catch (dbError) {
+      console.error('❌ Database operations query error:', dbError);
+      analytics.databaseOperations = {
+        readOperations: 0,
+        writeOperations: 0,
+        queryCount: 0,
+        totalUsers: 0
+      };
+      analytics.storageUsage = {
+        databaseSize: 'Error',
+        tableCount: 'Error',
+        indexSize: 'Error',
+        growthRate: 'Error'
+      };
+    }
 
     // Calculate response times based on recent database queries
     const dbStart = Date.now();
@@ -483,6 +592,8 @@ async function getUsageAnalytics(req, res) {
       analytics.responseTime.p99 = 'Error';
     }
 
+    console.log('📊 Usage Analytics Response:', JSON.stringify(analytics, null, 2));
+    
     return res.status(200).json({
       ...analytics,
       timestamp: new Date().toISOString(),

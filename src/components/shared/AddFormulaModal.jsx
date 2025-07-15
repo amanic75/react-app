@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Search, ChevronLeft, ChevronRight, Check, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, Search, ChevronLeft, ChevronRight, Check, AlertCircle, Bot, Sparkles } from 'lucide-react';
 import Button from '../ui/Button';
 import { getAllMaterials } from '../../lib/supabaseData';
+import aiService from '../../lib/aiService';
 
 const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [rawMaterials, setRawMaterials] = useState([]);
   const [materialSearchTerm, setMaterialSearchTerm] = useState('');
   const [errors, setErrors] = useState({});
+  
+  // AI material addition state
+  const [isAddingWithAI, setIsAddingWithAI] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
   
   // Form data
   const [formulaData, setFormulaData] = useState({
@@ -141,6 +146,53 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
       ...prev,
       ingredients: prev.ingredients.filter(ing => ing.id !== ingredientId)
     }));
+  };
+
+  // Handle AI material addition
+  const handleAddWithAI = async (chemicalName) => {
+    setIsAddingWithAI(true);
+    setAiResponse('');
+    
+    try {
+      // Request AI to add the chemical
+      const response = await aiService.generateResponse(
+        `Add ${chemicalName} to my raw materials database`,
+        null,
+        []
+      );
+      
+      setAiResponse(response.response || response);
+      
+      if (response.materialAdded && response.materialData) {
+        // Refresh materials list
+        const updatedMaterials = await getAllMaterials();
+        setRawMaterials(updatedMaterials);
+        
+        // Auto-add the new material to the formula
+        const newMaterial = response.materialData;
+        addIngredient(newMaterial);
+        
+        // Clear search term since material was added
+        setMaterialSearchTerm('');
+        
+        // Show success feedback
+        setTimeout(() => {
+          setAiResponse('');
+          setIsAddingWithAI(false);
+        }, 3000);
+      } else {
+        // Show error message
+        setTimeout(() => {
+          setIsAddingWithAI(false);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Error adding material with AI:', error);
+      setAiResponse('❌ Failed to add material with AI. Please try again.');
+      setTimeout(() => {
+        setIsAddingWithAI(false);
+      }, 5000);
+    }
   };
 
   // Navigation
@@ -326,22 +378,69 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
 
                 {/* Material Search Results */}
                 {materialSearchTerm && (
-                  <div className="max-h-40 overflow-y-auto border border-slate-600 rounded-lg">
-                    {filteredMaterials.slice(0, 5).map((material) => (
-                      <button
-                        key={material.id}
-                        onClick={() => addIngredient(material)}
-                        className="w-full p-3 text-left hover:bg-slate-700 border-b border-slate-600 last:border-b-0 transition-colors"
-                      >
-                        <div className="font-medium text-slate-200">{material.materialName}</div>
-                        <div className="text-sm text-slate-400">
-                          {material.supplierName} • ${material.supplierCost}/unit • {material.casNumber}
+                  <div className="border border-slate-600 rounded-lg">
+                    {/* AI Response Display */}
+                    {isAddingWithAI && aiResponse && (
+                      <div className="p-3 bg-blue-900/20 border-b border-slate-600">
+                        <div className="flex items-start space-x-2">
+                          <Bot className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-slate-300">{aiResponse}</div>
                         </div>
-                      </button>
-                    ))}
-                    {filteredMaterials.length === 0 && materialSearchTerm && (
-                      <div className="p-3 text-slate-400 text-center">No materials found</div>
+                      </div>
                     )}
+                    
+                    {/* Search Results */}
+                    <div className="max-h-40 overflow-y-auto">
+                      {filteredMaterials.slice(0, 5).map((material) => (
+                        <button
+                          key={material.id}
+                          onClick={() => addIngredient(material)}
+                          className="w-full p-3 text-left hover:bg-slate-700 border-b border-slate-600 last:border-b-0 transition-colors"
+                          disabled={isAddingWithAI}
+                        >
+                          <div className="font-medium text-slate-200">{material.materialName}</div>
+                          <div className="text-sm text-slate-400">
+                            {material.supplierName} • ${material.supplierCost ? material.supplierCost.toFixed(2) : '0.00'}/unit • {material.casNumber}
+                          </div>
+                        </button>
+                      ))}
+                      
+                      {/* No Results + AI Option */}
+                      {filteredMaterials.length === 0 && materialSearchTerm && !isAddingWithAI && (
+                        <div className="p-4">
+                          <div className="text-center text-slate-400 mb-4">
+                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No materials found for "<span className="font-medium">{materialSearchTerm}</span>"</p>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleAddWithAI(materialSearchTerm)}
+                            className="w-full flex items-center justify-center space-x-2 p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            <span className="font-medium">Add "{materialSearchTerm}" with AI</span>
+                            <Bot className="h-4 w-4" />
+                          </button>
+                          
+                          <p className="text-xs text-slate-500 text-center mt-2">
+                            AI will research and add this chemical with complete specifications
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Loading State */}
+                      {isAddingWithAI && (
+                        <div className="p-4 text-center">
+                          <div className="flex items-center justify-center space-x-2 text-blue-400">
+                            <Bot className="h-5 w-5 animate-pulse" />
+                            <span className="text-sm font-medium">AI is researching "{materialSearchTerm}"...</span>
+                          </div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            This may take a few seconds while we gather chemical data
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

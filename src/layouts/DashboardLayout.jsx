@@ -22,6 +22,9 @@ const DashboardLayout = ({ children, onMaterialAdded }) => {
 
   // Global activity tracking for all authenticated users
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    
     const trackUserActivity = async () => {
       if (userProfile?.email) {
         try {
@@ -42,22 +45,50 @@ const DashboardLayout = ({ children, onMaterialAdded }) => {
               page: location.pathname,
               timestamp: new Date().toISOString()
             }),
+            signal: AbortSignal.timeout(5000) // 5 second timeout
           });
 
           if (!response.ok) {
-            console.warn('Failed to track user activity:', response.status);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
+          
+          // Reset retry count on success
+          retryCount = 0;
         } catch (error) {
-          console.warn('Error tracking user activity:', error);
+          retryCount++;
+          
+          // Only log errors after first few attempts, and reduce noise
+          if (retryCount <= maxRetries) {
+            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+              console.warn(`📡 Activity tracking server not reachable (attempt ${retryCount}/${maxRetries})`);
+            } else if (error.name === 'TimeoutError') {
+              console.warn(`⏱️ Activity tracking timeout (attempt ${retryCount}/${maxRetries})`);
+            } else {
+              console.warn(`⚠️ Activity tracking error (attempt ${retryCount}/${maxRetries}):`, error.message);
+            }
+          }
+          
+          // Stop trying after max retries
+          if (retryCount >= maxRetries) {
+            console.warn('🚫 Activity tracking disabled after repeated failures');
+            return false; // Signal to stop heartbeat
+          }
         }
       }
+      return true; // Continue heartbeat
     };
 
     // Track activity when component mounts or location changes
     trackUserActivity();
 
-    // Set up heartbeat to track activity every 30 seconds
-    const heartbeatInterval = setInterval(trackUserActivity, 30000);
+    // Set up heartbeat to track activity every 30 seconds with retry logic
+    let heartbeatInterval = setInterval(async () => {
+      const shouldContinue = await trackUserActivity();
+      if (!shouldContinue) {
+        clearInterval(heartbeatInterval);
+        console.warn('🔄 Activity tracking heartbeat stopped due to repeated failures');
+      }
+    }, 30000);
 
     return () => {
       clearInterval(heartbeatInterval);

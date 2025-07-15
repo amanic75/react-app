@@ -13,7 +13,8 @@ import {
   Edit3,
   ArrowLeft,
   Check,
-  Table
+  Table,
+  X
 } from 'lucide-react';
 import Card from '../ui/Card';
 import CreateCompanyModal from './CreateCompanyModal';
@@ -302,6 +303,41 @@ const NsightAdminDashboard = ({ userData }) => {
     if (iconComponent === Table) return 'Table';
     if (iconComponent === Users) return 'Users';
     return 'Database'; // Default fallback
+  };
+
+  // Handle deleting an app
+  const handleDeleteApp = async (appId, appName) => {
+    if (!confirm(`Are you sure you want to delete the app "${appName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Deleting app:', appName);
+      
+      const response = await fetch(`/api/admin/apps?id=${appId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete app');
+      }
+      
+      if (result.success) {
+        console.log('✅ Successfully deleted app:', appName);
+        // Refresh the apps list
+        fetchApps();
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete app:', error);
+      alert(`Failed to delete app: ${error.message}`);
+    }
   };
 
   // Handle adding existing app template to company
@@ -822,10 +858,25 @@ const NsightAdminDashboard = ({ userData }) => {
                 return (
                   <div
                     key={app.id}
-                    onClick={() => navigate(`/apps/${app.id}`)}
-                    className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
+                    className="relative p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
                   >
-                    <div className="flex items-start space-x-3">
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteApp(app.id, app.appName);
+                      }}
+                      className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700 z-10"
+                      title="Delete App"
+                    >
+                      {React.createElement(X, { className: "h-3 w-3" })}
+                    </button>
+                    
+                    {/* App Content */}
+                    <div 
+                      onClick={() => navigate(`/apps/${app.id}`)}
+                      className="flex items-start space-x-3"
+                    >
                       <div 
                         className="w-10 h-10 rounded-lg flex items-center justify-center"
                         style={{ backgroundColor: app.appColor }}

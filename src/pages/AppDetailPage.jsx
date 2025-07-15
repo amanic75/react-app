@@ -10,7 +10,11 @@ import {
   Calendar,
   Building2,
   Eye,
-  EyeOff
+  EyeOff,
+  X,
+  Save,
+  FileText,
+  Zap
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -21,6 +25,13 @@ const AppDetailPage = () => {
   const [app, setApp] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    appName: '',
+    appDescription: '',
+    appColor: '#3B82F6',
+    appIcon: 'Database'
+  });
 
   // Fetch app details
   useEffect(() => {
@@ -39,6 +50,12 @@ const AppDetailPage = () => {
       
       if (data.success) {
         setApp(data.app);
+        setEditForm({
+          appName: data.app.appName,
+          appDescription: data.app.appDescription,
+          appColor: data.app.appColor,
+          appIcon: data.app.appIcon
+        });
         console.log('✅ Loaded app details:', data.app.appName);
       } else {
         throw new Error('Invalid API response');
@@ -49,6 +66,52 @@ const AppDetailPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditApp = async () => {
+    try {
+      console.log('🔧 Updating app:', editForm.appName);
+      
+      const response = await fetch(`/api/admin/apps?id=${appId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update app');
+      }
+      
+      if (result.success) {
+        console.log('✅ Successfully updated app:', editForm.appName);
+        setIsEditModalOpen(false);
+        // Refresh the app details
+        fetchAppDetails();
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update app:', error);
+      alert(`Failed to update app: ${error.message}`);
+    }
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const openEditModal = () => {
+    setEditForm({
+      appName: app.appName,
+      appDescription: app.appDescription,
+      appColor: app.appColor,
+      appIcon: app.appIcon
+    });
+    setIsEditModalOpen(true);
   };
 
   const getIconComponent = (iconName) => {
@@ -146,7 +209,10 @@ const AppDetailPage = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={openEditModal}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <div className="flex items-center space-x-2">
                 <Edit3 className="h-4 w-4" />
                 <span>Edit App</span>
@@ -334,6 +400,125 @@ const AppDetailPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit App Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-100">Edit App</h2>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* App Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  App Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.appName}
+                  onChange={(e) => handleEditChange('appName', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter app name"
+                />
+              </div>
+
+              {/* App Description */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.appDescription}
+                  onChange={(e) => handleEditChange('appDescription', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter app description"
+                  rows="3"
+                />
+              </div>
+
+              {/* App Color */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Color
+                </label>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="color"
+                    value={editForm.appColor}
+                    onChange={(e) => handleEditChange('appColor', e.target.value)}
+                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded-lg cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={editForm.appColor}
+                    onChange={(e) => handleEditChange('appColor', e.target.value)}
+                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="#3B82F6"
+                  />
+                </div>
+              </div>
+
+              {/* App Icon */}
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-2">
+                  Icon
+                </label>
+                <div className="grid grid-cols-5 gap-3">
+                  {[
+                    { name: 'Database', component: Database },
+                    { name: 'Table', component: Table },
+                    { name: 'Users', component: Users },
+                    { name: 'Settings', component: Settings },
+                    { name: 'FileText', component: FileText },
+                    { name: 'Building2', component: Building2 },
+                    { name: 'Zap', component: Zap }
+                  ].map((icon) => (
+                    <button
+                      key={icon.name}
+                      onClick={() => handleEditChange('appIcon', icon.name)}
+                      className={`p-3 rounded-lg border-2 transition-colors ${
+                        editForm.appIcon === icon.name
+                          ? 'border-blue-500 bg-blue-600/20'
+                          : 'border-slate-600 bg-slate-700 hover:bg-slate-600'
+                      }`}
+                    >
+                      {React.createElement(icon.component, { 
+                        className: "h-5 w-5 text-slate-300 mx-auto" 
+                      })}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditApp}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <div className="flex items-center space-x-2">
+                  <Save className="h-4 w-4" />
+                  <span>Save Changes</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

@@ -158,10 +158,10 @@ const SystemHealthPage = () => {
     historicalTrends: false // collapsed
   });
 
-  // Role-based access control - only Capacity Admin can access
+  // Role-based access control - only Capacity Admin and NSight Admin can access
   useEffect(() => {
     if (!loading && userProfile) {
-      if (userProfile.role !== 'Capacity Admin') {
+      if (userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
         console.log(`🚫 Access denied to system health for role: ${userProfile.role}, redirecting to dashboard`);
         const dashboardRoute = getDashboardRoute();
         navigate(dashboardRoute, { replace: true });
@@ -184,7 +184,7 @@ const SystemHealthPage = () => {
   }, []);
 
   // If user doesn't have access, don't render anything
-  if (userProfile && userProfile.role !== 'Capacity Admin') {
+  if (userProfile && userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
     return null;
   }
 

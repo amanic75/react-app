@@ -65,6 +65,20 @@ app.all('/api/admin/companies', async (req, res) => {
   }
 });
 
+// 2b. Consolidated Apps API (create, list, get, update, delete)
+app.all('/api/admin/apps', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/apps.js');
+    await handler(req, createMockResponse(res));
+  } catch (error) {
+    console.error('❌ Apps API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message
+    });
+  }
+});
+
 // 3. Consolidated System Monitoring API (all system monitoring endpoints)
 app.get('/api/system/monitoring', async (req, res) => {
   try {

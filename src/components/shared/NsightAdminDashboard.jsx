@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Building2, 
@@ -11,29 +11,121 @@ import {
   Database,
   UserPlus,
   Edit3,
-  ArrowLeft
+  ArrowLeft,
+  Check,
+  Table
 } from 'lucide-react';
 import Card from '../ui/Card';
 import CreateCompanyModal from './CreateCompanyModal';
+import CreateAppModal from './CreateAppModal';
 
 const NsightAdminDashboard = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
+  const [isCreateAppModalOpen, setIsCreateAppModalOpen] = useState(false);
+  const [isAddExistingAppModalOpen, setIsAddExistingAppModalOpen] = useState(false);
   const [companies, setCompanies] = useState([]);
+  const [apps, setApps] = useState([]);
+  const [allAvailableApps, setAllAvailableApps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingApps, setIsLoadingApps] = useState(false);
+  const [isLoadingAvailableApps, setIsLoadingAvailableApps] = useState(false);
   const [error, setError] = useState(null);
+  const [currentView, setCurrentView] = useState('company'); // 'company', 'apps'
+  
+  // Hover animation state
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const cardRefs = useRef({});
 
   // Get current mode from URL query parameters
   const searchParams = new URLSearchParams(location.search);
   const currentMode = searchParams.get('mode');
 
+  // Mouse move handler for hover animation
+  const handleMouseMove = (e, cardId) => {
+    if (!cardRefs.current[cardId]) return;
+    
+    const rect = cardRefs.current[cardId].getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setMousePosition({ x, y });
+  };
+
   const availableApps = [
-    { id: 'formulas', name: 'Formulas', icon: Database, description: 'Chemical formula management' },
-    { id: 'suppliers', name: 'Suppliers', icon: Building2, description: 'Supplier relationship management' },
-    { id: 'raw-materials', name: 'Raw Materials', icon: Zap, description: 'Raw material inventory' },
-    { id: 'analytics', name: 'Analytics', icon: Settings, description: 'Data analytics and reporting' }
+    { 
+      id: 'formulas', 
+      name: 'Formulas', 
+      icon: Database, 
+      description: 'Chemical formula management system',
+      color: '#10B981',
+      schema: {
+        fields: [
+          { name: 'id', type: 'bigint', label: 'ID', required: true },
+          { name: 'formula_name', type: 'text', label: 'Formula Name', required: true },
+          { name: 'chemical_composition', type: 'text', label: 'Chemical Composition', required: true },
+          { name: 'density', type: 'decimal', label: 'Density (g/mL)', required: false },
+          { name: 'ph_level', type: 'decimal', label: 'pH Level', required: false },
+          { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
+        ]
+      }
+    },
+    { 
+      id: 'suppliers', 
+      name: 'Suppliers', 
+      icon: Building2, 
+      description: 'Supplier relationship management',
+      color: '#3B82F6',
+      schema: {
+        fields: [
+          { name: 'id', type: 'bigint', label: 'ID', required: true },
+          { name: 'company_name', type: 'text', label: 'Company Name', required: true },
+          { name: 'contact_person', type: 'text', label: 'Contact Person', required: true },
+          { name: 'email', type: 'email', label: 'Email', required: true },
+          { name: 'phone', type: 'text', label: 'Phone', required: false },
+          { name: 'address', type: 'textarea', label: 'Address', required: false },
+          { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
+        ]
+      }
+    },
+    { 
+      id: 'raw-materials', 
+      name: 'Raw Materials', 
+      icon: Zap, 
+      description: 'Raw material inventory management',
+      color: '#F59E0B',
+      schema: {
+        fields: [
+          { name: 'id', type: 'bigint', label: 'ID', required: true },
+          { name: 'material_name', type: 'text', label: 'Material Name', required: true },
+          { name: 'supplier_id', type: 'bigint', label: 'Supplier ID', required: true },
+          { name: 'quantity', type: 'decimal', label: 'Quantity', required: true },
+          { name: 'unit', type: 'text', label: 'Unit', required: true },
+          { name: 'price_per_unit', type: 'decimal', label: 'Price per Unit', required: false },
+          { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
+        ]
+      }
+    },
+    { 
+      id: 'analytics', 
+      name: 'Analytics', 
+      icon: Settings, 
+      description: 'Data analytics and reporting dashboard',
+      color: '#8B5CF6',
+      schema: {
+        fields: [
+          { name: 'id', type: 'bigint', label: 'ID', required: true },
+          { name: 'report_name', type: 'text', label: 'Report Name', required: true },
+          { name: 'report_type', type: 'text', label: 'Report Type', required: true },
+          { name: 'data_source', type: 'text', label: 'Data Source', required: true },
+          { name: 'created_by', type: 'text', label: 'Created By', required: true },
+          { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
+        ]
+      }
+    }
   ];
 
   // Fetch companies from backend API
@@ -76,7 +168,180 @@ const NsightAdminDashboard = ({ userData }) => {
   // Reset selected company when mode changes
   useEffect(() => {
     setSelectedCompany(null);
+    setCurrentView('company');
   }, [currentMode]);
+
+  // Fetch apps when a company is selected
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchApps();
+    }
+  }, [selectedCompany]);
+
+  // Fetch apps for the selected company
+  const fetchApps = async () => {
+    try {
+      setIsLoadingApps(true);
+      const response = await fetch(`/api/admin/apps?company_id=${selectedCompany.id}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch apps');
+      }
+      
+      if (data.success) {
+        setApps(data.apps);
+        console.log('✅ Loaded apps for company:', selectedCompany.name, data.apps.length);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch apps:', error);
+      // Set sample data for testing
+      setApps([
+        { 
+          id: 1, 
+          appName: 'Customer Database', 
+          appDescription: 'Manage customer information and contacts',
+          appIcon: 'Users',
+          appColor: '#3B82F6',
+          tableName: 'customers',
+          recordCount: 45,
+          userCount: 8,
+          status: 'active',
+          createdAt: '2024-01-15T10:30:00Z'
+        },
+        { 
+          id: 2, 
+          appName: 'Product Catalog', 
+          appDescription: 'Manage product inventory and details',
+          appIcon: 'Database',
+          appColor: '#10B981',
+          tableName: 'products',
+          recordCount: 234,
+          userCount: 12,
+          status: 'active',
+          createdAt: '2024-01-10T14:20:00Z'
+        }
+      ]);
+    } finally {
+      setIsLoadingApps(false);
+    }
+  };
+
+
+
+  // Fetch all available apps from all companies for the "Add Existing App" modal
+  const fetchAllAvailableApps = async () => {
+    try {
+      setIsLoadingAvailableApps(true);
+      const response = await fetch('/api/admin/apps'); // Get all apps
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch available apps');
+      }
+      
+      if (data.success) {
+        // Combine predefined templates with existing apps from other companies
+        const existingApps = data.apps
+          .filter(app => app.company.id !== selectedCompany?.id) // Exclude current company's apps
+          .map(app => ({
+            id: `existing-${app.id}`,
+            name: app.appName,
+            description: app.appDescription,
+            icon: app.appIcon,
+            color: app.appColor,
+            schema: app.schema,
+            uiConfig: app.uiConfig,
+            permissions: app.permissionsConfig,
+            isTemplate: false,
+            originalApp: app
+          }));
+
+        // Combine with predefined templates
+        const templates = availableApps.map(template => ({
+          ...template,
+          isTemplate: true
+        }));
+
+        setAllAvailableApps([...templates, ...existingApps]);
+        console.log('✅ Loaded available apps:', templates.length + existingApps.length);
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch available apps:', error);
+      // Fallback to just templates
+      setAllAvailableApps(availableApps.map(template => ({ ...template, isTemplate: true })));
+    } finally {
+      setIsLoadingAvailableApps(false);
+    }
+  };
+
+  // Handle adding existing app template to company
+  const handleAddExistingApp = async (appTemplate) => {
+    try {
+      console.log('📱 Adding existing app template:', appTemplate.name);
+      
+      const appData = {
+        companyId: selectedCompany.id,
+        appName: appTemplate.name,
+        appDescription: appTemplate.description,
+        appIcon: appTemplate.icon === 'Database' ? 'Database' : 
+                appTemplate.icon === 'Building2' ? 'Building2' : 
+                appTemplate.icon === 'Zap' ? 'Zap' : 
+                appTemplate.icon === 'Settings' ? 'Settings' : 'Database',
+        appColor: appTemplate.color || '#3B82F6',
+        tableName: (appTemplate.isTemplate ? appTemplate.id : appTemplate.originalApp?.tableName || appTemplate.id) + '_data',
+        schema: appTemplate.schema || {
+          fields: [
+            { name: 'id', type: 'bigint', label: 'ID', required: true },
+            { name: 'name', type: 'text', label: 'Name', required: true },
+            { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
+          ]
+        },
+        uiConfig: appTemplate.uiConfig || {
+          primaryColor: appTemplate.color || '#3B82F6',
+          theme: 'dark',
+          layout: 'table'
+        },
+        permissions: appTemplate.permissions || {
+          canView: ['all'],
+          canEdit: ['admin'],
+          canDelete: ['admin']
+        }
+      };
+
+      const response = await fetch('/api/admin/apps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appData)
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add app');
+      }
+      
+      if (result.success) {
+        console.log('✅ Successfully added existing app:', result.app.appName);
+        setIsAddExistingAppModalOpen(false);
+        // Refresh the apps list
+        fetchApps();
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to add existing app:', error);
+      alert(`Failed to add app: ${error.message}`);
+    }
+  };
+
+
 
   const handleModeSelection = (mode) => {
     navigate(`/dashboard?mode=${mode}`);
@@ -87,7 +352,19 @@ const NsightAdminDashboard = ({ userData }) => {
   };
 
   const handleCompanySelection = (company) => {
-    setSelectedCompany(company);
+    // Toggle selection: if same company is clicked, deselect it
+    if (selectedCompany?.id === company.id) {
+      setSelectedCompany(null);
+      setApps([]);
+      setCurrentView('company');
+    } else {
+      setSelectedCompany(company);
+      setCurrentView('existing');
+    }
+  };
+
+  const handleViewApps = () => {
+    setCurrentView('apps');
   };
 
   const handleCreateCompany = async (newCompany) => {
@@ -125,6 +402,37 @@ const NsightAdminDashboard = ({ userData }) => {
     }
   };
 
+  const handleCreateApp = async (newApp) => {
+    try {
+      console.log('📱 Creating app via API:', newApp.appName);
+      
+      const response = await fetch('/api/admin/apps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newApp)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create app');
+      }
+      
+      if (data.success) {
+        console.log('✅ App created successfully:', data.app.appName);
+        alert(`App "${data.app.appName}" created successfully!`);
+      } else {
+        throw new Error('Invalid API response');
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to create app:', error);
+      alert(`Failed to create app: ${error.message}`);
+    }
+  };
+
   const renderModeSelection = () => (
     <div className="space-y-8">
       <div className="text-center">
@@ -134,56 +442,140 @@ const NsightAdminDashboard = ({ userData }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         {/* Developer Mode */}
-        <Card 
-          className="p-8 cursor-pointer hover:bg-slate-750 transition-all duration-200 border-2 border-transparent hover:border-blue-500"
+        <div
+          ref={(el) => (cardRefs.current['developer'] = el)}
+          onMouseEnter={() => setHoveredCard('developer')}
+          onMouseLeave={() => {
+            setHoveredCard(null);
+            setMousePosition({ x: 50, y: 50 }); // Reset to center
+          }}
+          onMouseMove={(e) => handleMouseMove(e, 'developer')}
+          className="relative cursor-pointer"
+          style={{
+            transform: hoveredCard === 'developer' ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
+            transformOrigin: hoveredCard === 'developer' 
+              ? `${mousePosition.x}% ${mousePosition.y}%` 
+              : 'center center',
+            transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+          }}
           onClick={() => handleModeSelection('developer')}
         >
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto">
-              <Code className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-100">Developer Mode</h3>
-            <p className="text-slate-400 text-sm">
-              Create new companies and develop custom applications for clients
-            </p>
-            <div className="pt-4 space-y-2 text-xs text-slate-500">
-              <div className="flex items-center justify-center space-x-2">
-                <Plus className="h-3 w-3" />
-                <span>Create New Company</span>
+          <Card className="p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent hover:border-blue-500">
+            {hoveredCard === 'developer' && (
+              <div 
+                className="absolute inset-0 opacity-20 -z-0"
+                style={{
+                  background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.3), transparent 70%)`
+                }}
+              />
+            )}
+            <div className="text-center space-y-4 relative z-10">
+              <div 
+                className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto transition-all duration-300"
+                style={{
+                  transform: hoveredCard === 'developer' ? 'scale(1.1)' : 'scale(1)',
+                  transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                }}
+              >
+                <Code className="h-8 w-8 text-white" />
               </div>
-              <div className="flex items-center justify-center space-x-2">
-                <Database className="h-3 w-3" />
-                <span>Create Apps</span>
+              <h3 className="text-xl font-semibold text-slate-100">Developer Mode</h3>
+              <p className="text-slate-400 text-sm">
+                Create new companies and develop custom applications for clients
+              </p>
+              <div className="pt-4 space-y-2 text-xs text-slate-500">
+                <div 
+                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
+                  style={{
+                    transform: hoveredCard === 'developer' ? 'scale(1.05)' : 'scale(1)',
+                    transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Create New Company</span>
+                </div>
+                <div 
+                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
+                  style={{
+                    transform: hoveredCard === 'developer' ? 'scale(1.05)' : 'scale(1)',
+                    transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                  }}
+                >
+                  <Database className="h-3 w-3" />
+                  <span>Create Apps</span>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
 
         {/* Existing Company Mode */}
-        <Card 
-          className="p-8 cursor-pointer hover:bg-slate-750 transition-all duration-200 border-2 border-transparent hover:border-green-500"
+        <div
+          ref={(el) => (cardRefs.current['existing'] = el)}
+          onMouseEnter={() => setHoveredCard('existing')}
+          onMouseLeave={() => {
+            setHoveredCard(null);
+            setMousePosition({ x: 50, y: 50 }); // Reset to center
+          }}
+          onMouseMove={(e) => handleMouseMove(e, 'existing')}
+          className="relative cursor-pointer"
+          style={{
+            transform: hoveredCard === 'existing' ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
+            transformOrigin: hoveredCard === 'existing' 
+              ? `${mousePosition.x}% ${mousePosition.y}%` 
+              : 'center center',
+            transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+          }}
           onClick={() => handleModeSelection('existing')}
         >
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-100">Existing Company Mode</h3>
-            <p className="text-slate-400 text-sm">
-              Manage existing companies, users, and applications
-            </p>
-            <div className="pt-4 space-y-2 text-xs text-slate-500">
-              <div className="flex items-center justify-center space-x-2">
-                <Users className="h-3 w-3" />
-                <span>Manage Users</span>
+          <Card className="p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent hover:border-green-500">
+            {hoveredCard === 'existing' && (
+              <div 
+                className="absolute inset-0 opacity-20 -z-0"
+                style={{
+                  background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(34, 197, 94, 0.3), transparent 70%)`
+                }}
+              />
+            )}
+            <div className="text-center space-y-4 relative z-10">
+              <div 
+                className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto transition-all duration-300"
+                style={{
+                  transform: hoveredCard === 'existing' ? 'scale(1.1)' : 'scale(1)',
+                  transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                }}
+              >
+                <Building2 className="h-8 w-8 text-white" />
               </div>
-              <div className="flex items-center justify-center space-x-2">
-                <Edit3 className="h-3 w-3" />
-                <span>Edit/Add Apps</span>
+              <h3 className="text-xl font-semibold text-slate-100">Existing Company Mode</h3>
+              <p className="text-slate-400 text-sm">
+                Manage existing companies, users, and applications
+              </p>
+              <div className="pt-4 space-y-2 text-xs text-slate-500">
+                <div 
+                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
+                  style={{
+                    transform: hoveredCard === 'existing' ? 'scale(1.05)' : 'scale(1)',
+                    transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                  }}
+                >
+                  <Users className="h-3 w-3" />
+                  <span>Manage Users</span>
+                </div>
+                <div 
+                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
+                  style={{
+                    transform: hoveredCard === 'existing' ? 'scale(1.05)' : 'scale(1)',
+                    transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                  }}
+                >
+                  <Edit3 className="h-3 w-3" />
+                  <span>Edit/Add Apps</span>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -234,7 +626,10 @@ const NsightAdminDashboard = ({ userData }) => {
               <p className="text-slate-400 text-sm">Develop custom applications</p>
             </div>
           </div>
-          <button className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+          <button 
+            onClick={() => setIsCreateAppModalOpen(true)}
+            className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
             Create App
           </button>
         </Card>
@@ -276,72 +671,167 @@ const NsightAdminDashboard = ({ userData }) => {
         </div>
       </div>
 
-      {!selectedCompany ? (
+      {/* Company Selection Section */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-slate-100">Select Company</h3>
+          {error && (
+            <button
+              onClick={fetchCompanies}
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
+            <p className="text-red-300 text-sm">⚠️ {error}</p>
+            <p className="text-red-400 text-xs mt-1">Showing sample data</p>
+          </div>
+        )}
+        
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-3 text-slate-400">Loading companies...</span>
+          </div>
+        ) : companies.length === 0 ? (
+          <div className="text-center py-8">
+            <Building2 className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+            <h4 className="text-slate-300 font-medium mb-2">No Companies Found</h4>
+            <p className="text-slate-400 text-sm mb-4">Create your first company to get started</p>
+            <button
+              onClick={() => navigate('/dashboard?mode=developer')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Company
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {companies.map((company) => (
+              <div
+                key={company.id}
+                onClick={() => handleCompanySelection(company)}
+                className={`p-4 rounded-lg transition-colors cursor-pointer group border-2 ${
+                  selectedCompany?.id === company.id 
+                    ? 'bg-blue-600/20 border-blue-500' 
+                    : 'bg-slate-700 border-transparent hover:bg-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-slate-200 font-medium">{company.name}</h4>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <span className="text-slate-400 text-sm">{company.users} users</span>
+                      <span className="text-slate-400 text-sm">
+                        Apps: {Array.isArray(company.apps) ? company.apps.join(', ') : 'None'}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedCompany?.id === company.id ? (
+                    <Check className="h-5 w-5 text-blue-400" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* App Selection Section */}
+      {selectedCompany && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-100">Select Company</h3>
-            {error && (
+            <h3 className="text-lg font-semibold text-slate-100">Select App</h3>
+            <div className="flex items-center space-x-3">
               <button
-                onClick={fetchCompanies}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Retry
-              </button>
-            )}
-          </div>
-          
-          {error && (
-            <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
-              <p className="text-red-300 text-sm">⚠️ {error}</p>
-              <p className="text-red-400 text-xs mt-1">Showing sample data</p>
-            </div>
-          )}
-          
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <span className="ml-3 text-slate-400">Loading companies...</span>
-            </div>
-          ) : companies.length === 0 ? (
-            <div className="text-center py-8">
-              <Building2 className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <h4 className="text-slate-300 font-medium mb-2">No Companies Found</h4>
-              <p className="text-slate-400 text-sm mb-4">Create your first company to get started</p>
-              <button
-                onClick={() => navigate('/dashboard?mode=developer')}
+                onClick={() => {
+                  setIsAddExistingAppModalOpen(true);
+                  fetchAllAvailableApps();
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Create Company
+                Add Existing App
+              </button>
+              <button
+                onClick={() => setIsCreateAppModalOpen(true)}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Add New App
+              </button>
+            </div>
+          </div>
+          
+          {isLoadingApps ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              <span className="ml-3 text-slate-400">Loading apps...</span>
+            </div>
+          ) : apps.length === 0 ? (
+            <div className="text-center py-8">
+              <Database className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <h4 className="text-slate-300 font-medium mb-2">No Apps Found</h4>
+              <p className="text-slate-400 text-sm mb-4">Create your first app for {selectedCompany.name}</p>
+              <button
+                onClick={() => setIsCreateAppModalOpen(true)}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Create App
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {companies.map((company) => (
-                <div
-                  key={company.id}
-                  onClick={() => handleCompanySelection(company)}
-                  className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-slate-200 font-medium">{company.name}</h4>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-slate-400 text-sm">{company.users} users</span>
-                        <span className="text-slate-400 text-sm">
-                          Apps: {Array.isArray(company.apps) ? company.apps.join(', ') : 'None'}
-                        </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {apps.map((app) => {
+                const IconComponent = (() => {
+                  switch(app.appIcon) {
+                    case 'Users': return Users;
+                    case 'Database': return Database;
+                    case 'Settings': return Settings;
+                    case 'Table': return Table;
+                    default: return Database;
+                  }
+                })();
+                
+                return (
+                  <div
+                    key={app.id}
+                    onClick={() => navigate(`/apps/${app.id}`)}
+                    className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: app.appColor }}
+                      >
+                        <IconComponent className="w-5 h-5 text-white" />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-slate-200 font-medium truncate">{app.appName}</h4>
+                        <p className="text-slate-400 text-sm mt-1 line-clamp-2">{app.appDescription}</p>
+                        <div className="flex items-center space-x-4 mt-3 text-xs text-slate-500">
+                          <span>{app.recordCount || 0} records</span>
+                          <span>{app.userCount || 0} users</span>
+                          <span className="px-2 py-1 bg-green-900/50 text-green-400 rounded">
+                            {app.status}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
-      ) : (
-        renderCompanyManagement()
       )}
+
+
     </div>
   );
 
@@ -393,15 +883,21 @@ const NsightAdminDashboard = ({ userData }) => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-100">Edit/Add Apps</h3>
-              <p className="text-slate-400 text-sm">{selectedCompany.apps.length} apps configured</p>
+              <p className="text-slate-400 text-sm">{Array.isArray(selectedCompany.apps) ? selectedCompany.apps.length : 0} apps configured</p>
             </div>
           </div>
           <div className="space-y-2 mb-4">
-            <button className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+            <button 
+              onClick={() => setIsCreateAppModalOpen(true)}
+              className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
               Add New App
             </button>
-            <button className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors">
-              Configure Existing Apps
+            <button 
+              onClick={handleViewApps}
+              className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+            >
+              View & Edit Apps
             </button>
           </div>
         </Card>
@@ -427,6 +923,8 @@ const NsightAdminDashboard = ({ userData }) => {
     </div>
   );
 
+
+
   // Determine which view to render based on URL mode
   return (
     <>
@@ -440,6 +938,86 @@ const NsightAdminDashboard = ({ userData }) => {
         onClose={() => setIsCreateCompanyModalOpen(false)}
         onSave={handleCreateCompany}
       />
+      
+      {/* Create App Modal */}
+      <CreateAppModal
+        isOpen={isCreateAppModalOpen}
+        onClose={() => setIsCreateAppModalOpen(false)}
+        onSave={handleCreateApp}
+        selectedCompany={selectedCompany}
+      />
+
+      {/* Add Existing App Modal */}
+      {isAddExistingAppModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-100">Add Existing App Template</h2>
+              <button
+                onClick={() => setIsAddExistingAppModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p className="text-slate-400 mb-6">
+              Choose from pre-built templates or copy existing apps from other companies to add to {selectedCompany?.name}
+            </p>
+            
+            {isLoadingAvailableApps ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-3 text-slate-400">Loading available apps...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {allAvailableApps.map((appTemplate) => {
+                const IconComponent = appTemplate.icon;
+                return (
+                  <div
+                    key={appTemplate.id}
+                    onClick={() => handleAddExistingApp(appTemplate)}
+                    className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer group border border-transparent hover:border-blue-500"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: appTemplate.color }}
+                      >
+                        <IconComponent className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-slate-200 font-medium">{appTemplate.name}</h4>
+                        <p className="text-slate-400 text-sm mt-1">{appTemplate.description}</p>
+                        <div className="mt-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                            appTemplate.isTemplate 
+                              ? 'bg-blue-900 text-blue-300' 
+                              : 'bg-green-900 text-green-300'
+                          }`}>
+                            {appTemplate.isTemplate ? 'Template' : `From ${appTemplate.originalApp?.company?.name || 'Other Company'}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-slate-700">
+              <button
+                onClick={() => setIsAddExistingAppModalOpen(false)}
+                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

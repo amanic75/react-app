@@ -170,6 +170,109 @@ async function createCompany(req, res) {
 
   console.log('✅ Company created successfully:', newCompany.id);
 
+  // Create admin user account for the company
+  let adminUser = null;
+  let adminCreated = false;
+
+  try {
+    // Check if admin user already exists
+    const { data: existingUser, error: existingUserError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('id, email, first_name, last_name, role')
+      .eq('email', companyData.adminUserEmail)
+      .single();
+
+    if (existingUser) {
+      console.log(`👤 Admin user already exists: ${companyData.adminUserEmail}`);
+      adminUser = existingUser;
+      
+      // Update role to Capacity Admin if needed
+      if (existingUser.role !== 'Capacity Admin') {
+        const { error: roleUpdateError } = await supabaseAdmin
+          .from('user_profiles')
+          .update({
+            role: 'Capacity Admin',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingUser.id);
+
+        if (roleUpdateError) {
+          console.error(`❌ Failed to update role for ${companyData.adminUserEmail}:`, roleUpdateError);
+        } else {
+          console.log(`✅ Updated role to Capacity Admin for ${companyData.adminUserEmail}`);
+        }
+      }
+    } else {
+      console.log(`🆕 Creating new admin user: ${companyData.adminUserEmail}`);
+      
+      // Create new user account
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: companyData.adminUserEmail,
+        password: 'ChangeMe123!', // Default password - should be changed
+        email_confirm: true,
+        user_metadata: {
+          first_name: companyData.adminUserName.split(' ')[0] || '',
+          last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
+          role: 'Capacity Admin'
+        }
+      });
+
+      if (authError) {
+        console.error(`❌ Failed to create auth user for ${companyData.adminUserEmail}:`, authError);
+        // Continue without admin user - can be created later via sync
+      } else {
+        // Create user profile
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from('user_profiles')
+          .insert([{
+            id: authData.user.id,
+            email: companyData.adminUserEmail,
+            first_name: companyData.adminUserName.split(' ')[0] || '',
+            last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
+            role: 'Capacity Admin',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (profileError) {
+          console.error(`❌ Failed to create profile for ${companyData.adminUserEmail}:`, profileError);
+          // Continue without admin user - can be created later via sync
+        } else {
+          console.log(`✅ Created new admin user: ${companyData.adminUserEmail}`);
+          adminUser = profileData;
+          adminCreated = true;
+        }
+      }
+    }
+
+    // Link admin user to company
+    if (adminUser) {
+      const { error: linkError } = await supabaseAdmin
+        .from('company_users')
+        .upsert([{
+          company_id: newCompany.id,
+          user_id: adminUser.id,
+          role: 'Admin',
+          status: 'Active',
+          added_at: new Date().toISOString()
+        }], { 
+          onConflict: 'company_id,user_id',
+          ignoreDuplicates: false 
+        });
+
+      if (linkError) {
+        console.error(`❌ Failed to link admin user to company ${companyData.companyName}:`, linkError);
+      } else {
+        console.log(`✅ Successfully linked ${companyData.adminUserEmail} to ${companyData.companyName}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error creating admin user:', error);
+    // Continue with company creation even if admin user creation fails
+  }
+
   // Create initial apps for the company
   const appInserts = companyData.initialApps.map(appId => ({
     company_id: newCompany.id,
@@ -196,7 +299,14 @@ async function createCompany(req, res) {
     success: true,
     message: `Company "${companyData.companyName}" created successfully`,
     company: newCompany,
-    apps: appInserts
+    apps: appInserts,
+    adminUser: adminUser ? {
+      id: adminUser.id,
+      email: adminUser.email,
+      name: `${adminUser.first_name} ${adminUser.last_name}`.trim(),
+      role: adminUser.role,
+      created: adminCreated
+    } : null
   });
 }
 

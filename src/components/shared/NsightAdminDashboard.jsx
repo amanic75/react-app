@@ -36,6 +36,8 @@ const NsightAdminDashboard = ({ userData }) => {
   const [isLoadingAvailableApps, setIsLoadingAvailableApps] = useState(false);
   const [error, setError] = useState(null);
   const [currentView, setCurrentView] = useState('company'); // 'company', 'apps'
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
   
   // Hover animation state
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -166,6 +168,49 @@ const NsightAdminDashboard = ({ userData }) => {
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  // Handle company sync
+  const handleSyncCompanies = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatus(null);
+      
+      console.log('🔄 Starting company sync...');
+      
+      const response = await fetch('http://localhost:3001/api/admin/company-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync companies');
+      }
+      
+      if (data.success) {
+        console.log('✅ Company sync completed:', data.results);
+        setSyncStatus(data.results);
+        
+        // Show success message
+        const { created, linked, errors } = data.results;
+        const message = `Sync completed: ${created} users created, ${linked} companies linked, ${errors} errors`;
+        alert(message);
+        
+        // Refresh companies list to show updated data
+        await fetchCompanies();
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to sync companies:', error);
+      alert(`Failed to sync companies: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Reset selected company when mode changes
   useEffect(() => {
@@ -733,15 +778,37 @@ const NsightAdminDashboard = ({ userData }) => {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-100">Select Company</h3>
-          {error && (
+          <div className="flex items-center space-x-3">
             <button
-              onClick={fetchCompanies}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              onClick={handleSyncCompanies}
+              disabled={isSyncing}
+              className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                isSyncing 
+                  ? 'bg-gray-500 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
             >
-              Retry
+              {isSyncing ? 'Syncing...' : 'Sync Companies'}
             </button>
-          )}
+            {error && (
+              <button
+                onClick={fetchCompanies}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                Retry
+              </button>
+            )}
+          </div>
         </div>
+        
+        {syncStatus && (
+          <div className="mb-4 p-3 bg-green-900/50 border border-green-700 rounded-lg">
+            <p className="text-green-300 text-sm">✅ Sync completed</p>
+            <p className="text-green-400 text-xs mt-1">
+              {syncStatus.created} users created, {syncStatus.linked} companies linked, {syncStatus.errors} errors
+            </p>
+          </div>
+        )}
         
         {error && (
           <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
@@ -787,6 +854,11 @@ const NsightAdminDashboard = ({ userData }) => {
                       <span className="text-slate-400 text-sm">
                         Apps: {Array.isArray(company.apps) ? company.apps.join(', ') : 'None'}
                       </span>
+                      {company.adminUserEmail && (
+                        <span className="text-slate-400 text-sm">
+                          Admin: {company.adminUserEmail}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {selectedCompany?.id === company.id ? (

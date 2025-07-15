@@ -241,21 +241,32 @@ async function createApp(req, res) {
       return res.status(400).json({ error: 'Invalid company ID' });
     }
 
-    // Check if an app with the same name already exists (including deleted ones)
+    // Check if an app with the same name OR table name already exists (including deleted ones)
     console.log(`🔍 Checking for existing app: ${appName} in company: ${companyIdToUse}`);
-    const { data: existingApp, error: existingError } = await supabaseAdmin
+    const { data: existingAppByName, error: nameError } = await supabaseAdmin
       .from('apps')
-      .select('id, status')
+      .select('id, status, app_name')
       .eq('company_id', companyIdToUse)
       .eq('app_name', appName)
       .single();
 
-    console.log(`🔍 Existing app check result:`, { existingApp, existingError });
+    const { data: existingAppByTable, error: tableError } = await supabaseAdmin
+      .from('apps')
+      .select('id, status, table_name')
+      .eq('company_id', companyIdToUse)
+      .eq('table_name', tableName)
+      .single();
 
-    if (existingError && existingError.code !== 'PGRST116') {
-      console.error('Error checking existing app:', existingError);
+    console.log(`🔍 Existing app check result:`, { existingAppByName, existingAppByTable, nameError, tableError });
+
+    if ((nameError && nameError.code !== 'PGRST116') || (tableError && tableError.code !== 'PGRST116')) {
+      console.error('Error checking existing app:', { nameError, tableError });
       return res.status(500).json({ error: 'Failed to check existing app' });
     }
+
+    // Determine which existing app to use (prefer by name, fallback to table)
+    const existingApp = existingAppByName || existingAppByTable;
+    const existingError = nameError;
 
     // Build schema JSON from fields or use direct schema
     const schemaJson = schema || {
@@ -290,26 +301,49 @@ async function createApp(req, res) {
       console.log(`🔍 Found existing app with status: ${existingApp.status}`);
       if (existingApp.status === 'active') {
         console.log(`❌ App is already active, returning error`);
+        
+        // Provide specific error messages
+        if (existingAppByName && existingAppByTable) {
+          return res.status(400).json({ 
+            error: 'Both app name and table name already exist for this company' 
+          });
+        } else if (existingAppByName) {
+          return res.status(400).json({ 
+            error: 'App name already exists for this company' 
+          });
+        } else if (existingAppByTable) {
+          return res.status(400).json({ 
+            error: 'Table name already exists for this company' 
+          });
+        }
+        
         return res.status(400).json({ 
-          error: 'App name already exists for this company' 
+          error: 'App already exists for this company' 
         });
       } else if (existingApp.status === 'deleted') {
         console.log(`♻️  Reactivating deleted app with ID: ${existingApp.id}`);
         // Reactivate the deleted app with new data
+        const updateData = {
+          app_description: appDescription,
+          app_icon: appIcon,
+          app_color: appColor,
+          category,
+          table_name: tableName,
+          schema_json: schemaJson,
+          ui_config: finalUiConfig,
+          permissions_config: finalPermissionsConfig,
+          status: 'active',
+          updated_at: new Date().toISOString()
+        };
+        
+        // Only update app_name if we found the app by name (not by table)
+        if (existingAppByName) {
+          updateData.app_name = appName;
+        }
+        
         const { data: reactivatedApp, error } = await supabaseAdmin
           .from('apps')
-          .update({
-            app_description: appDescription,
-            app_icon: appIcon,
-            app_color: appColor,
-            category,
-            table_name: tableName,
-            schema_json: schemaJson,
-            ui_config: finalUiConfig,
-            permissions_config: finalPermissionsConfig,
-            status: 'active',
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', existingApp.id)
           .select()
           .single();

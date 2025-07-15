@@ -65,6 +65,20 @@ app.all('/api/admin/companies', async (req, res) => {
   }
 });
 
+// 2a. Company-User Sync API (sync companies with their admin users)
+app.all('/api/admin/company-sync', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/admin/company-sync.js');
+    await handler(req, createMockResponse(res));
+  } catch (error) {
+    console.error('❌ Company Sync API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message
+    });
+  }
+});
+
 // 2b. Consolidated Apps API (create, list, get, update, delete)
 app.all('/api/admin/apps', async (req, res) => {
   try {
@@ -295,6 +309,7 @@ app.listen(PORT, () => {
   console.log(`   POST http://localhost:${PORT}/api/admin/users?action=create`);
   console.log(`   POST http://localhost:${PORT}/api/admin/users?action=change-password`);
   console.log(`   ALL  http://localhost:${PORT}/api/admin/companies[?id=123]`);
+  console.log(`   ALL  http://localhost:${PORT}/api/admin/company-sync`);
   console.log(`   GET  http://localhost:${PORT}/api/system/monitoring?type=server-status`);
   console.log(`   GET  http://localhost:${PORT}/api/system/monitoring?type=all`);
   console.log(`   POST http://localhost:${PORT}/api/ai-chat`);

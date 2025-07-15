@@ -80,27 +80,63 @@ const UserManagementTable = () => {
         updated_at: profile.updated_at
       }));
 
-      const recentActivity = getActivity({ limit: 50 });
-      const summary = getActivitySummary(24);
-      
-      // Track online users (logged in within last 30 minutes without logout)
-      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-      const onlineUserEmails = new Set();
-      
-      // Process activity to determine who's online
-      const userLastActivity = {};
-      recentActivity.forEach(act => {
-        if (!userLastActivity[act.userEmail] || new Date(act.timestamp) > new Date(userLastActivity[act.userEmail].timestamp)) {
-          userLastActivity[act.userEmail] = act;
+      // Get activity data from API (production) or localStorage (development fallback)
+      let recentActivity = [];
+      let summary = { totalLogins: 0, totalLogouts: 0, uniqueUsers: 0 };
+      let apiOnlineUsers = [];
+
+      try {
+        const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+          ? 'http://localhost:3001/api/activity-summary'
+          : '/api/activity-summary';
+        
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+          const apiData = await response.json();
+          if (apiData.success) {
+            summary = apiData.summary;
+            apiOnlineUsers = apiData.onlineUsers || [];
+            recentActivity = apiData.summary.recentActivity || [];
+            console.log('📊 Activity summary from API:', { summary, onlineCount: apiOnlineUsers.length });
+          }
+        } else {
+          throw new Error(`API responded with ${response.status}`);
         }
-      });
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch activity from API, using localStorage fallback:', error.message);
+        // Fallback to localStorage for development
+        recentActivity = getActivity({ limit: 50 });
+        summary = getActivitySummary(24);
+      }
       
-      Object.entries(userLastActivity).forEach(([email, lastAct]) => {
-        const actTime = new Date(lastAct.timestamp);
-        if (actTime > thirtyMinutesAgo && lastAct.type === ACTIVITY_TYPES.LOGIN) {
-          onlineUserEmails.add(email);
-        }
-      });
+      // Track online users - use API data if available, otherwise fallback to localStorage logic
+      let onlineUserEmails = new Set();
+      
+      if (apiOnlineUsers.length > 0) {
+        // Use API online users data (more reliable)
+        apiOnlineUsers.forEach(user => {
+          onlineUserEmails.add(user.user_email);
+        });
+        console.log('👥 Online users from API:', Array.from(onlineUserEmails));
+      } else {
+        // Fallback to localStorage logic for development
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        
+        // Process activity to determine who's online
+        const userLastActivity = {};
+        recentActivity.forEach(act => {
+          if (!userLastActivity[act.userEmail] || new Date(act.timestamp) > new Date(userLastActivity[act.userEmail].timestamp)) {
+            userLastActivity[act.userEmail] = act;
+          }
+        });
+        
+        Object.entries(userLastActivity).forEach(([email, lastAct]) => {
+          const actTime = new Date(lastAct.timestamp);
+          if (actTime > thirtyMinutesAgo && lastAct.type === ACTIVITY_TYPES.LOGIN) {
+            onlineUserEmails.add(email);
+          }
+        });
+      }
       
       // Update last login times from activity data
       const usersWithActivity = allUsers.map(user => {

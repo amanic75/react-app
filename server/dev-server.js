@@ -107,7 +107,21 @@ app.post('/api/track-activity', async (req, res) => {
   }
 });
 
-// 6. Database test endpoint (debugging)
+// 6. Activity summary endpoint (for user management metrics)
+app.get('/api/activity-summary', async (req, res) => {
+  try {
+    const { default: handler } = await import('../api/activity-summary.js');
+    await handler(req, createMockResponse(res));
+  } catch (error) {
+    console.error('❌ Activity Summary API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
+});
+
+// 7. Database test endpoint (debugging)
 app.get('/api/test-db', async (req, res) => {
   try {
     const { default: handler } = await import('../api/test-db.js');
@@ -257,6 +271,7 @@ app.listen(PORT, () => {
   console.log(`   GET  http://localhost:${PORT}/api/system/monitoring?type=all`);
   console.log(`   POST http://localhost:${PORT}/api/ai-chat`);
   console.log(`   POST http://localhost:${PORT}/api/track-activity`);
+  console.log(`   GET  http://localhost:${PORT}/api/activity-summary`);
   console.log('');
   console.log('🔄 LEGACY COMPATIBILITY ENDPOINTS (redirect to consolidated):');
   console.log(`   All legacy individual endpoints still work and redirect internally`);

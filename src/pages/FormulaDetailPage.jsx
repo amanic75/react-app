@@ -211,12 +211,25 @@ const FormulaDetailPage = () => {
     return <File className="h-5 w-5 text-slate-400" />;
   };
 
-  const handleEditToggle = async () => {
-    if (isEditing) {
-      try {
-        // Save changes to Supabase
+  const handleEditToggle = () => {
+    // Reset to current values when starting edit
+    setEditableFormula({
+      name: formula.name,
+      totalCost: formula.totalCost,
+      finalSalePriceDrum: formula.finalSalePriceDrum,
+      finalSalePriceTote: formula.finalSalePriceTote,
+      ingredients: [...formula.ingredients]
+    });
+    setIsEditing(true);
+    // Load raw materials for search functionality
+    loadRawMaterials();
+  };
+
+  const handleSave = async () => {
+    try {
+      // Save changes to Supabase
       if (editableFormula) {
-          const updatedFormula = await updateFormula(formula.id, editableFormula);
+        const updatedFormula = await updateFormula(formula.id, editableFormula);
         if (updatedFormula) {
           setFormula(updatedFormula);
           console.log('Formula saved successfully:', updatedFormula);
@@ -229,23 +242,29 @@ const FormulaDetailPage = () => {
       setIsAddingWithAI(false);
       setAiResponse('');
       // Keep deleted documents after save - they are permanently removed
-      } catch (err) {
-        console.error('Error saving formula:', err);
-        // You might want to show an error message to the user here
-      }
-    } else {
-      // Reset to current values when starting edit
-      setEditableFormula({
-        name: formula.name,
-        totalCost: formula.totalCost,
-        finalSalePriceDrum: formula.finalSalePriceDrum,
-        finalSalePriceTote: formula.finalSalePriceTote,
-        ingredients: [...formula.ingredients]
-      });
-      setIsEditing(true);
-      // Load raw materials for search functionality
-      loadRawMaterials();
+    } catch (err) {
+      console.error('Error saving formula:', err);
+      // You might want to show an error message to the user here
     }
+  };
+
+  const handleCancel = () => {
+    // Revert all changes back to original formula
+    setEditableFormula({
+      name: formula.name,
+      totalCost: formula.totalCost,
+      finalSalePriceDrum: formula.finalSalePriceDrum,
+      finalSalePriceTote: formula.finalSalePriceTote,
+      ingredients: [...formula.ingredients]
+    });
+    setIsEditing(false);
+    setShowMaterialSearch(false);
+    setMaterialSearchTerm('');
+    setIsAddingWithAI(false);
+    setAiResponse('');
+    // Clear any uploaded files that weren't saved
+    setUploadedFiles([]);
+    setDeletedDocuments([]);
   };
 
   // Load raw materials for ingredient search
@@ -397,13 +416,32 @@ const FormulaDetailPage = () => {
                 <span>Delete Formula</span>
               </Button>
             )}
-          <Button
-            onClick={handleEditToggle}
-            className={`${isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            <Edit3 className="h-4 w-4 mr-2" />
-            {isEditing ? 'Save Changes' : 'Edit Formula'}
-          </Button>
+          {isEditing ? (
+            <div className="flex space-x-3">
+              <Button
+                onClick={handleSave}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+              <Button
+                onClick={handleCancel}
+                className="bg-gray-600 hover:bg-gray-700"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={handleEditToggle}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Formula
+            </Button>
+          )}
           </div>
         </div>
 

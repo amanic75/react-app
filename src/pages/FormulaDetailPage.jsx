@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2, Plus, Search } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
-import { getFormulaById, updateFormula, getAllFormulas, deleteFormula } from '../lib/supabaseData';
+import { getFormulaById, updateFormula, getAllFormulas, deleteFormula, getAllMaterials } from '../lib/supabaseData';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -18,6 +18,11 @@ const FormulaDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Material search functionality for editing
+  const [rawMaterials, setRawMaterials] = useState([]);
+  const [materialSearchTerm, setMaterialSearchTerm] = useState('');
+  const [showMaterialSearch, setShowMaterialSearch] = useState(false);
 
   // Get formula from Supabase
   useEffect(() => {
@@ -214,6 +219,8 @@ const FormulaDetailPage = () => {
       }
       console.log('Deleted documents:', deletedDocuments);
       setIsEditing(false);
+      setShowMaterialSearch(false);
+      setMaterialSearchTerm('');
       // Keep deleted documents after save - they are permanently removed
       } catch (err) {
         console.error('Error saving formula:', err);
@@ -229,7 +236,42 @@ const FormulaDetailPage = () => {
         ingredients: [...formula.ingredients]
       });
       setIsEditing(true);
+      // Load raw materials for search functionality
+      loadRawMaterials();
     }
+  };
+
+  // Load raw materials for ingredient search
+  const loadRawMaterials = async () => {
+    try {
+      const materials = await getAllMaterials();
+      setRawMaterials(materials);
+    } catch (error) {
+      console.error('Error loading raw materials:', error);
+    }
+  };
+
+  // Filter materials for search
+  const filteredMaterials = rawMaterials.filter(material =>
+    material.materialName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    material.supplierName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    material.casNumber.toLowerCase().includes(materialSearchTerm.toLowerCase())
+  );
+
+  // Add ingredient from material search
+  const addIngredientFromMaterial = (material) => {
+    const newIngredient = {
+      name: material.materialName,
+      percentage: 0,
+      cost: material.supplierCost || 0
+    };
+    
+    setEditableFormula(prev => ({
+      ...prev,
+      ingredients: [...prev.ingredients, newIngredient]
+    }));
+    setMaterialSearchTerm('');
+    setShowMaterialSearch(false);
   };
 
   const handleFieldChange = (field, value) => {
@@ -375,7 +417,71 @@ const FormulaDetailPage = () => {
 
           {/* Ingredients Horizontal Scroll */}
           <div className="border-t border-slate-700 pt-6">
-            <h3 className="text-lg font-medium text-slate-200 mb-4">Ingredients</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-slate-200">Ingredients</h3>
+              {isEditing && (
+                <button
+                  onClick={() => setShowMaterialSearch(!showMaterialSearch)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Ingredient</span>
+                </button>
+              )}
+            </div>
+
+            {/* Material Search Panel - Only show when editing and search is active */}
+            {isEditing && showMaterialSearch && (
+              <div className="mb-6 p-4 bg-slate-750 rounded-lg border border-slate-600">
+                <h4 className="text-md font-medium text-slate-200 mb-3">Add Ingredient from Raw Materials</h4>
+                
+                {/* Material Search */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={materialSearchTerm}
+                    onChange={(e) => setMaterialSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search raw materials by name, supplier, or CAS number..."
+                  />
+                </div>
+
+                {/* Material Search Results */}
+                {materialSearchTerm && (
+                  <div className="max-h-48 overflow-y-auto border border-slate-600 rounded-lg">
+                    {filteredMaterials.slice(0, 8).map((material) => (
+                      <button
+                        key={material.id}
+                        onClick={() => addIngredientFromMaterial(material)}
+                        className="w-full p-3 text-left hover:bg-slate-700 border-b border-slate-600 last:border-b-0 transition-colors"
+                      >
+                        <div className="font-medium text-slate-200">{material.materialName}</div>
+                        <div className="text-sm text-slate-400">
+                          {material.supplierName} • ${material.supplierCost ? material.supplierCost.toFixed(2) : '0.00'}/unit • {material.casNumber}
+                        </div>
+                      </button>
+                    ))}
+                    {filteredMaterials.length === 0 && materialSearchTerm && (
+                      <div className="p-3 text-slate-400 text-center">
+                        No materials found. Try different search terms.
+                      </div>
+                    )}
+                    {filteredMaterials.length > 8 && (
+                      <div className="p-2 text-slate-400 text-center text-xs bg-slate-750">
+                        Showing first 8 results. Refine search for more specific results.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!materialSearchTerm && (
+                  <div className="text-slate-400 text-sm text-center py-4">
+                    Start typing to search through {rawMaterials.length} available raw materials
+                  </div>
+                )}
+              </div>
+            )}
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
               <div className="flex space-x-4 pb-2 min-w-max">
                 {(editableFormula?.ingredients || formula.ingredients).map((ingredient, index) => (

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import { getAllFormulas } from '../lib/supabaseData';
+import AddFormulaModal from '../components/shared/AddFormulaModal';
+import { getAllFormulas, addFormula } from '../lib/supabaseData';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -62,6 +63,23 @@ const FormulasPage = () => {
 
     loadData();
   }, []);
+
+  // Handle adding new formula
+  const handleAddFormula = async (formulaData) => {
+    try {
+      console.log('Adding new formula:', formulaData);
+      const newFormula = await addFormula(formulaData);
+      if (newFormula) {
+        // Refresh the formulas list
+        const updatedFormulas = await getAllFormulas();
+        setFormulas(updatedFormulas);
+        console.log('Formula added successfully:', newFormula);
+      }
+    } catch (error) {
+      console.error('Error adding formula:', error);
+      setError('Failed to add formula. Please try again.');
+    }
+  };
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -496,7 +514,10 @@ const FormulasPage = () => {
                   </div>
                 )}
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors">
+              <button 
+                onClick={() => setIsAddFormulaModalOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+              >
                 <Plus className="w-4 h-4 text-white" />
                 <span className="text-sm text-white font-medium">Add Formula</span>
               </button>
@@ -568,6 +589,13 @@ const FormulasPage = () => {
         <DropboxUploadModal
           isOpen={isDropboxModalOpen}
           onClose={() => setIsDropboxModalOpen(false)}
+        />
+
+        {/* Add Formula Modal */}
+        <AddFormulaModal
+          isOpen={isAddFormulaModalOpen}
+          onClose={() => setIsAddFormulaModalOpen(false)}
+          onSave={handleAddFormula}
         />
       </div>
     </DashboardLayout>

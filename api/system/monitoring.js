@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { getActiveUsers } from '../track-activity.js';
 
 // Initialize Supabase client - try service role key first, fallback to anon key with different approach
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -460,10 +459,13 @@ async function getUsageAnalytics(req, res) {
       }
     };
 
-    // Get real active user count from activity tracking
+    // Get real active user count from database-based activity tracking
     try {
-      // Get currently active users from activity tracking
-      const currentActiveUsers = getActiveUsers();
+      // Import the activity tracking function
+      const { getActiveUsers } = await import('../track-activity.js');
+      
+      // Get currently active users from database activity tracking
+      const currentActiveUsers = await getActiveUsers();
       
       // Get total users and recent activity from database
       const { data: users, error: userError } = await supabase

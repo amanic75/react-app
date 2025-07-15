@@ -1,14 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with anon key (temporary fix until service role key is updated)
+// Initialize Supabase client with service role key for full access
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 );
 
-// In-memory activity tracking (in production, use Redis or database)
-let userActivity = new Map();
-
+// Database-based activity tracking (works on serverless platforms)
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -34,25 +32,58 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID or email required' });
     }
 
-    // Update user activity with enhanced data
-    userActivity.set(trackingId, {
-      lastSeen: Date.now(),
-      page: page || 'unknown',
-      userName: userName || 'Unknown User',
-      userRole: userRole || 'Employee',
-      userEmail: userEmail || trackingId,
-      timestamp: timestamp || new Date().toISOString()
-    });
+    // Create user_activity table if it doesn't exist (for first run)
+    await ensureActivityTableExists();
 
-    // Clean up old activity (remove users inactive for more than 1 minute)
-    const oneMinuteAgo = Date.now() - (1 * 60 * 1000);
-    let cleanedUp = 0;
-    for (const [id, activity] of userActivity.entries()) {
-      if (activity.lastSeen < oneMinuteAgo) {
-        userActivity.delete(id);
-        cleanedUp++;
+    // Update user activity in database with upsert
+    const activityData = {
+      user_email: userEmail || trackingId,
+      user_name: userName || 'Unknown User',
+      user_role: userRole || 'Employee',
+      page: page || 'unknown',
+      last_seen: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    };
+
+    const { data: upsertData, error: upsertError } = await supabase
+      .from('user_activity')
+      .upsert(activityData, { 
+        onConflict: 'user_email',
+        ignoreDuplicates: false 
+      })
+      .select();
+
+    if (upsertError) {
+      console.error('❌ Activity upsert error:', upsertError);
+      // Fallback: try insert instead
+      const { data: insertData, error: insertError } = await supabase
+        .from('user_activity')
+        .insert(activityData)
+        .select();
+      
+      if (insertError) {
+        console.error('❌ Activity insert error:', insertError);
       }
     }
+
+    // Clean up old activity (remove users inactive for more than 2 minutes)
+    const twoMinutesAgo = new Date(Date.now() - (2 * 60 * 1000)).toISOString();
+    const { error: cleanupError } = await supabase
+      .from('user_activity')
+      .delete()
+      .lt('last_seen', twoMinutesAgo);
+
+    if (cleanupError) {
+      console.error('❌ Activity cleanup error:', cleanupError);
+    }
+
+    // Get current active user count
+    const { data: activeUsers, error: countError } = await supabase
+      .from('user_activity')
+      .select('user_email')
+      .gte('last_seen', twoMinutesAgo);
+
+    const activeUserCount = activeUsers?.length || 0;
 
     // Try to update user profile updated_at timestamp as well (if we have userEmail)
     let dbUpdateSuccess = false;
@@ -80,15 +111,14 @@ export default async function handler(req, res) {
       userEmail,
       userName,
       userRole,
-      inMemoryActiveUsers: userActivity.size,
+      activeUsers: activeUserCount,
       dbUpdateSuccess,
-      cleanedUpUsers: cleanedUp,
       timestamp: new Date().toISOString()
     });
 
     res.status(200).json({ 
       success: true,
-      activeUsers: userActivity.size,
+      activeUsers: activeUserCount,
       message: 'Activity tracked'
     });
 
@@ -101,16 +131,58 @@ export default async function handler(req, res) {
   }
 }
 
-// Export the activity map for use by usage analytics
-export const getActiveUsers = () => {
-  const oneMinuteAgo = Date.now() - (1 * 60 * 1000);
-  
-  // Clean up old activity
-  for (const [id, activity] of userActivity.entries()) {
-    if (activity.lastSeen < oneMinuteAgo) {
-      userActivity.delete(id);
+// Ensure the user_activity table exists
+async function ensureActivityTableExists() {
+  try {
+    // Try to query the table first
+    const { data, error } = await supabase
+      .from('user_activity')
+      .select('user_email')
+      .limit(1);
+
+    // If table doesn't exist, this will return a specific error
+    if (error && error.message.includes('relation "user_activity" does not exist')) {
+      console.log('📋 Creating user_activity table...');
+      
+      // Create the table using SQL
+      const { error: createError } = await supabase.rpc('create_user_activity_table', {});
+      
+      if (createError) {
+        console.error('❌ Failed to create user_activity table:', createError);
+      } else {
+        console.log('✅ user_activity table created successfully');
+      }
     }
+  } catch (err) {
+    console.log('⚠️ Could not verify/create user_activity table:', err.message);
   }
-  
-  return userActivity.size;
+}
+
+// Export function to get active users (updated for database-based tracking)
+export const getActiveUsers = async () => {
+  try {
+    const twoMinutesAgo = new Date(Date.now() - (2 * 60 * 1000)).toISOString();
+    
+    // Clean up old activity first
+    await supabase
+      .from('user_activity')
+      .delete()
+      .lt('last_seen', twoMinutesAgo);
+
+    // Get current active users
+    const { data: activeUsers, error } = await supabase
+      .from('user_activity')
+      .select('user_email')
+      .gte('last_seen', twoMinutesAgo);
+
+    if (error) {
+      console.error('❌ Error getting active users:', error);
+      return 0;
+    }
+
+    return activeUsers?.length || 0;
+  } catch (err) {
+    console.error('❌ getActiveUsers error:', err);
+    return 0;
+  }
 }; 

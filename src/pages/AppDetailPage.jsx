@@ -30,7 +30,23 @@ const AppDetailPage = () => {
     appName: '',
     appDescription: '',
     appColor: '#3B82F6',
-    appIcon: 'Database'
+    appIcon: 'Database',
+    category: 'business',
+    tableName: '',
+    uiConfig: {
+      showInDashboard: true,
+      enableSearch: true,
+      enableFilters: true,
+      enableExport: true
+    },
+    schema: {
+      fields: []
+    },
+    permissionsConfig: {
+      adminAccess: [],
+      managerAccess: [],
+      userAccess: []
+    }
   });
 
   // Fetch app details
@@ -101,7 +117,59 @@ const AppDetailPage = () => {
   };
 
   const handleEditChange = (field, value) => {
-    setEditForm(prev => ({ ...prev, [field]: value }));
+    if (field.startsWith('uiConfig.')) {
+      const configKey = field.split('.')[1];
+      setEditForm(prev => ({ 
+        ...prev, 
+        uiConfig: { ...prev.uiConfig, [configKey]: value }
+      }));
+    } else if (field.startsWith('permissionsConfig.')) {
+      const roleKey = field.split('.')[1];
+      setEditForm(prev => ({ 
+        ...prev, 
+        permissionsConfig: { ...prev.permissionsConfig, [roleKey]: value }
+      }));
+    } else if (field === 'schema.fields') {
+      setEditForm(prev => ({ 
+        ...prev, 
+        schema: { ...prev.schema, fields: value }
+      }));
+    } else {
+      setEditForm(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const addSchemaField = () => {
+    const newField = {
+      name: '',
+      label: '',
+      type: 'text',
+      required: false
+    };
+    handleEditChange('schema.fields', [...editForm.schema.fields, newField]);
+  };
+
+  const updateSchemaField = (index, fieldKey, value) => {
+    const updatedFields = [...editForm.schema.fields];
+    updatedFields[index] = { ...updatedFields[index], [fieldKey]: value };
+    handleEditChange('schema.fields', updatedFields);
+  };
+
+  const removeSchemaField = (index) => {
+    const updatedFields = editForm.schema.fields.filter((_, i) => i !== index);
+    handleEditChange('schema.fields', updatedFields);
+  };
+
+  const addPermission = (role, permission) => {
+    if (permission.trim() && !editForm.permissionsConfig[role].includes(permission.trim())) {
+      const updatedPermissions = [...editForm.permissionsConfig[role], permission.trim()];
+      handleEditChange(`permissionsConfig.${role}`, updatedPermissions);
+    }
+  };
+
+  const removePermission = (role, permission) => {
+    const updatedPermissions = editForm.permissionsConfig[role].filter(p => p !== permission);
+    handleEditChange(`permissionsConfig.${role}`, updatedPermissions);
   };
 
   const openEditModal = () => {
@@ -109,7 +177,23 @@ const AppDetailPage = () => {
       appName: app.appName,
       appDescription: app.appDescription,
       appColor: app.appColor,
-      appIcon: app.appIcon
+      appIcon: app.appIcon,
+      category: app.category || 'business',
+      tableName: app.tableName || '',
+      uiConfig: {
+        showInDashboard: app.uiConfig?.showInDashboard !== false,
+        enableSearch: app.uiConfig?.enableSearch !== false,
+        enableFilters: app.uiConfig?.enableFilters !== false,
+        enableExport: app.uiConfig?.enableExport !== false
+      },
+      schema: {
+        fields: app.schema?.fields || []
+      },
+      permissionsConfig: {
+        adminAccess: app.permissionsConfig?.adminAccess || [],
+        managerAccess: app.permissionsConfig?.managerAccess || [],
+        userAccess: app.permissionsConfig?.userAccess || []
+      }
     });
     setIsEditModalOpen(true);
   };
@@ -403,8 +487,8 @@ const AppDetailPage = () => {
 
       {/* Edit App Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-100">Edit App</h2>
               <button
@@ -415,87 +499,304 @@ const AppDetailPage = () => {
               </button>
             </div>
             
-            <div className="space-y-4">
-              {/* App Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  App Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.appName}
-                  onChange={(e) => handleEditChange('appName', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter app name"
-                />
-              </div>
-
-              {/* App Description */}
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={editForm.appDescription}
-                  onChange={(e) => handleEditChange('appDescription', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter app description"
-                  rows="3"
-                />
-              </div>
-
-              {/* App Color */}
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  Color
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="color"
-                    value={editForm.appColor}
-                    onChange={(e) => handleEditChange('appColor', e.target.value)}
-                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded-lg cursor-pointer"
-                  />
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-600 pb-2">
+                  Basic Information
+                </h3>
+                
+                {/* App Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    App Name
+                  </label>
                   <input
                     type="text"
-                    value={editForm.appColor}
-                    onChange={(e) => handleEditChange('appColor', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="#3B82F6"
+                    value={editForm.appName}
+                    onChange={(e) => handleEditChange('appName', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter app name"
                   />
+                </div>
+
+                {/* App Description */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editForm.appDescription}
+                    onChange={(e) => handleEditChange('appDescription', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter app description"
+                    rows="3"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={editForm.category}
+                    onChange={(e) => handleEditChange('category', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="business">Business</option>
+                    <option value="productivity">Productivity</option>
+                    <option value="communication">Communication</option>
+                    <option value="finance">Finance</option>
+                    <option value="analytics">Analytics</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
               </div>
 
-              {/* App Icon */}
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-2">
-                  Icon
-                </label>
-                <div className="grid grid-cols-5 gap-3">
+              {/* Appearance */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-600 pb-2">
+                  Appearance
+                </h3>
+                
+                {/* App Color */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Color
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={editForm.appColor}
+                      onChange={(e) => handleEditChange('appColor', e.target.value)}
+                      className="w-12 h-10 bg-slate-700 border border-slate-600 rounded-lg cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={editForm.appColor}
+                      onChange={(e) => handleEditChange('appColor', e.target.value)}
+                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="#3B82F6"
+                    />
+                  </div>
+                </div>
+
+                {/* App Icon */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Icon
+                  </label>
+                  <div className="grid grid-cols-7 gap-3">
+                    {[
+                      { name: 'Database', component: Database },
+                      { name: 'Table', component: Table },
+                      { name: 'Users', component: Users },
+                      { name: 'Settings', component: Settings },
+                      { name: 'FileText', component: FileText },
+                      { name: 'Building2', component: Building2 },
+                      { name: 'Zap', component: Zap }
+                    ].map((icon) => (
+                      <button
+                        key={icon.name}
+                        onClick={() => handleEditChange('appIcon', icon.name)}
+                        className={`p-3 rounded-lg border-2 transition-colors ${
+                          editForm.appIcon === icon.name
+                            ? 'border-blue-500 bg-blue-600/20'
+                            : 'border-slate-600 bg-slate-700 hover:bg-slate-600'
+                        }`}
+                      >
+                        {React.createElement(icon.component, { 
+                          className: "h-5 w-5 text-slate-300 mx-auto" 
+                        })}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-600 pb-2">
+                  Features
+                </h3>
+                
+                <div className="space-y-2">
                   {[
-                    { name: 'Database', component: Database },
-                    { name: 'Table', component: Table },
-                    { name: 'Users', component: Users },
-                    { name: 'Settings', component: Settings },
-                    { name: 'FileText', component: FileText },
-                    { name: 'Building2', component: Building2 },
-                    { name: 'Zap', component: Zap }
-                  ].map((icon) => (
-                    <button
-                      key={icon.name}
-                      onClick={() => handleEditChange('appIcon', icon.name)}
-                      className={`p-3 rounded-lg border-2 transition-colors ${
-                        editForm.appIcon === icon.name
-                          ? 'border-blue-500 bg-blue-600/20'
-                          : 'border-slate-600 bg-slate-700 hover:bg-slate-600'
-                      }`}
-                    >
-                      {React.createElement(icon.component, { 
-                        className: "h-5 w-5 text-slate-300 mx-auto" 
-                      })}
-                    </button>
+                    { key: 'showInDashboard', label: 'Show in Dashboard' },
+                    { key: 'enableSearch', label: 'Enable Search' },
+                    { key: 'enableFilters', label: 'Enable Filters' },
+                    { key: 'enableExport', label: 'Enable Export' }
+                  ].map(feature => (
+                    <div key={feature.key} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                      <span className="text-slate-300">{feature.label}</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editForm.uiConfig[feature.key]}
+                          onChange={(e) => handleEditChange(`uiConfig.${feature.key}`, e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Database Schema */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-600 pb-2">
+                  Database Schema
+                </h3>
+                
+                {/* Table Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Table Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.tableName}
+                    onChange={(e) => handleEditChange('tableName', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                    placeholder="Enter table name"
+                  />
+                </div>
+
+                {/* Fields */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-slate-200">
+                      Fields ({editForm.schema.fields.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addSchemaField}
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Add Field
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {editForm.schema.fields.map((field, index) => (
+                      <div key={index} className="p-3 bg-slate-700 rounded-lg">
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={field.name}
+                            onChange={(e) => updateSchemaField(index, 'name', e.target.value)}
+                            className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-slate-100 text-sm font-mono"
+                            placeholder="Field name"
+                          />
+                          <input
+                            type="text"
+                            value={field.label}
+                            onChange={(e) => updateSchemaField(index, 'label', e.target.value)}
+                            className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-slate-100 text-sm"
+                            placeholder="Field label"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <select
+                              value={field.type}
+                              onChange={(e) => updateSchemaField(index, 'type', e.target.value)}
+                              className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-slate-100 text-sm"
+                            >
+                              <option value="text">Text</option>
+                              <option value="number">Number</option>
+                              <option value="email">Email</option>
+                              <option value="date">Date</option>
+                              <option value="boolean">Boolean</option>
+                              <option value="select">Select</option>
+                              <option value="textarea">Textarea</option>
+                            </select>
+                            <label className="flex items-center text-sm text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={field.required}
+                                onChange={(e) => updateSchemaField(index, 'required', e.target.checked)}
+                                className="mr-1"
+                              />
+                              Required
+                            </label>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSchemaField(index)}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {editForm.schema.fields.length === 0 && (
+                      <p className="text-slate-500 text-sm text-center py-4">No fields defined. Click "Add Field" to get started.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Permissions */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200 border-b border-slate-600 pb-2">
+                  Permissions
+                </h3>
+                
+                {[
+                  { key: 'adminAccess', label: 'Admin Access', color: 'red' },
+                  { key: 'managerAccess', label: 'Manager Access', color: 'orange' },
+                  { key: 'userAccess', label: 'User Access', color: 'green' }
+                ].map(role => (
+                  <div key={role.key} className="space-y-2">
+                    <label className="text-sm font-medium text-slate-200">{role.label}</label>
+                    <div className="p-3 bg-slate-700 rounded-lg">
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {editForm.permissionsConfig[role.key].map((permission, index) => (
+                          <span 
+                            key={index}
+                            className={`text-xs px-2 py-1 rounded bg-${role.color}-900 text-${role.color}-300 flex items-center`}
+                          >
+                            {permission}
+                            <button
+                              type="button"
+                              onClick={() => removePermission(role.key, permission)}
+                              className="ml-1 hover:text-white"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                        {editForm.permissionsConfig[role.key].length === 0 && (
+                          <span className="text-xs text-slate-500">No permissions</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              addPermission(role.key, e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-slate-100 text-sm"
+                        >
+                          <option value="">Add permission...</option>
+                          <option value="create">Create</option>
+                          <option value="read">Read</option>
+                          <option value="update">Update</option>
+                          <option value="delete">Delete</option>
+                          <option value="export">Export</option>
+                          <option value="import">Import</option>
+                          <option value="manage_users">Manage Users</option>
+                          <option value="manage_settings">Manage Settings</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
             

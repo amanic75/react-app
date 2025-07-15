@@ -241,6 +241,22 @@ async function createApp(req, res) {
       return res.status(400).json({ error: 'Invalid company ID' });
     }
 
+    // Check if an app with the same name already exists (including deleted ones)
+    console.log(`🔍 Checking for existing app: ${appName} in company: ${companyIdToUse}`);
+    const { data: existingApp, error: existingError } = await supabaseAdmin
+      .from('apps')
+      .select('id, status')
+      .eq('company_id', companyIdToUse)
+      .eq('app_name', appName)
+      .single();
+
+    console.log(`🔍 Existing app check result:`, { existingApp, existingError });
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('Error checking existing app:', existingError);
+      return res.status(500).json({ error: 'Failed to check existing app' });
+    }
+
     // Build schema JSON from fields or use direct schema
     const schemaJson = schema || {
       fields: fields.map(field => ({
@@ -267,40 +283,85 @@ async function createApp(req, res) {
       userAccess
     };
 
-    // Insert the new app
-    const { data: newApp, error } = await supabaseAdmin
-      .from('apps')
-      .insert({
-        company_id: companyIdToUse,
-        app_name: appName,
-        app_description: appDescription,
-        app_icon: appIcon,
-        app_color: appColor,
-        category,
-        table_name: tableName,
-        schema_json: schemaJson,
-        ui_config: finalUiConfig,
-        permissions_config: finalPermissionsConfig,
-        // created_by: null // TODO: Get from authenticated user - will be handled by RLS
-      })
-      .select()
-      .single();
+    let newApp;
+    let isReactivated = false;
 
-    if (error) {
-      console.error('Database error:', error);
-      if (error.code === '23505') { // Unique constraint violation
+    if (existingApp) {
+      console.log(`🔍 Found existing app with status: ${existingApp.status}`);
+      if (existingApp.status === 'active') {
+        console.log(`❌ App is already active, returning error`);
         return res.status(400).json({ 
-          error: 'App name or table name already exists for this company' 
+          error: 'App name already exists for this company' 
         });
+      } else if (existingApp.status === 'deleted') {
+        console.log(`♻️  Reactivating deleted app with ID: ${existingApp.id}`);
+        // Reactivate the deleted app with new data
+        const { data: reactivatedApp, error } = await supabaseAdmin
+          .from('apps')
+          .update({
+            app_description: appDescription,
+            app_icon: appIcon,
+            app_color: appColor,
+            category,
+            table_name: tableName,
+            schema_json: schemaJson,
+            ui_config: finalUiConfig,
+            permissions_config: finalPermissionsConfig,
+            status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingApp.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database error reactivating app:', error);
+          return res.status(500).json({ error: 'Failed to reactivate app' });
+        }
+
+        newApp = reactivatedApp;
+        isReactivated = true;
+        console.log(`✅ Successfully reactivated app: ${reactivatedApp.app_name}`);
       }
-      return res.status(500).json({ error: 'Failed to create app' });
+    } else {
+      console.log(`🆕 No existing app found, creating new app`);
+      // Insert the new app
+      const { data: createdApp, error } = await supabaseAdmin
+        .from('apps')
+        .insert({
+          company_id: companyIdToUse,
+          app_name: appName,
+          app_description: appDescription,
+          app_icon: appIcon,
+          app_color: appColor,
+          category,
+          table_name: tableName,
+          schema_json: schemaJson,
+          ui_config: finalUiConfig,
+          permissions_config: finalPermissionsConfig,
+          // created_by: null // TODO: Get from authenticated user - will be handled by RLS
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error:', error);
+        if (error.code === '23505') { // Unique constraint violation
+          return res.status(400).json({ 
+            error: 'App name or table name already exists for this company' 
+          });
+        }
+        return res.status(500).json({ error: 'Failed to create app' });
+      }
+
+      newApp = createdApp;
     }
 
-    console.log(`✅ Created app: ${newApp.app_name} for company: ${company.company_name}`);
+    console.log(`✅ ${isReactivated ? 'Reactivated' : 'Created'} app: ${newApp.app_name} for company: ${company.company_name}`);
 
     return res.status(201).json({
       success: true,
-      message: `App "${newApp.app_name}" created successfully`,
+      message: `App "${newApp.app_name}" ${isReactivated ? 'reactivated' : 'created'} successfully`,
       app: {
         id: newApp.id,
         appName: newApp.app_name,

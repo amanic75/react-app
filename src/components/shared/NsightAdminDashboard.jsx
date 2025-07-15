@@ -894,7 +894,6 @@ const NsightAdminDashboard = ({ userData }) => {
                           </span>
                         </div>
                       </div>
-                      {React.createElement(ChevronRight, { className: "h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" })}
                     </div>
                   </div>
                 );

@@ -169,12 +169,12 @@ const RawMaterialsPage = () => {
   const filteredMaterials = rawMaterials.filter(material => {
     // Search filter
     const matchesSearch = 
-    material.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.tradeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.casNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.manufacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      material.country.toLowerCase().includes(searchTerm.toLowerCase());
+    (material.materialName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (material.supplierName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (material.tradeName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (material.casNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (material.manufacture || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (material.country || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     // Supplier filter
     const matchesSupplier = filterSupplier === 'all' || material.supplierName === filterSupplier;
@@ -197,36 +197,36 @@ const RawMaterialsPage = () => {
     
     switch (sortBy) {
       case 'materialName':
-        aValue = a.materialName.toLowerCase();
-        bValue = b.materialName.toLowerCase();
+        aValue = (a.materialName || '').toLowerCase();
+        bValue = (b.materialName || '').toLowerCase();
         break;
       case 'supplierName':
-        aValue = a.supplierName.toLowerCase();
-        bValue = b.supplierName.toLowerCase();
+        aValue = (a.supplierName || '').toLowerCase();
+        bValue = (b.supplierName || '').toLowerCase();
         break;
       case 'supplierCost':
         aValue = parseFloat(a.supplierCost) || 0;
         bValue = parseFloat(b.supplierCost) || 0;
         break;
       case 'physicalForm':
-        aValue = a.physicalForm.toLowerCase();
-        bValue = b.physicalForm.toLowerCase();
+        aValue = (a.physicalForm || '').toLowerCase();
+        bValue = (b.physicalForm || '').toLowerCase();
         break;
       case 'hazardClass':
-        aValue = a.hazardClass.toLowerCase();
-        bValue = b.hazardClass.toLowerCase();
+        aValue = (a.hazardClass || '').toLowerCase();
+        bValue = (b.hazardClass || '').toLowerCase();
         break;
       case 'country':
-        aValue = a.country.toLowerCase();
-        bValue = b.country.toLowerCase();
+        aValue = (a.country || '').toLowerCase();
+        bValue = (b.country || '').toLowerCase();
         break;
       case 'purity':
-        aValue = a.purity.toLowerCase();
-        bValue = b.purity.toLowerCase();
+        aValue = (a.purity || '').toLowerCase();
+        bValue = (b.purity || '').toLowerCase();
         break;
       case 'casNumber':
-        aValue = a.casNumber.toLowerCase();
-        bValue = b.casNumber.toLowerCase();
+        aValue = (a.casNumber || '').toLowerCase();
+        bValue = (b.casNumber || '').toLowerCase();
         break;
       default:
         aValue = a.materialName.toLowerCase();

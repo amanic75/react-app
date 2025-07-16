@@ -153,8 +153,8 @@ const FormulasPage = () => {
   const filteredFormulas = formulas.filter(formula => {
     // Search filter
     const matchesSearch = 
-    formula.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      formula.id.toLowerCase().includes(searchTerm.toLowerCase());
+    (formula.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (formula.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     // Cost range filter
     const matchesCostRange = filterCostRange === 'all' || (() => {

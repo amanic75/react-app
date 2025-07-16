@@ -50,9 +50,9 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
 
   // Filter materials for search
   const filteredMaterials = rawMaterials.filter(material =>
-    material.materialName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
-    material.supplierName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
-    material.casNumber.toLowerCase().includes(materialSearchTerm.toLowerCase())
+    (material.materialName || '').toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    (material.supplierName || '').toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    (material.casNumber || '').toLowerCase().includes(materialSearchTerm.toLowerCase())
   );
 
   // Calculate total cost and percentages

@@ -57,7 +57,7 @@ const AdminDashboard = ({ userData }) => {
           status: 'Active',
           lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
           contact: '',
-          appAccess: getAppAccessByRole(profile.role || 'Employee'),
+          appAccess: profile.app_access || getAppAccessByRole(profile.role || 'Employee'),
           department: profile.department || '',
           created_at: profile.created_at,
           updated_at: profile.updated_at

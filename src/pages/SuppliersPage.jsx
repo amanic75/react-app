@@ -131,10 +131,10 @@ const SuppliersPage = () => {
   const filteredSuppliers = suppliers.filter(supplier => {
     // Search filter
     const matchesSearch = 
-    supplier.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.supplierId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.supplierEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.supplierContact.toLowerCase().includes(searchTerm.toLowerCase());
+    (supplier.supplierName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (supplier.supplierId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (supplier.supplierEmail || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (supplier.supplierContact || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     // Cost range filter
     const matchesCostRange = filterCostRange === 'all' || (() => {

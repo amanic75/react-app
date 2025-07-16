@@ -279,9 +279,9 @@ const FormulaDetailPage = () => {
 
   // Filter materials for search
   const filteredMaterials = rawMaterials.filter(material =>
-    material.materialName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
-    material.supplierName.toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
-    material.casNumber.toLowerCase().includes(materialSearchTerm.toLowerCase())
+    (material.materialName || '').toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    (material.supplierName || '').toLowerCase().includes(materialSearchTerm.toLowerCase()) ||
+    (material.casNumber || '').toLowerCase().includes(materialSearchTerm.toLowerCase())
   );
 
   // Add ingredient from material search

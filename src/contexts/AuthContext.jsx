@@ -451,7 +451,8 @@ export const AuthProvider = ({ children }) => {
           first_name: userData.firstName || '',
           last_name: userData.lastName || '',
           department: userData.department || '',
-          role: userData.role || 'Employee'
+          role: userData.role || 'Employee',
+          app_access: userData.appAccess || []
         }
       };
       
@@ -769,6 +770,7 @@ export const AuthProvider = ({ children }) => {
           last_name: updates.last_name,
           role: updates.role,
           department: updates.department,
+          app_access: updates.app_access,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)

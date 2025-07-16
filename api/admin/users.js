@@ -149,6 +149,7 @@ async function createUser(req, res) {
     last_name: userData?.last_name || '',
     role: userData?.role || 'Employee',
     department: userData?.department || '',
+    app_access: userData?.app_access || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -192,6 +193,7 @@ async function createUser(req, res) {
           .from('user_profiles')
           .update({ 
             role: userData?.role || 'Employee',
+            app_access: userData?.app_access || [],
             updated_at: new Date().toISOString() 
           })
           .eq('id', authData.user.id)

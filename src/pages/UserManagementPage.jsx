@@ -93,7 +93,7 @@ const UserManagementPage = () => {
         status: 'Active', // Default status since user_profiles doesn't have status field
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
-        appAccess: getAppAccessByRole(profile.role || 'Employee') || [],
+        appAccess: profile.app_access || getAppAccessByRole(profile.role || 'Employee') || [],
         credentials: getRoleCredentials(profile.role || 'Employee') || '',
         department: profile.department || '',
         created_at: profile.created_at,
@@ -284,7 +284,8 @@ const UserManagementPage = () => {
         first_name: updatedUser.name.split(' ')[0] || '',
         last_name: updatedUser.name.split(' ').slice(1).join(' ') || '',
         role: updatedUser.role,
-        department: updatedUser.department || ''
+        department: updatedUser.department || '',
+        app_access: updatedUser.appAccess || []
       };
       
       const { error } = await updateUserProfile(updatedUser.id, updates);
@@ -382,7 +383,8 @@ const UserManagementPage = () => {
         firstName: newUser.name.split(' ')[0] || '',
         lastName: newUser.name.split(' ').slice(1).join(' ') || '',
         role: newUser.role,
-        department: newUser.department || ''
+        department: newUser.department || '',
+        appAccess: newUser.appAccess || []
       });
 
       if (error) {

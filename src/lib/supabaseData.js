@@ -754,6 +754,7 @@ export const deleteSupplier = async (supplierId) => {
 
 export const generateMaterialId = (materialName) => {
   // Keep the same ID generation logic as before
+  if (!materialName) return '';
   return materialName
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '-')

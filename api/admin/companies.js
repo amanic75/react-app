@@ -619,7 +619,7 @@ async function deleteCompany(req, res, companyId) {
   // Validate that company exists first
   const { data: existingCompany, error: fetchError } = await supabaseAdmin
     .from('companies')
-    .select('id, company_name')
+    .select('id, company_name, admin_user_email')
     .eq('id', companyId)
     .single();
 
@@ -633,26 +633,137 @@ async function deleteCompany(req, res, companyId) {
     });
   }
 
-  // Delete the company (CASCADE will handle related records)
-  const { error: deleteError } = await supabaseAdmin
-    .from('companies')
-    .delete()
-    .eq('id', companyId);
+  console.log(`🗑️ Deleting company: ${existingCompany.company_name}`);
+  let deletedUsers = 0;
 
-  if (deleteError) {
-    console.error('❌ Company deletion failed:', deleteError);
+  try {
+    // Step 1: Get all users associated with this company
+    const { data: companyUsers, error: usersError } = await supabaseAdmin
+      .from('company_users')
+      .select('user_id')
+      .eq('company_id', companyId);
+
+    if (usersError) {
+      console.error('❌ Error fetching company users:', usersError);
+    } else if (companyUsers && companyUsers.length > 0) {
+      console.log(`🗑️ Found ${companyUsers.length} users to delete`);
+      
+      // Step 2: Delete auth users (but not NSight admins)
+      for (const companyUser of companyUsers) {
+        try {
+          // Check if user is NSight admin before deleting
+          const { data: userProfile, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .select('email, role')
+            .eq('id', companyUser.user_id)
+            .single();
+
+          if (!profileError && userProfile && userProfile.role !== 'NSight Admin') {
+            console.log(`🗑️ Deleting auth user: ${userProfile.email}`);
+            
+            // Delete from auth
+            const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(companyUser.user_id);
+            if (authError) {
+              console.error(`❌ Failed to delete auth user ${userProfile.email}:`, authError);
+            }
+            
+            // Delete from user_profiles
+            const { error: profileDeleteError } = await supabaseAdmin
+              .from('user_profiles')
+              .delete()
+              .eq('id', companyUser.user_id);
+            
+            if (profileDeleteError) {
+              console.error(`❌ Failed to delete user profile ${userProfile.email}:`, profileDeleteError);
+            } else {
+              deletedUsers++;
+            }
+          } else {
+            console.log(`⚠️ Skipping NSight admin user: ${userProfile?.email || 'unknown'}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error deleting user ${companyUser.user_id}:`, error);
+        }
+      }
+    }
+
+    // Step 3: Delete company_users entries
+    const { error: companyUsersError } = await supabaseAdmin
+      .from('company_users')
+      .delete()
+      .eq('company_id', companyId);
+
+    if (companyUsersError) {
+      console.error('❌ Error deleting company_users:', companyUsersError);
+    } else {
+      console.log('✅ Deleted company_users entries');
+    }
+
+    // Step 4: Delete apps associated with this company
+    const { error: appsError } = await supabaseAdmin
+      .from('apps')
+      .delete()
+      .eq('company_id', companyId);
+
+    if (appsError) {
+      console.error('❌ Error deleting apps:', appsError);
+    } else {
+      console.log('✅ Deleted company apps');
+    }
+
+    // Step 5: Delete company_apps entries
+    const { error: companyAppsError } = await supabaseAdmin
+      .from('company_apps')
+      .delete()
+      .eq('company_id', companyId);
+
+    if (companyAppsError) {
+      console.error('❌ Error deleting company_apps:', companyAppsError);
+    } else {
+      console.log('✅ Deleted company_apps entries');
+    }
+
+    // Step 6: Delete tenant configuration if it exists
+    const { error: tenantError } = await supabaseAdmin
+      .from('tenant_configurations')
+      .delete()
+      .eq('company_id', companyId);
+
+    if (tenantError) {
+      console.error('❌ Error deleting tenant configuration:', tenantError);
+    } else {
+      console.log('✅ Deleted tenant configuration');
+    }
+
+    // Step 7: Finally, delete the company record
+    const { error: deleteError } = await supabaseAdmin
+      .from('companies')
+      .delete()
+      .eq('id', companyId);
+
+    if (deleteError) {
+      console.error('❌ Company deletion failed:', deleteError);
+      return res.status(500).json({ 
+        error: 'Failed to delete company',
+        details: deleteError.message 
+      });
+    }
+
+    console.log(`✅ Successfully deleted company: ${existingCompany.company_name}`);
+
+    return res.status(200).json({
+      success: true,
+      message: `Company "${existingCompany.company_name}" deleted successfully`,
+      deletedUsers: deletedUsers
+    });
+
+  } catch (error) {
+    console.error('❌ Delete company error:', error);
     return res.status(500).json({ 
-      error: 'Failed to delete company',
-      details: deleteError.message 
+      error: 'Internal server error', 
+      details: error.message 
     });
   }
-
-  console.log('✅ Company deleted successfully:', existingCompany.company_name);
-
-  return res.status(200).json({
-    success: true,
-    message: `Company "${existingCompany.company_name}" deleted successfully`
-  });
 }
 
 // Helper function to get app display name from app ID

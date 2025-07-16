@@ -160,12 +160,12 @@ async function syncCompaniesWithUsers(req, res) {
       console.log(`🔄 Processing company: ${company.company_name} (${company.admin_user_email})`);
 
       try {
-        // Check if admin user already exists and is linked to this company
+        // Check if admin user already exists and is linked to this company via company_users table
         const { data: existingUserLink, error: existingLinkError } = await supabaseAdmin
-          .from('user_profiles')
-          .select('id, email, role')
-          .eq('email', company.admin_user_email)
+          .from('company_users')
+          .select('user_id, role')
           .eq('company_id', company.id)
+          .eq('status', 'Active')
           .single();
 
         if (existingUserLink && !existingLinkError) {
@@ -284,7 +284,7 @@ async function syncCompaniesWithUsers(req, res) {
           syncResults.details.push({
             company: company.company_name,
             action: 'error',
-            reason: `Failed to link user to company: ${linkError.message}`
+            reason: `Failed to link user to company: ${companyLinkError.message}`
           });
           continue;
         }

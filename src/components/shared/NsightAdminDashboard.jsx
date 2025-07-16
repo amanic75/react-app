@@ -14,7 +14,8 @@ import {
   ArrowLeft,
   Check,
   Table,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import Card from '../ui/Card';
 import CreateCompanyModal from './CreateCompanyModal';
@@ -38,6 +39,8 @@ const NsightAdminDashboard = ({ userData }) => {
   const [currentView, setCurrentView] = useState('company'); // 'company', 'apps'
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingCompanyId, setDeletingCompanyId] = useState(null);
   
   // Hover animation state
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -505,6 +508,56 @@ const NsightAdminDashboard = ({ userData }) => {
     }
   };
 
+  const handleDeleteCompany = async (companyId, companyName) => {
+    if (!confirm(`Are you sure you want to delete "${companyName}"? This will permanently delete the company and all its users and data.`)) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setDeletingCompanyId(companyId);
+      console.log('🗑️ Deleting company:', companyId);
+
+      const response = await fetch(`/api/admin/companies?id=${companyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete company');
+      }
+
+      if (data.success) {
+        console.log('✅ Company deleted successfully:', companyName);
+        alert(`Company "${companyName}" deleted successfully! ${data.deletedUsers} users were also deleted.`);
+        
+        // Refresh the companies list
+        if (currentMode === 'multi-tenant') {
+          fetchMultiTenantCompanies();
+        } else {
+          fetchCompanies();
+        }
+        
+        // Clear selected company if it was deleted
+        if (selectedCompany?.id === companyId) {
+          setSelectedCompany(null);
+        }
+      } else {
+        throw new Error('Invalid API response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to delete company:', error);
+      alert(`Failed to delete company: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+      setDeletingCompanyId(null);
+    }
+  };
+
   const handleCreateApp = async (newApp) => {
     try {
       console.log('📱 Creating app via API:', newApp.appName);
@@ -839,15 +892,17 @@ const NsightAdminDashboard = ({ userData }) => {
             {companies.map((company) => (
               <div
                 key={company.id}
-                onClick={() => handleCompanySelection(company)}
-                className={`p-4 rounded-lg transition-colors cursor-pointer group border-2 ${
+                className={`p-4 rounded-lg transition-colors border-2 ${
                   selectedCompany?.id === company.id 
                     ? 'bg-blue-600/20 border-blue-500' 
                     : 'bg-slate-700 border-transparent hover:bg-slate-600'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div 
+                    onClick={() => handleCompanySelection(company)}
+                    className="cursor-pointer flex-1"
+                  >
                     <h4 className="text-slate-200 font-medium">{company.name}</h4>
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-slate-400 text-sm">{company.users} users</span>
@@ -861,11 +916,32 @@ const NsightAdminDashboard = ({ userData }) => {
                       )}
                     </div>
                   </div>
-                  {selectedCompany?.id === company.id ? (
-                    React.createElement(Check, { className: "h-5 w-5 text-blue-400" })
-                  ) : (
-                    React.createElement(ChevronRight, { className: "h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" })
-                  )}
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCompany(company.id, company.name);
+                      }}
+                      disabled={isDeleting && deletingCompanyId === company.id}
+                      className={`p-2 rounded-lg transition-colors ${
+                        isDeleting && deletingCompanyId === company.id
+                          ? 'bg-gray-500 cursor-not-allowed'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                      title="Delete Company"
+                    >
+                      {isDeleting && deletingCompanyId === company.id ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      ) : (
+                        React.createElement(Trash2, { className: "h-4 w-4" })
+                      )}
+                    </button>
+                    {selectedCompany?.id === company.id ? (
+                      React.createElement(Check, { className: "h-5 w-5 text-blue-400" })
+                    ) : (
+                      React.createElement(ChevronRight, { className: "h-5 w-5 text-slate-400 group-hover:text-slate-200 transition-colors" })
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

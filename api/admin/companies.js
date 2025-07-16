@@ -170,6 +170,46 @@ async function createCompany(req, res) {
 
   console.log('✅ Company created successfully:', newCompany.id);
 
+  // Create isolated tenant database for the company
+  let tenantInfo = null;
+  try {
+    console.log('🏗️ Creating isolated tenant database for company:', companyData.companyName);
+    
+    // Check if multi-tenant schema functions exist
+    const { data: functionCheck, error: functionError } = await supabaseAdmin
+      .from('information_schema.routines')
+      .select('routine_name')
+      .eq('routine_name', 'create_tenant_schema')
+      .single();
+    
+    if (functionError || !functionCheck) {
+      console.log('⚠️ Multi-tenant schema functions not found. Run multi_tenant_schema.sql first.');
+      throw new Error('Multi-tenant schema functions not available');
+    }
+    
+    // Import the multi-tenant database class
+    const { default: MultiTenantDatabase } = await import('../../src/lib/multiTenantDatabase.js');
+    const multiTenantDB = new MultiTenantDatabase();
+    
+    // Create isolated tenant database
+    tenantInfo = await multiTenantDB.createTenantDatabase(
+      newCompany.id,
+      companyData.companyName
+    );
+    
+    console.log('✅ Tenant database created:', tenantInfo.schemaName);
+    
+    // Deploy initial apps to tenant database
+    const initialApps = companyData.initialApps || ['formulas', 'raw-materials'];
+    await multiTenantDB.deployInitialApps(newCompany.id, initialApps);
+    console.log('✅ Initial apps deployed to tenant database:', initialApps);
+    
+  } catch (error) {
+    console.error('❌ Failed to create tenant database:', error);
+    console.log('💡 To enable isolated databases, run multi_tenant_schema.sql in Supabase SQL editor');
+    // Continue with company creation - tenant database can be created later
+  }
+
   // Create admin user account for the company
   let adminUser = null;
   let adminCreated = false;
@@ -205,7 +245,7 @@ async function createCompany(req, res) {
     } else {
       console.log(`🆕 Creating new admin user: ${companyData.adminUserEmail}`);
       
-      // Create new user account
+      // Create new user account with tenant database metadata
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: companyData.adminUserEmail,
         password: 'ChangeMe123!', // Default password - should be changed
@@ -213,38 +253,65 @@ async function createCompany(req, res) {
         user_metadata: {
           first_name: companyData.adminUserName.split(' ')[0] || '',
           last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
-          role: 'Capacity Admin'
+          role: 'Capacity Admin',
+          company_id: newCompany.id,
+          company_name: companyData.companyName
         }
       });
 
-      if (authError) {
-        console.error(`❌ Failed to create auth user for ${companyData.adminUserEmail}:`, authError);
-        // Continue without admin user - can be created later via sync
-      } else {
-        // Create user profile
-        const { data: profileData, error: profileError } = await supabaseAdmin
-          .from('user_profiles')
-          .insert([{
-            id: authData.user.id,
-            email: companyData.adminUserEmail,
-            first_name: companyData.adminUserName.split(' ')[0] || '',
-            last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
-            role: 'Capacity Admin',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          .single();
-
-        if (profileError) {
-          console.error(`❌ Failed to create profile for ${companyData.adminUserEmail}:`, profileError);
+              if (authError) {
+          console.error(`❌ Failed to create auth user for ${companyData.adminUserEmail}:`, authError);
           // Continue without admin user - can be created later via sync
         } else {
-          console.log(`✅ Created new admin user: ${companyData.adminUserEmail}`);
-          adminUser = profileData;
-          adminCreated = true;
+          // Create user profile in master database (for global access)
+          const { data: profileData, error: profileError } = await supabaseAdmin
+            .from('user_profiles')
+            .insert([{
+              id: authData.user.id,
+              email: companyData.adminUserEmail,
+              first_name: companyData.adminUserName.split(' ')[0] || '',
+              last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
+              role: 'Capacity Admin',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error(`❌ Failed to create profile for ${companyData.adminUserEmail}:`, profileError);
+            // Continue without admin user - can be created later via sync
+          } else {
+            console.log(`✅ Created new admin user: ${companyData.adminUserEmail}`);
+            adminUser = profileData;
+            adminCreated = true;
+            
+            // Also create user profile in tenant database if tenant was created
+            if (tenantInfo) {
+              try {
+                const { default: MultiTenantDatabase } = await import('../../src/lib/multiTenantDatabase.js');
+                const multiTenantDB = new MultiTenantDatabase();
+                const tenantDb = await multiTenantDB.getTenantConnection(newCompany.id);
+                
+                await tenantDb
+                  .from('user_profiles')
+                  .insert({
+                    id: authData.user.id,
+                    email: companyData.adminUserEmail,
+                    first_name: companyData.adminUserName.split(' ')[0] || '',
+                    last_name: companyData.adminUserName.split(' ').slice(1).join(' ') || '',
+                    role: 'Capacity Admin',
+                    company_id: newCompany.id,
+                    app_access: companyData.initialApps || ['formulas', 'raw-materials']
+                  });
+                
+                console.log(`✅ Created admin user profile in tenant database: ${tenantInfo.schemaName}`);
+              } catch (tenantProfileError) {
+                console.error(`❌ Failed to create tenant profile for ${companyData.adminUserEmail}:`, tenantProfileError);
+              }
+            }
+          }
         }
-      }
     }
 
     // Link admin user to company
@@ -297,7 +364,7 @@ async function createCompany(req, res) {
 
   return res.status(201).json({
     success: true,
-    message: `Company "${companyData.companyName}" created successfully`,
+    message: `Company "${companyData.companyName}" created successfully${tenantInfo ? ' with isolated database' : ''}`,
     company: newCompany,
     apps: appInserts,
     adminUser: adminUser ? {
@@ -305,8 +372,17 @@ async function createCompany(req, res) {
       email: adminUser.email,
       name: `${adminUser.first_name} ${adminUser.last_name}`.trim(),
       role: adminUser.role,
-      created: adminCreated
-    } : null
+      created: adminCreated,
+      defaultPassword: adminCreated ? 'ChangeMe123!' : null
+    } : null,
+    tenantInfo: tenantInfo ? {
+      schemaName: tenantInfo.schemaName,
+      hasIsolatedDatabase: true,
+      appsDeployed: companyData.initialApps || ['formulas', 'raw-materials']
+    } : {
+      hasIsolatedDatabase: false,
+      message: 'Using shared database - tenant database creation failed'
+    }
   });
 }
 

@@ -497,8 +497,23 @@ const NsightAdminDashboard = ({ userData }) => {
         // Refresh the companies list from the database
         await fetchCompanies();
         
-        // Show success message (you can enhance this with a toast notification)
-        alert(`Company "${data.company.company_name}" created successfully!`);
+        // Show success message with tenant database info
+        let successMessage = `Company "${data.company.company_name}" created successfully!`;
+        
+        if (data.tenantInfo?.hasIsolatedDatabase) {
+          successMessage += `\n\n🏗️ Isolated Database Created:`;
+          successMessage += `\nSchema: ${data.tenantInfo.schemaName}`;
+          successMessage += `\nApps Deployed: ${data.tenantInfo.appsDeployed.join(', ')}`;
+        }
+        
+        if (data.adminUser?.created) {
+          successMessage += `\n\n👤 Admin Account Created:`;
+          successMessage += `\nEmail: ${data.adminUser.email}`;
+          successMessage += `\nPassword: ${data.adminUser.defaultPassword}`;
+          successMessage += `\n\nPlease save these credentials and change the password immediately after first login.`;
+        }
+        
+        alert(successMessage);
       } else {
         throw new Error('Invalid API response');
       }

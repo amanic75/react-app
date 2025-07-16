@@ -4,15 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import UserManagementTable from './UserManagementTable';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const AdminDashboard = ({ userData }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredCard, setHoveredCard] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [users, setUsers] = useState([]);
+  const [currentCompanyId, setCurrentCompanyId] = useState(null);
   const cardRefs = useRef({});
   const navigate = useNavigate();
-  const { getAllUsers } = useAuth();
+  const { getAllUsers, getCompanyUsers, userProfile } = useAuth();
 
   const handleMouseMove = (e, cardId) => {
     if (!cardRefs.current[cardId]) return;
@@ -38,11 +40,54 @@ const AdminDashboard = ({ userData }) => {
     }
   };
 
+  // Get company ID for current user if they're a Capacity Admin
+  useEffect(() => {
+    const getCompanyId = async () => {
+      if (!userProfile || userProfile.role !== 'Capacity Admin') {
+        setCurrentCompanyId(null);
+        return;
+      }
+
+      try {
+        // Get the company associated with this user
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userProfile.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching company ID:', error);
+          return;
+        }
+
+        setCurrentCompanyId(data.company_id);
+      } catch (error) {
+        console.error('Error in getCompanyId:', error);
+      }
+    };
+
+    getCompanyId();
+  }, [userProfile]);
+
   // Load users for app access display
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const { data: profiles, error } = await getAllUsers();
+        let profiles, error;
+        
+        // For Capacity Admins, only show users from their company
+        if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
+          ({ data: profiles, error } = await getCompanyUsers(currentCompanyId));
+        } else if (userProfile?.role === 'NSight Admin') {
+          // NSight Admins see all users
+          ({ data: profiles, error } = await getAllUsers());
+        } else {
+          // No access or still loading
+          setUsers([]);
+          return;
+        }
+        
         if (error) {
           console.error('Error loading users:', error);
           return;
@@ -53,11 +98,11 @@ const AdminDashboard = ({ userData }) => {
           id: profile.id,
           name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
           email: profile.email,
-          role: profile.role || 'Employee',
-          status: 'Active',
+          role: profile.company_role || profile.role || 'Employee', // Use company_role if available
+          status: profile.company_status || 'Active', // Use company_status if available
           lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
           contact: '',
-          appAccess: profile.app_access || getAppAccessByRole(profile.role || 'Employee'),
+          appAccess: profile.app_access || getAppAccessByRole(profile.company_role || profile.role || 'Employee'),
           department: profile.department || '',
           created_at: profile.created_at,
           updated_at: profile.updated_at
@@ -69,8 +114,13 @@ const AdminDashboard = ({ userData }) => {
       }
     };
     
+    // For Capacity Admins, wait until we have the company ID
+    if (userProfile?.role === 'Capacity Admin' && !currentCompanyId) {
+      return; // Wait for company ID to be loaded
+    }
+    
     loadUsers();
-  }, []); // Removed getAllUsers dependency and interval to prevent constant refetching
+  }, [currentCompanyId, userProfile?.role]); // Re-load when company ID is available
 
   // Get users who have access to a specific app
   const getUsersWithAccess = (appName) => {

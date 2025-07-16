@@ -6,16 +6,61 @@ const getCurrentUser = async () => {
   return user;
 };
 
+// Helper function to get current user's company ID
+const getCurrentUserCompanyId = async () => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return null;
+
+    // Check if user is NSight Admin (they don't have a specific company)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role === 'NSight Admin') {
+      return 'all'; // Special value to indicate access to all companies
+    }
+
+    // Get user's company from company_users table
+    const { data: companyUser } = await supabase
+      .from('company_users')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('status', 'Active')
+      .single();
+
+    return companyUser?.company_id || null;
+  } catch (error) {
+    console.error('Error getting user company:', error);
+    return null;
+  }
+};
+
 // ==============================================
 // RAW MATERIALS DATA MANAGEMENT
 // ==============================================
 
 export const getAllMaterials = async () => {
   try {
-    const { data, error } = await supabase
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      console.warn('No company ID found for user');
+      return [];
+    }
+
+    // Build query
+    let query = supabase
       .from('raw_materials')
-      .select('*')
-      .order('id', { ascending: true });
+      .select('*');
+
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+
+    const { data, error } = await query.order('id', { ascending: true });
 
     if (error) throw error;
     
@@ -67,11 +112,24 @@ export const getAllMaterials = async () => {
 
 export const getMaterialById = async (id) => {
   try {
-    const { data, error } = await supabase
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      console.warn('No company ID found for user');
+      return null;
+    }
+
+    // Build query
+    let query = supabase
       .from('raw_materials')
       .select('*')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) throw error;
     
@@ -114,6 +172,11 @@ export const updateMaterial = async (materialId, updatedData) => {
   try {
     const user = await getCurrentUser();
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      throw new Error('Cannot update material without a company');
+    }
+    
     // Transform frontend format to database format
     const dbData = {
       material_name: updatedData.materialName,
@@ -142,10 +205,18 @@ export const updateMaterial = async (materialId, updatedData) => {
       dbData.assigned_to = updatedData.assigned_to;
     }
 
-    const { data, error } = await supabase
+    // Build update query
+    let query = supabase
       .from('raw_materials')
       .update(dbData)
-      .eq('id', materialId)
+      .eq('id', materialId);
+    
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+    
+    const { data, error } = await query
       .select('*')
       .single();
 
@@ -191,6 +262,11 @@ export const addMaterial = async (materialData) => {
     const user = await getCurrentUser();
     if (!user) throw new Error('User not authenticated');
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId || companyId === 'all') {
+      throw new Error('Cannot add material without a specific company');
+    }
+    
     // Transform frontend format to database format
     const dbData = {
       material_name: materialData.materialName,
@@ -213,6 +289,7 @@ export const addMaterial = async (materialData) => {
       shelf_life: materialData.shelfLife,
       created_by: user.id,
       assigned_to: materialData.assigned_to || user.id, // Assign to creator by default
+      company_id: companyId, // Add company_id
       // New verification tracking fields
       data_source_notes: materialData.dataSourceNotes,
       confidence_level: materialData.confidenceLevel,
@@ -286,10 +363,23 @@ export const addMaterial = async (materialData) => {
 
 export const getAllFormulas = async () => {
   try {
-    const { data, error } = await supabase
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      console.warn('No company ID found for user');
+      return [];
+    }
+
+    // Build query
+    let query = supabase
       .from('formulas')
-      .select('*')
-      .order('id', { ascending: true });
+      .select('*');
+
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+
+    const { data, error } = await query.order('id', { ascending: true });
 
     if (error) throw error;
     
@@ -317,11 +407,24 @@ export const getAllFormulas = async () => {
 
 export const getFormulaById = async (id) => {
   try {
-    const { data, error } = await supabase
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      console.warn('No company ID found for user');
+      return null;
+    }
+
+    // Build query
+    let query = supabase
       .from('formulas')
       .select('*')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) throw error;
     
@@ -350,6 +453,11 @@ export const updateFormula = async (formulaId, updatedData) => {
   try {
     const user = await getCurrentUser();
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      throw new Error('Cannot update formula without a company');
+    }
+    
     const dbData = {
       name: updatedData.name,
       total_cost: updatedData.totalCost,
@@ -364,10 +472,18 @@ export const updateFormula = async (formulaId, updatedData) => {
       dbData.assigned_to = updatedData.assigned_to;
     }
 
-    const { data, error } = await supabase
+    // Build update query
+    let query = supabase
       .from('formulas')
       .update(dbData)
-      .eq('id', formulaId)
+      .eq('id', formulaId);
+    
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+    
+    const { data, error } = await query
       .select('*')
       .single();
 
@@ -399,6 +515,11 @@ export const addFormula = async (formulaData) => {
     const user = await getCurrentUser();
     if (!user) throw new Error('User not authenticated');
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId || companyId === 'all') {
+      throw new Error('Cannot add formula without a specific company');
+    }
+    
     const dbData = {
       id: formulaData.id || `FORM${Date.now()}`,
       name: formulaData.name,
@@ -407,7 +528,8 @@ export const addFormula = async (formulaData) => {
       final_sale_price_tote: formulaData.finalSalePriceTote,
       ingredients: formulaData.ingredients || [],
       created_by: user.id,
-      assigned_to: formulaData.assigned_to || user.id // Assign to creator by default
+      assigned_to: formulaData.assigned_to || user.id, // Assign to creator by default
+      company_id: companyId // Add company_id
     };
 
     const { data, error } = await supabase
@@ -445,10 +567,23 @@ export const addFormula = async (formulaData) => {
 
 export const getAllSuppliers = async () => {
   try {
-    const { data, error } = await supabase
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      console.warn('No company ID found for user');
+      return [];
+    }
+
+    // Build query
+    let query = supabase
       .from('suppliers')
-              .select('*')
-      .order('id', { ascending: true });
+      .select('*');
+
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+
+    const { data, error } = await query.order('id', { ascending: true });
 
     if (error) throw error;
     
@@ -481,6 +616,11 @@ export const addSupplier = async (supplierData) => {
     const user = await getCurrentUser();
     if (!user) throw new Error('User not authenticated');
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId || companyId === 'all') {
+      throw new Error('Cannot add supplier without a specific company');
+    }
+    
     const dbData = {
       supplier_name: supplierData.supplierName,
       supplier_id: supplierData.supplierId,
@@ -489,7 +629,8 @@ export const addSupplier = async (supplierData) => {
       packaging_code: supplierData.packagingCode,
       standard_cost: supplierData.standardCost,
       created_by: user.id,
-      assigned_to: supplierData.assigned_to || user.id // Assign to creator by default
+      assigned_to: supplierData.assigned_to || user.id, // Assign to creator by default
+      company_id: companyId // Add company_id
     };
 
     const { data, error } = await supabase
@@ -528,6 +669,11 @@ export const updateSupplier = async (supplierId, updatedData) => {
   try {
     const user = await getCurrentUser();
     
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      throw new Error('Cannot update supplier without a company');
+    }
+    
     const dbData = {
       supplier_name: updatedData.supplierName,
       supplier_id: updatedData.supplierId,
@@ -543,10 +689,18 @@ export const updateSupplier = async (supplierId, updatedData) => {
       dbData.assigned_to = updatedData.assigned_to;
     }
 
-    const { data, error } = await supabase
+    // Build update query
+    let query = supabase
       .from('suppliers')
       .update(dbData)
-      .eq('id', supplierId)
+      .eq('id', supplierId);
+    
+    // Only filter by company if not NSight Admin
+    if (companyId !== 'all') {
+      query = query.eq('company_id', companyId);
+    }
+    
+    const { data, error } = await query
       .select(`
         *,
         created_by_profile:user_profiles!created_by(first_name, last_name, email),

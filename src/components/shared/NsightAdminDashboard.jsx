@@ -15,7 +15,8 @@ import {
   Check,
   Table,
   X,
-  Trash2
+  Trash2,
+  FlaskConical
 } from 'lucide-react';
 import Card from '../ui/Card';
 import CreateCompanyModal from './CreateCompanyModal';
@@ -172,6 +173,13 @@ const NsightAdminDashboard = ({ userData }) => {
     fetchCompanies();
   }, []);
 
+  // Fetch apps when company is selected in existing mode
+  useEffect(() => {
+    if (selectedCompany && currentView === 'existing') {
+      fetchApps();
+    }
+  }, [selectedCompany, currentView]);
+
   // Handle company sync
   const handleSyncCompanies = async () => {
     try {
@@ -247,33 +255,8 @@ const NsightAdminDashboard = ({ userData }) => {
       }
     } catch (error) {
       console.error('❌ Failed to fetch apps:', error);
-      // Set sample data for testing
-      setApps([
-        { 
-          id: 1, 
-          appName: 'Customer Database', 
-          appDescription: 'Manage customer information and contacts',
-          appIcon: 'Users',
-          appColor: '#3B82F6',
-          tableName: 'customers',
-          recordCount: 45,
-          userCount: 8,
-          status: 'active',
-          createdAt: '2024-01-15T10:30:00Z'
-        },
-        { 
-          id: 2, 
-          appName: 'Product Catalog', 
-          appDescription: 'Manage product inventory and details',
-          appIcon: 'Database',
-          appColor: '#10B981',
-          tableName: 'products',
-          recordCount: 234,
-          userCount: 12,
-          status: 'active',
-          createdAt: '2024-01-10T14:20:00Z'
-        }
-      ]);
+      // Don't fallback to sample data, just show empty state
+      setApps([]);
     } finally {
       setIsLoadingApps(false);
     }
@@ -497,23 +480,8 @@ const NsightAdminDashboard = ({ userData }) => {
         // Refresh the companies list from the database
         await fetchCompanies();
         
-        // Show success message with tenant database info
-        let successMessage = `Company "${data.company.company_name}" created successfully!`;
-        
-        if (data.tenantInfo?.hasIsolatedDatabase) {
-          successMessage += `\n\n🏗️ Isolated Database Created:`;
-          successMessage += `\nSchema: ${data.tenantInfo.schemaName}`;
-          successMessage += `\nApps Deployed: ${data.tenantInfo.appsDeployed.join(', ')}`;
-        }
-        
-        if (data.adminUser?.created) {
-          successMessage += `\n\n👤 Admin Account Created:`;
-          successMessage += `\nEmail: ${data.adminUser.email}`;
-          successMessage += `\nPassword: ${data.adminUser.defaultPassword}`;
-          successMessage += `\n\nPlease save these credentials and change the password immediately after first login.`;
-        }
-        
-        alert(successMessage);
+        // Show success message (you can enhance this with a toast notification)
+        alert(`Company "${data.company.company_name}" created successfully!`);
       } else {
         throw new Error('Invalid API response');
       }
@@ -1014,6 +982,9 @@ const NsightAdminDashboard = ({ userData }) => {
                     case 'Database': return Database;
                     case 'Settings': return Settings;
                     case 'Table': return Table;
+                    case 'FlaskConical': return FlaskConical;
+                    case 'Building2': return Building2;
+                    case 'Zap': return Zap;
                     default: return Database;
                   }
                 })();

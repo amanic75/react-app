@@ -10,7 +10,7 @@ import AddUserModal from '../components/shared/AddUserModal';
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, getAllUsers, updateUserProfile, deleteUserProfile, adminCreateUser, changePassword, getDashboardRoute, loading } = useAuth();
+  const { user, userProfile, getAllUsers, getCompanyUsers, updateUserProfile, deleteUserProfile, adminCreateUser, changePassword, getDashboardRoute, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -24,6 +24,7 @@ const UserManagementPage = () => {
   const [filterDomain, setFilterDomain] = useState('all');
   const [filterApp, setFilterApp] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentCompanyId, setCurrentCompanyId] = useState(null);
   
   // Temporary states for complex filtering
   const [tempSortBy, setTempSortBy] = useState('name');
@@ -43,6 +44,37 @@ const UserManagementPage = () => {
       }
     }
   }, [userProfile, loading, navigate, getDashboardRoute]);
+
+  // Get company ID for current user if they're a Capacity Admin
+  useEffect(() => {
+    const getCompanyId = async () => {
+      if (!userProfile || userProfile.role !== 'Capacity Admin') {
+        setCurrentCompanyId(null);
+        return;
+      }
+
+      try {
+        // Get the company associated with this user
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', userProfile.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching company ID:', error);
+          return;
+        }
+
+        setCurrentCompanyId(data.company_id);
+        console.log('Found company ID for user:', data.company_id);
+      } catch (error) {
+        console.error('Error in getCompanyId:', error);
+      }
+    };
+
+    getCompanyId();
+  }, [userProfile]);
 
   // Helper function to get app access based on role
   const getAppAccessByRole = (role) => {
@@ -78,7 +110,21 @@ const UserManagementPage = () => {
     
     try {
       setIsLoading(true);
-      const { data, error } = await getAllUsers();
+      
+      let data, error;
+      
+      // For Capacity Admins, only show users from their company
+      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
+        ({ data, error } = await getCompanyUsers(currentCompanyId));
+      } else if (userProfile?.role === 'NSight Admin') {
+        // NSight Admins see all users
+        ({ data, error } = await getAllUsers());
+      } else {
+        // No access or still loading
+        setUsers([]);
+        return;
+      }
+      
       if (error) {
         console.error('Error loading users:', error);
         return;
@@ -89,12 +135,12 @@ const UserManagementPage = () => {
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
         email: profile.email || '',
-        role: profile.role || 'Employee',
-        status: 'Active', // Default status since user_profiles doesn't have status field
+        role: profile.company_role || profile.role || 'Employee', // Use company_role if available
+        status: profile.company_status || 'Active', // Use company_status if available
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
-        appAccess: profile.app_access || getAppAccessByRole(profile.role || 'Employee') || [],
-        credentials: getRoleCredentials(profile.role || 'Employee') || '',
+        appAccess: profile.app_access || getAppAccessByRole(profile.company_role || profile.role || 'Employee') || [],
+        credentials: getRoleCredentials(profile.company_role || profile.role || 'Employee') || '',
         department: profile.department || '',
         created_at: profile.created_at,
         updated_at: profile.updated_at
@@ -109,9 +155,13 @@ const UserManagementPage = () => {
   };
 
   useEffect(() => {
-    // Load users only once on component mount
+    // Load users when component mounts or when company ID changes
+    // For Capacity Admins, wait until we have the company ID
+    if (userProfile?.role === 'Capacity Admin' && !currentCompanyId) {
+      return; // Wait for company ID to be loaded
+    }
     loadUsers();
-  }, []); // Removed getAllUsers dependency to prevent constant refetching
+  }, [currentCompanyId, userProfile?.role]); // Re-load when company ID is available
 
   // Show loading while checking auth and permissions
   if (loading) {
@@ -295,6 +345,35 @@ const UserManagementPage = () => {
         return;
       }
       
+      // If we're a Capacity Admin, also update the company-specific role
+      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
+        try {
+          // Map frontend role to company_users role
+          let companyRole = 'Employee';
+          if (updatedUser.role === 'Capacity Admin') {
+            companyRole = 'Admin';
+          } else if (updatedUser.role === 'Employee') {
+            companyRole = 'Employee';
+          }
+          
+          const { error: companyUpdateError } = await supabase
+            .from('company_users')
+            .update({
+              role: companyRole,
+              status: 'Active'
+            })
+            .eq('company_id', currentCompanyId)
+            .eq('user_id', updatedUser.id);
+
+          if (companyUpdateError) {
+            console.error('Error updating company role:', companyUpdateError);
+            alert('User updated but failed to update company role. Please try again.');
+          }
+        } catch (companyError) {
+          console.error('Error updating company role:', companyError);
+        }
+      }
+      
       // Refresh the users list
       await loadUsers();
       
@@ -394,6 +473,40 @@ const UserManagementPage = () => {
       }
 
       console.log('✅ User created successfully:', data);
+      
+      // If current user is a Capacity Admin, associate the new user with their company
+      if (userProfile?.role === 'Capacity Admin' && currentCompanyId && data?.id) {
+        try {
+          // Map frontend role to company_users role
+          let companyRole = 'Employee';
+          if (newUser.role === 'Capacity Admin') {
+            companyRole = 'Admin';
+          } else if (newUser.role === 'Employee') {
+            companyRole = 'Employee';
+          }
+          
+          const { error: linkError } = await supabase
+            .from('company_users')
+            .insert({
+              company_id: currentCompanyId,
+              user_id: data.id,
+              role: companyRole,
+              status: 'Active',
+              added_at: new Date().toISOString(),
+              added_by: userProfile.id
+            });
+
+          if (linkError) {
+            console.error('❌ Error linking user to company:', linkError);
+            alert(`User created but failed to link to company: ${linkError.message}`);
+          } else {
+            console.log('✅ User linked to company successfully');
+          }
+        } catch (linkError) {
+          console.error('❌ Error in company association:', linkError);
+        }
+      }
+      
       alert(`User created successfully! Email: ${newUser.email}\nPassword: ${newUser.password}\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
       
       // Refresh the users list

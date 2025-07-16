@@ -756,6 +756,77 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Get users filtered by company (for multi-tenant isolation)
+  const getCompanyUsers = async (companyId) => {
+    try {
+      console.log('🔍 Fetching users for company:', companyId);
+      
+      if (!companyId) {
+        console.warn('⚠️ No company ID provided, returning empty list');
+        return { data: [], error: null };
+      }
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Get company users timeout')), 10000)
+      );
+      
+      // First get the company_users associations
+      const fetchPromise = supabase
+        .from('company_users')
+        .select(`
+          user_id,
+          role,
+          status,
+          added_at
+        `)
+        .eq('company_id', companyId)
+        .order('added_at', { ascending: false });
+
+      const { data: companyUsersData, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+      if (error) {
+        throw error;
+      }
+
+      if (!companyUsersData || companyUsersData.length === 0) {
+        console.log('✅ No users found for company', companyId);
+        return { data: [], error: null };
+      }
+
+      // Get the user IDs
+      const userIds = companyUsersData.map(cu => cu.user_id);
+      
+      // Now fetch the user profiles for these user IDs
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .in('id', userIds);
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      // Combine the data
+      const users = userProfiles.map(profile => {
+        const companyUser = companyUsersData.find(cu => cu.user_id === profile.id);
+        return {
+          ...profile,
+          company_role: companyUser?.role || 'Employee',  // Role within this company
+          company_status: companyUser?.status || 'Active'  // Status within this company
+        };
+      });
+
+      console.log(`✅ Found ${users.length} users for company ${companyId}`);
+      return { data: users, error: null };
+    } catch (error) {
+      console.error('❌ Company users fetch failed:', error);
+      return { 
+        data: [], 
+        error 
+      };
+    }
+  };
+
   // Update user profile (for admins)
   const updateUserProfile = async (userId, updates) => {
     try {
@@ -882,6 +953,7 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     resetPassword,
     getAllUsers,
+    getCompanyUsers,
     updateUserProfile,
     deleteUserProfile,
     assignUser,

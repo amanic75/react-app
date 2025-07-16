@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { 
   getActivity, 
   getActivitySummary, 
@@ -19,9 +20,10 @@ const UserManagementTable = () => {
   const [activitySummary, setActivitySummary] = useState({});
   const [expandedUsers, setExpandedUsers] = useState(new Set());
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [currentCompanyId, setCurrentCompanyId] = useState(null);
   const navigate = useNavigate();
   const usersPerPage = 20;
-  const { getAllUsers, userProfile } = useAuth();
+  const { getAllUsers, getCompanyUsers, userProfile } = useAuth();
 
   // Helper function to get app access based on role
   const getAppAccessByRole = (role) => {
@@ -55,11 +57,53 @@ const UserManagementTable = () => {
     }
   };
 
+  // Get company ID for current user if they're a Capacity Admin
+  useEffect(() => {
+    const getCompanyId = async () => {
+      if (!userProfile || userProfile.role !== 'Capacity Admin') {
+        setCurrentCompanyId(null);
+        return;
+      }
+
+      try {
+        // Get the company associated with this user
+        const { data, error } = await supabase.from('company_users')
+          .select('company_id')
+          .eq('user_id', userProfile.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching company ID:', error);
+          return;
+        }
+
+        setCurrentCompanyId(data.company_id);
+      } catch (error) {
+        console.error('Error in getCompanyId:', error);
+      }
+    };
+
+    getCompanyId();
+  }, [userProfile]);
+
   // Load all data
   const loadData = async () => {
     try {
       // Load users from Supabase
-      const { data: profiles, error } = await getAllUsers();
+      let profiles, error;
+      
+      // For Capacity Admins, only show users from their company
+      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
+        ({ data: profiles, error } = await getCompanyUsers(currentCompanyId));
+      } else if (userProfile?.role === 'NSight Admin') {
+        // NSight Admins see all users
+        ({ data: profiles, error } = await getAllUsers());
+      } else {
+        // No access or still loading
+        setUsers([]);
+        return;
+      }
+      
       if (error) {
         console.error('Error loading users:', error);
         return;
@@ -70,11 +114,11 @@ const UserManagementTable = () => {
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
         email: profile.email,
-        role: profile.role || 'Employee',
-        status: 'Active',
+        role: profile.company_role || profile.role || 'Employee', // Use company_role if available
+        status: profile.company_status || 'Active', // Use company_status if available
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
-        appAccess: profile.app_access || getAppAccessByRole(profile.role || 'Employee'),
+        appAccess: profile.app_access || getAppAccessByRole(profile.company_role || profile.role || 'Employee'),
         department: profile.department || '',
         created_at: profile.created_at,
         updated_at: profile.updated_at
@@ -171,6 +215,11 @@ const UserManagementTable = () => {
   };
 
   useEffect(() => {
+    // For Capacity Admins, wait until we have the company ID
+    if (userProfile?.role === 'Capacity Admin' && !currentCompanyId) {
+      return; // Wait for company ID to be loaded
+    }
+    
     loadData();
     
     // Set up real-time updates
@@ -184,7 +233,7 @@ const UserManagementTable = () => {
     return () => {
       window.removeEventListener('loginActivityUpdate', handleActivityUpdate);
     };
-  }, []);
+  }, [currentCompanyId, userProfile?.role]); // Re-load when company ID is available
 
   const getStatusColor = (status) => {
     switch (status) {

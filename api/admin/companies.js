@@ -303,8 +303,11 @@ async function createCompany(req, res) {
       app_description: getAppDescription(appId),
       app_icon: getAppIcon(appId),
       app_color: getAppColor(appId),
+      table_name: `${appId}_data`,
       status: 'active',
-      configuration: {}
+      schema_json: {},
+      ui_config: {},
+      permissions_config: {}
     }));
 
     const { error: appTableError } = await supabaseAdmin
@@ -792,9 +795,9 @@ async function deleteCompany(req, res, companyId) {
 // Helper function to get app display name from app ID
 function getAppName(appId) {
   const appNames = {
-    'formulas': 'Formulas',
+    'formulas': 'Formulas Management',
     'raw-materials': 'Raw Materials',
-    'suppliers': 'Supplier Management',
+    'suppliers': 'Suppliers',
     'analytics': 'Analytics',
     'compliance': 'Compliance',
     'quality': 'Quality Control'
@@ -819,9 +822,9 @@ function getAppDescription(appId) {
 function getAppIcon(appId) {
   const icons = {
     'formulas': 'Database',
-    'raw-materials': 'FlaskConical',
+    'raw-materials': 'Zap',
     'suppliers': 'Users',
-    'analytics': 'BarChart',
+    'analytics': 'Settings',
     'compliance': 'Shield',
     'quality': 'CheckCircle'
   };

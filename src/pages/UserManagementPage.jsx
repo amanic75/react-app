@@ -135,7 +135,23 @@ const UserManagementPage = () => {
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
         email: profile.email || '',
+        // Preserve original role for logic/filtering
         role: profile.company_role || profile.role || 'Employee', // Use company_role if available
+        // Display role with company name for Capacity Admins
+        displayRole: (() => {
+          const baseRole = profile.company_role || profile.role || 'Employee';
+          if (baseRole !== 'Capacity Admin') return baseRole;
+          let companyName = profile.company_name;
+          if (!companyName || companyName.length === 0) {
+            const domain = (profile.email || '').split('@')[1] || '';
+            companyName = domain.split('.')[0] || '';
+          }
+          if (companyName) {
+            companyName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
+            return `${companyName} Admin`;
+          }
+          return baseRole;
+        })(),
         status: profile.company_status || 'Active', // Use company_status if available
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
@@ -980,8 +996,8 @@ const UserManagementPage = () => {
                         </a>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium truncate ${getRoleColor(employee.role || 'Employee')}`}>
-                          {employee.role || 'Employee'}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium truncate ${getRoleColor(employee.role || 'Employee')}`}> 
+                          {employee.displayRole || employee.role || 'Employee'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300 truncate" title={employee.contact || ''}>

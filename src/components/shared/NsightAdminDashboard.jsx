@@ -291,7 +291,11 @@ const NsightAdminDashboard = ({ userData }) => {
 
         // Combine predefined templates with existing apps from other companies
         const existingApps = data.apps
-          .filter(app => app.company.id !== selectedCompany?.id) // Exclude current company's apps
+          .filter(app => {
+            // If the payload doesn't include company info, include it (can't match current company)
+            if (!app.company) return true;
+            return app.company.id !== selectedCompany?.id;
+          })
           .map(app => ({
             id: `existing-${app.id}`,
             name: app.appName,
@@ -382,6 +386,7 @@ const NsightAdminDashboard = ({ userData }) => {
         appDescription: appTemplate.description,
         appIcon: getIconString(appTemplate.icon),
         appColor: appTemplate.color || '#3B82F6',
+        appType: appTemplate.id, // Add the missing appType field
         tableName: (appTemplate.isTemplate ? appTemplate.id : appTemplate.originalApp?.tableName || appTemplate.id) + '_data',
         schema: appTemplate.schema || {
           fields: [
@@ -890,7 +895,7 @@ const NsightAdminDashboard = ({ userData }) => {
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-slate-400 text-sm">{company.users} users</span>
                       <span className="text-slate-400 text-sm">
-                        Apps: {Array.isArray(company.apps) ? company.apps.join(', ') : 'None'}
+                        {Array.isArray(company.apps) ? `${company.apps.length} apps` : '0 apps'}
                       </span>
                       {company.adminUserEmail && (
                         <span className="text-slate-400 text-sm">

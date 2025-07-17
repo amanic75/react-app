@@ -114,7 +114,25 @@ const UserManagementTable = () => {
         id: profile.id,
         name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0],
         email: profile.email,
-        role: profile.company_role || profile.role || 'Employee', // Use company_role if available
+        // Preserve original role for logic/filtering
+        role: profile.company_role || profile.role || 'Employee',
+        // Add displayRole: replace "Capacity Admin" with "<Company> Admin" based on company name
+        displayRole: (() => {
+          const baseRole = profile.company_role || profile.role || 'Employee';
+          if (baseRole !== 'Capacity Admin') return baseRole;
+          // Derive company name from profile.company_name if available, else from email domain
+          let companyName = profile.company_name;
+          if (!companyName || companyName.length === 0) {
+            const domain = (profile.email || '').split('@')[1] || '';
+            companyName = domain.split('.')[0] || '';
+          }
+          // Capitalize first letter
+          if (companyName) {
+            companyName = companyName.charAt(0).toUpperCase() + companyName.slice(1);
+            return `${companyName} Admin`;
+          }
+          return baseRole;
+        })(),
         status: profile.company_status || 'Active', // Use company_status if available
         lastLogin: profile.created_at ? new Date(profile.created_at).toISOString().split('T')[0] : 'Never',
         contact: '',
@@ -369,8 +387,8 @@ const UserManagementTable = () => {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                      {user.role}
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}> 
+                      {user.displayRole || user.role}
                     </span>
                   </td>
                   <td className="py-3 px-4">

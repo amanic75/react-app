@@ -972,7 +972,11 @@ export const AuthProvider = ({ children }) => {
       if (!user || !userProfile) return false;
       if (userProfile.role === 'Capacity Admin') return true;
       if (userProfile.role === 'NSight Admin') return true;
-      return item?.created_by === user.id || item?.assigned_to === user.id;
+      // Handle both single UUID and array formats for assigned_to
+      const isAssignedTo = Array.isArray(item?.assigned_to) 
+        ? item.assigned_to.includes(user.id)
+        : item?.assigned_to === user.id;
+      return item?.created_by === user.id || isAssignedTo;
     },
     canDelete: (item) => {
       if (!user || !userProfile) return false;

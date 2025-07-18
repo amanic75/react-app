@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   // Get user profile from database with fallback
   const getUserProfile = async (userId, fallbackUser = null) => {
     try {
-      console.log('🔍 Fetching user profile for ID:', userId);
+
       
       // Check if this user was recently deleted (within last 10 minutes)
       const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }) => {
         return createProfileFromAuth(user);
       }
       
-      console.log('✅ User profile found in database:', data);
+
       return data;
     } catch (error) {
       // Check if it's a timeout - this is expected sometimes
@@ -259,7 +259,6 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (session?.user) {
-          console.log('✅ Session found for user:', session.user.email);
           
           // Check if this user was recently deleted
           const recentlyDeleted = localStorage.getItem(`deleted_user_${session.user.id}`);
@@ -311,7 +310,7 @@ export const AuthProvider = ({ children }) => {
         }
       } finally {
         if (mounted) {
-          console.log('✅ Initial auth check complete');
+  
           setLoading(false);
         }
       }
@@ -324,11 +323,8 @@ export const AuthProvider = ({ children }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
-
         try {
           if (session?.user) {
-            console.log('👤 Processing auth state change for user:', session.user.id, session.user.email);
             
             // Check if this user was recently deleted
             const recentlyDeleted = localStorage.getItem(`deleted_user_${session.user.id}`);
@@ -759,7 +755,7 @@ export const AuthProvider = ({ children }) => {
   // Get users filtered by company (for multi-tenant isolation)
   const getCompanyUsers = async (companyId) => {
     try {
-      console.log('🔍 Fetching users for company:', companyId);
+
       
       if (!companyId) {
         console.warn('⚠️ No company ID provided, returning empty list');
@@ -816,7 +812,7 @@ export const AuthProvider = ({ children }) => {
         };
       });
 
-      console.log(`✅ Found ${users.length} users for company ${companyId}`);
+
       return { data: users, error: null };
     } catch (error) {
       console.error('❌ Company users fetch failed:', error);

@@ -10,14 +10,7 @@ const DashboardPage = () => {
   const [error, setError] = useState(null);
   const [profileRetryCount, setProfileRetryCount] = useState(0);
 
-  useEffect(() => {
-    console.log('DashboardPage - Auth State:', {
-      user: user?.email,
-      userProfile,
-      loading,
-      profileRetryCount
-    });
-  }, [user, userProfile, loading, profileRetryCount]);
+
 
   // Show loading state
   if (loading) {
@@ -95,15 +88,7 @@ const DashboardPage = () => {
     );
   }
 
-  // Debug info (remove in production)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('=== DASHBOARD DEBUG ===');
-    console.log('User Profile:', userProfile);
-    console.log('User Role:', JSON.stringify(userProfile.role));
-    console.log('Role Type:', typeof userProfile.role);
-    console.log('Role Length:', userProfile.role?.length);
-    console.log('=======================');
-  }
+
 
   // Render appropriate dashboard based on user role
   const renderDashboard = () => {
@@ -111,20 +96,14 @@ const DashboardPage = () => {
       // Normalize the role value (trim whitespace and handle case)
       const role = userProfile?.role?.trim() || 'Employee';
       
-      console.log('Normalized Role for Switch:', JSON.stringify(role));
-      
       switch (role) {
         case 'Capacity Admin':
-          console.log('Rendering AdminDashboard');
           return <AdminDashboard />;
         case 'NSight Admin':
-          console.log('Rendering NsightAdminDashboard');
           return <NsightAdminDashboard />;
         case 'Employee':
-          console.log('Rendering EmployeeDashboard (Employee role)');
           return <EmployeeDashboard />;
         default:
-          console.log('Rendering EmployeeDashboard (Default fallback for role:', JSON.stringify(role));
           return <EmployeeDashboard />;
       }
     } catch (error) {

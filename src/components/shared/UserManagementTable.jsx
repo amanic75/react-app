@@ -159,7 +159,7 @@ const UserManagementTable = () => {
             summary = apiData.summary;
             apiOnlineUsers = apiData.onlineUsers || [];
             recentActivity = apiData.summary.recentActivity || [];
-            console.log('📊 Activity summary from API:', { summary, onlineCount: apiOnlineUsers.length });
+    
           }
         } else {
           throw new Error(`API responded with ${response.status}`);
@@ -179,7 +179,7 @@ const UserManagementTable = () => {
         apiOnlineUsers.forEach(user => {
           onlineUserEmails.add(user.user_email);
         });
-        console.log('👥 Online users from API:', Array.from(onlineUserEmails));
+  
       } else {
         // Fallback to localStorage logic for development
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);

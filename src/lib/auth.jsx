@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
 
     // Add to user management data
     const roleMap = {
-      'admin': 'Admin',
+      'admin': 'Capacity Admin',
       'nsight-admin': 'NSight Admin',
       'employee': 'Employee'
     };
@@ -187,8 +187,8 @@ export const AuthProvider = ({ children }) => {
       status: 'Active',
       lastLogin: 'Never',
       contact: '',
-      appAccess: role === 'admin' ? ['formulas', 'suppliers', 'raw-materials'] : role === 'nsight-admin' ? ['developer-mode', 'existing-company-mode'] : ['formulas'],
-      credentials: role === 'admin' ? 'admin/secure pass' : role === 'nsight-admin' ? 'nsight-admin/enterprise pass' : 'user/temporary pass'
+      appAccess: roleMap[role] === 'Capacity Admin' ? ['formulas', 'suppliers', 'raw-materials'] : roleMap[role] === 'NSight Admin' ? ['developer-mode', 'existing-company-mode'] : ['formulas'],
+      credentials: roleMap[role] === 'Capacity Admin' ? 'admin/secure pass' : roleMap[role] === 'NSight Admin' ? 'nsight-admin/enterprise pass' : 'user/temporary pass'
     };
 
     addUser(newUser);

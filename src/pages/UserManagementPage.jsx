@@ -268,8 +268,8 @@ const UserManagementPage = () => {
         bValue = (b.name || '').toLowerCase();
         break;
       case 'role':
-        // Custom role order: Employee, Admin, NSight Admin
-        const roleOrder = { 'Employee': 1, 'Admin': 2, 'NSight Admin': 3 };
+        // Custom role order: Employee, Capacity Admin, NSight Admin
+        const roleOrder = { 'Employee': 1, 'Capacity Admin': 2, 'NSight Admin': 3 };
         aValue = roleOrder[a.role] || 4;
         bValue = roleOrder[b.role] || 4;
         break;
@@ -326,12 +326,10 @@ const UserManagementPage = () => {
 
   const getRoleColor = (role) => {
     switch (role) {
-      case 'Admin':
-        return 'text-purple-600 bg-purple-100';
       case 'Capacity Admin':
         return 'text-green-600 bg-green-100';
       case 'NSight Admin':
-        return 'text-indigo-600 bg-indigo-100';
+        return 'text-purple-600 bg-purple-100';
       case 'Employee':
         return 'text-blue-600 bg-blue-100';
       default:
@@ -340,6 +338,12 @@ const UserManagementPage = () => {
   };
 
   const handleEditUser = (user) => {
+    // Prevent Capacity Admins from editing NSight Admins
+    if (userProfile?.role === 'Capacity Admin' && user.role === 'NSight Admin') {
+      alert('You do not have permission to edit NSight Admin users.');
+      return;
+    }
+    
     setSelectedUser(user);
     setIsEditModalOpen(true);
   };
@@ -368,7 +372,7 @@ const UserManagementPage = () => {
           // Map frontend role to company_users role
           let companyRole = 'Employee';
           if (updatedUser.role === 'Capacity Admin') {
-            companyRole = 'Admin';
+            companyRole = 'Capacity Admin';
           } else if (updatedUser.role === 'Employee') {
             companyRole = 'Employee';
           }
@@ -416,6 +420,12 @@ const UserManagementPage = () => {
       const userToDelete = users.find(u => u.id === userId);
       if (!userToDelete) {
         alert('User not found in current list.');
+        return;
+      }
+      
+      // Prevent Capacity Admins from deleting NSight Admins
+      if (userProfile?.role === 'Capacity Admin' && userToDelete.role === 'NSight Admin') {
+        alert('You do not have permission to delete NSight Admin users.');
         return;
       }
       
@@ -497,7 +507,7 @@ const UserManagementPage = () => {
           // Map frontend role to company_users role
           let companyRole = 'Employee';
           if (newUser.role === 'Capacity Admin') {
-            companyRole = 'Admin';
+            companyRole = 'Capacity Admin';
           } else if (newUser.role === 'Employee') {
             companyRole = 'Employee';
           }
@@ -805,7 +815,7 @@ const UserManagementPage = () => {
                             >
                               <option value="all">All Roles</option>
                               <option value="Employee">Employee</option>
-                              <option value="Admin">Admin</option>
+                              <option value="Capacity Admin">Capacity Admin</option>
                               <option value="NSight Admin">NSight Admin</option>
                             </select>
                           </div>
@@ -1023,8 +1033,17 @@ const UserManagementPage = () => {
                       <td className="px-6 py-4">
                         <button 
                           onClick={() => handleEditUser(employee)}
-                          className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-600 rounded-md transition-colors"
-                          title="Edit user"
+                          className={`p-2 rounded-md transition-colors ${
+                            userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'
+                              ? 'text-slate-600 cursor-not-allowed'
+                              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600'
+                          }`}
+                          title={
+                            userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'
+                              ? 'Cannot edit NSight Admin users'
+                              : 'Edit user'
+                          }
+                          disabled={userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'}
                         >
                           <Edit className="h-4 w-4" />
                         </button>

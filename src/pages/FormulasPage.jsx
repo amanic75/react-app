@@ -6,6 +6,8 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
 import AddFormulaModal from '../components/shared/AddFormulaModal';
 import { getAllFormulas, addFormula } from '../lib/supabaseData';
+import { useAuth } from '../contexts/AuthContext';
+import { filterByTab } from '../lib/filterUtils';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -18,6 +20,7 @@ const ChemformationLogo = ({ className = "w-6 h-6" }) => (
 
 const FormulasPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -149,8 +152,12 @@ const FormulasPage = () => {
     }
   };
 
-  // Filter formulas based on search term and filters
-  const filteredFormulas = formulas.filter(formula => {
+  // Filter formulas based on search term, filters, and active tab
+  // First apply tab filtering with the new utility
+  const tabFilteredFormulas = filterByTab(formulas, activeTab, user);
+  
+  // Then apply additional filters (search, cost range, sale price range, ingredient count)
+  const filteredFormulas = tabFilteredFormulas.filter(formula => {
     // Search filter
     const matchesSearch = 
     (formula.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||

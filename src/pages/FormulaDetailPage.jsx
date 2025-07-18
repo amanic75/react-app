@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2, Plus, Search, Bot, Sparkles } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2, Plus, Search, Bot, Sparkles, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
 import { getFormulaById, updateFormula, getAllFormulas, deleteFormula, getAllMaterials } from '../lib/supabaseData';
 import aiService from '../lib/aiService';
+import { useAuth } from '../contexts/AuthContext';
+import EmployeeAssignmentSelector from '../components/shared/EmployeeAssignmentSelector';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
   const { formulaId } = useParams();
+  const { userProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -19,6 +22,7 @@ const FormulaDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   
   // Material search functionality for editing
   const [rawMaterials, setRawMaterials] = useState([]);
@@ -46,7 +50,8 @@ const FormulaDetailPage = () => {
         totalCost: foundFormula.totalCost,
         finalSalePriceDrum: foundFormula.finalSalePriceDrum,
         finalSalePriceTote: foundFormula.finalSalePriceTote,
-        ingredients: [...foundFormula.ingredients]
+        ingredients: [...foundFormula.ingredients],
+        assigned_to: foundFormula.assigned_to || []
       });
       console.log('Formula state set successfully');
     } else {
@@ -218,7 +223,8 @@ const FormulaDetailPage = () => {
       totalCost: formula.totalCost,
       finalSalePriceDrum: formula.finalSalePriceDrum,
       finalSalePriceTote: formula.finalSalePriceTote,
-      ingredients: [...formula.ingredients]
+      ingredients: [...formula.ingredients],
+      assigned_to: formula.assigned_to || []
     });
     setIsEditing(true);
     // Load raw materials for search functionality
@@ -255,7 +261,8 @@ const FormulaDetailPage = () => {
       totalCost: formula.totalCost,
       finalSalePriceDrum: formula.finalSalePriceDrum,
       finalSalePriceTote: formula.finalSalePriceTote,
-      ingredients: [...formula.ingredients]
+      ingredients: [...formula.ingredients],
+      assigned_to: formula.assigned_to || []
     });
     setIsEditing(false);
     setShowMaterialSearch(false);
@@ -266,6 +273,16 @@ const FormulaDetailPage = () => {
     setUploadedFiles([]);
     setDeletedDocuments([]);
   };
+
+  const handleAssignmentSave = (selectedEmployeeIds) => {
+    setEditableFormula(prev => ({
+      ...prev,
+      assigned_to: selectedEmployeeIds
+    }));
+    setShowAssignmentModal(false);
+  };
+
+  const isCapacityAdmin = userProfile?.role === 'Capacity Admin';
 
   // Load raw materials for ingredient search
   const loadRawMaterials = async () => {
@@ -448,12 +465,39 @@ const FormulaDetailPage = () => {
         {/* Formula Info Card */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
           {isEditing && editableFormula ? (
-            <input
-              type="text"
-              value={editableFormula.name}
-              onChange={(e) => handleFieldChange('name', e.target.value)}
-              className="text-2xl font-semibold text-slate-100 mb-6 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <>
+              <input
+                type="text"
+                value={editableFormula.name}
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+                className="text-2xl font-semibold text-slate-100 mb-6 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              
+              {/* Assignment Section - Only for Capacity Admins */}
+              {isCapacityAdmin && (
+                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-slate-200 mb-1">Employee Assignments</h3>
+                      <p className="text-sm text-slate-400">
+                        {editableFormula.assigned_to?.length > 0 
+                          ? `Assigned to ${editableFormula.assigned_to.length} employee${editableFormula.assigned_to.length !== 1 ? 's' : ''}`
+                          : 'Not assigned to any employees'
+                        }
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => setShowAssignmentModal(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>Manage Assignments</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <h2 className="text-2xl font-semibold text-slate-100 mb-6">{editableFormula?.name || formula.name}</h2>
           )}
@@ -882,7 +926,16 @@ const FormulaDetailPage = () => {
             </div>
           </div>
         )}
-       </div>
+      </div>
+
+      {/* Employee Assignment Modal */}
+      <EmployeeAssignmentSelector
+        isOpen={showAssignmentModal}
+        onClose={() => setShowAssignmentModal(false)}
+        onSave={handleAssignmentSave}
+        currentAssignments={editableFormula?.assigned_to || []}
+        title="Assign Formula to Employees"
+      />
     </DashboardLayout>
   );
 };

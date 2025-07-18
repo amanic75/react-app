@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
 import { 
@@ -56,6 +57,7 @@ ChartJS.register(
 const SystemHealthPage = () => {
   const { userProfile, loading, getDashboardRoute } = useAuth();
   const navigate = useNavigate();
+  const { currentTheme } = useTheme();
   const [refreshTime, setRefreshTime] = useState(new Date());
   const [infrastructureMetrics, setInfrastructureMetrics] = useState({
     serverStatus: { uptime: '--', responseTime: '--', status: 'loading' },
@@ -157,6 +159,27 @@ const SystemHealthPage = () => {
     userAnalytics: false,   // collapsed
     historicalTrends: false // collapsed
   });
+
+  // Theme-aware chart colors
+  const getChartColors = () => {
+    const isLight = currentTheme === 'light';
+    return {
+      primary: isLight ? 'rgb(59, 130, 246)' : 'rgb(59, 130, 246)', // blue-500
+      secondary: isLight ? 'rgb(34, 197, 94)' : 'rgb(34, 197, 94)', // green-500
+      accent: isLight ? 'rgb(147, 51, 234)' : 'rgb(147, 51, 234)', // purple-500
+      warning: isLight ? 'rgb(251, 146, 60)' : 'rgb(251, 146, 60)', // orange-400
+      danger: isLight ? 'rgb(239, 68, 68)' : 'rgb(239, 68, 68)', // red-500
+      textColor: isLight ? 'rgb(51, 65, 85)' : 'rgb(148, 163, 184)', // slate-700 : slate-400
+      gridColor: isLight ? 'rgba(51, 65, 85, 0.1)' : 'rgba(148, 163, 184, 0.1)',
+      backgroundColor: {
+        primary: isLight ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+        secondary: isLight ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+        accent: isLight ? 'rgba(147, 51, 234, 0.6)' : 'rgba(147, 51, 234, 0.6)',
+        warning: isLight ? 'rgba(251, 146, 60, 0.1)' : 'rgba(251, 146, 60, 0.1)',
+        danger: isLight ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+      }
+    };
+  };
 
   // Role-based access control - only Capacity Admin and NSight Admin can access
   useEffect(() => {
@@ -1852,16 +1875,16 @@ const SystemHealthPage = () => {
                         {
                           label: 'Total Users',
                           data: historicalData.userGrowth.dailyGrowth.map(item => item.totalUsers),
-                          borderColor: 'rgb(59, 130, 246)',
-                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          borderColor: getChartColors().primary,
+                          backgroundColor: getChartColors().backgroundColor.primary,
                           fill: true,
                           tension: 0.4
                         },
                         {
                           label: 'New Users',
                           data: historicalData.userGrowth.dailyGrowth.map(item => item.newUsers),
-                          borderColor: 'rgb(34, 197, 94)',
-                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          borderColor: getChartColors().secondary,
+                          backgroundColor: getChartColors().backgroundColor.secondary,
                           fill: false,
                           tension: 0.4
                         }
@@ -1873,25 +1896,25 @@ const SystemHealthPage = () => {
                       plugins: {
                         legend: {
                           labels: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           }
                         }
                       },
                       scales: {
                         x: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         },
                         y: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         }
                       }
@@ -1923,8 +1946,8 @@ const SystemHealthPage = () => {
                         {
                           label: 'User Registrations',
                           data: historicalData.peakUsagePatterns.byDayOfWeek.map(item => item.registrations),
-                          backgroundColor: 'rgba(147, 51, 234, 0.6)',
-                          borderColor: 'rgb(147, 51, 234)',
+                          backgroundColor: getChartColors().backgroundColor.accent,
+                          borderColor: getChartColors().accent,
                           borderWidth: 1
                         }
                       ]
@@ -1935,25 +1958,25 @@ const SystemHealthPage = () => {
                       plugins: {
                         legend: {
                           labels: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           }
                         }
                       },
                       scales: {
                         x: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         },
                         y: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         }
                       }
@@ -1987,8 +2010,8 @@ const SystemHealthPage = () => {
                         {
                           label: 'Avg Response Time (ms)',
                           data: historicalData.performanceOverTime.avgResponseTime.map(item => item.responseTime),
-                          borderColor: 'rgb(34, 197, 94)',
-                          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                          borderColor: getChartColors().secondary,
+                          backgroundColor: getChartColors().backgroundColor.secondary,
                           fill: false,
                           tension: 0.4,
                           yAxisID: 'y'
@@ -1996,8 +2019,8 @@ const SystemHealthPage = () => {
                         {
                           label: 'Error Rate (%)',
                           data: historicalData.performanceOverTime.errorRate?.map(item => item.errorRate) || [],
-                          borderColor: 'rgb(239, 68, 68)',
-                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          borderColor: getChartColors().danger,
+                          backgroundColor: getChartColors().backgroundColor.danger,
                           fill: false,
                           tension: 0.4,
                           yAxisID: 'y1'
@@ -2010,17 +2033,17 @@ const SystemHealthPage = () => {
                       plugins: {
                         legend: {
                           labels: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           }
                         }
                       },
                       scales: {
                         x: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         },
                         y: {
@@ -2028,10 +2051,10 @@ const SystemHealthPage = () => {
                           display: true,
                           position: 'left',
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         },
                         y1: {
@@ -2039,7 +2062,7 @@ const SystemHealthPage = () => {
                           display: true,
                           position: 'right',
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
                             drawOnChartArea: false
@@ -2074,8 +2097,8 @@ const SystemHealthPage = () => {
                         {
                           label: 'User Registrations',
                           data: historicalData.peakUsagePatterns.byHour.map(item => item.registrations),
-                          borderColor: 'rgb(251, 146, 60)',
-                          backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                          borderColor: getChartColors().warning,
+                          backgroundColor: getChartColors().backgroundColor.warning,
                           fill: true,
                           tension: 0.4
                         }
@@ -2087,26 +2110,26 @@ const SystemHealthPage = () => {
                       plugins: {
                         legend: {
                           labels: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           }
                         }
                       },
                       scales: {
                         x: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)',
+                            color: getChartColors().textColor,
                             maxTicksLimit: 12
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         },
                         y: {
                           ticks: {
-                            color: 'rgb(148, 163, 184)'
+                            color: getChartColors().textColor
                           },
                           grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
+                            color: getChartColors().gridColor
                           }
                         }
                       }

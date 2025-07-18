@@ -5,6 +5,8 @@ import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
 import { getAllMaterials, generateMaterialId } from '../lib/supabaseData';
+import { useAuth } from '../contexts/AuthContext';
+import { filterByTab } from '../lib/filterUtils';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -17,6 +19,7 @@ const ChemformationLogo = ({ className = "w-6 h-6" }) => (
 
 const RawMaterialsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -165,28 +168,33 @@ const RawMaterialsPage = () => {
     }
   };
 
-  // Filter materials based on search term and filters
-  const filteredMaterials = rawMaterials.filter(material => {
+  // Filter materials based on search term, filters, and active tab
+  // First apply tab filtering with the new utility
+  const tabFilteredMaterials = filterByTab(rawMaterials, activeTab, user);
+  
+  // Then apply additional filters (search, supplier, form, hazard, country)
+  const filteredMaterials = tabFilteredMaterials.filter(material => {
     // Search filter
     const matchesSearch = 
-    (material.materialName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (material.supplierName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (material.tradeName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (material.casNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (material.manufacture || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (material.country || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (material.materialName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (material.supplierName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (material.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     // Supplier filter
-    const matchesSupplier = filterSupplier === 'all' || material.supplierName === filterSupplier;
+    const matchesSupplier = filterSupplier === 'all' || 
+      (material.supplierName || '').toLowerCase() === filterSupplier.toLowerCase();
     
-    // Physical form filter
-    const matchesForm = filterForm === 'all' || material.physicalForm === filterForm;
+    // Form filter
+    const matchesForm = filterForm === 'all' || 
+      (material.physicalForm || '').toLowerCase() === filterForm.toLowerCase();
     
-    // Hazard class filter
-    const matchesHazard = filterHazard === 'all' || material.hazardClass === filterHazard;
+    // Hazard filter
+    const matchesHazard = filterHazard === 'all' || 
+      (material.hazardClass || '').toLowerCase() === filterHazard.toLowerCase();
     
     // Country filter
-    const matchesCountry = filterCountry === 'all' || material.country === filterCountry;
+    const matchesCountry = filterCountry === 'all' || 
+      (material.country || '').toLowerCase() === filterCountry.toLowerCase();
     
     return matchesSearch && matchesSupplier && matchesForm && matchesHazard && matchesCountry;
   });

@@ -101,8 +101,8 @@ export const MultiTenantAuthProvider = ({ children }) => {
         const profile = {
           id: authUser.id,
           email: authUser.email,
-          first_name: authUser.user_metadata?.first_name || 'Admin',
-          last_name: authUser.user_metadata?.last_name || '',
+          first_name: authUser.user_metadata?.first_name || 'NSight',
+          last_name: authUser.user_metadata?.last_name || 'Admin',
           role: 'NSight Admin',
           company_id: null,
           company_name: 'NSight Inc'

@@ -53,8 +53,6 @@ const LoginActivityPanel = () => {
 
   const getRoleColor = (role) => {
     switch (role?.toLowerCase()) {
-      case 'admin':
-        return 'text-red-400';
       case 'capacity admin':
         return 'text-green-400';
       case 'nsight admin':

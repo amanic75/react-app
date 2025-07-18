@@ -266,12 +266,10 @@ const UserManagementTable = () => {
 
   const getRoleColor = (role) => {
     switch (role) {
-      case 'Admin':
-        return 'text-purple-600 bg-purple-100';
       case 'Capacity Admin':
         return 'text-green-600 bg-green-100';
       case 'NSight Admin':
-        return 'text-indigo-600 bg-indigo-100';
+        return 'text-purple-600 bg-purple-100';
       case 'Employee':
         return 'text-blue-600 bg-blue-100';
       default:

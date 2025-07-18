@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Sidebar from '../components/shared/Sidebar';
 import ChatBot from '../components/shared/ChatBot';
 import HeaderControls from '../components/shared/HeaderControls';
+import DualLogo from '../components/ui/DualLogo';
 
 const DashboardLayout = ({ children, onMaterialAdded }) => {
   const { userProfile } = useAuth();
@@ -98,7 +99,13 @@ const DashboardLayout = ({ children, onMaterialAdded }) => {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Global Header */}
-      <header className="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-end px-6 sticky top-0 z-40">
+      <header 
+        className="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-6 sticky top-0 z-40 transition-all duration-300"
+        style={{ 
+          marginLeft: isCollapsed ? '80px' : '256px'
+        }}
+      >
+        <DualLogo />
         <HeaderControls />
       </header>
       

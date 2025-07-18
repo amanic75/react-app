@@ -915,3 +915,102 @@ export const generateMaterialId = (materialName) => {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }; 
+
+// Bulk assignment functions
+export const updateFormulaAssignments = async (formulaIds, assignedUserIds) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      throw new Error('Cannot update assignments without a company');
+    }
+    
+    // Convert single formula to array for consistency
+    const ids = Array.isArray(formulaIds) ? formulaIds : [formulaIds];
+    
+    // For each formula, update the assigned users
+    const updatePromises = ids.map(formulaId => {
+      const dbData = {
+        assigned_to: assignedUserIds, // Store array of user IDs
+        updated_at: new Date().toISOString()
+      };
+      
+      let query = supabase
+        .from('formulas')
+        .update(dbData)
+        .eq('id', formulaId);
+      
+      // Only filter by company if not NSight Admin
+      if (companyId !== 'all') {
+        query = query.eq('company_id', companyId);
+      }
+      
+      return query;
+    });
+    
+    const results = await Promise.all(updatePromises);
+    
+    // Check for errors
+    const errors = results.filter(result => result.error);
+    if (errors.length > 0) {
+      console.error('Errors updating formula assignments:', errors);
+      throw new Error('Failed to update some formula assignments');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating formula assignments:', error);
+    return false;
+  }
+};
+
+export const updateMaterialAssignments = async (materialIds, assignedUserIds) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    const companyId = await getCurrentUserCompanyId();
+    if (!companyId) {
+      throw new Error('Cannot update assignments without a company');
+    }
+    
+    // Convert single material to array for consistency
+    const ids = Array.isArray(materialIds) ? materialIds : [materialIds];
+    
+    // For each material, update the assigned users
+    const updatePromises = ids.map(materialId => {
+      const dbData = {
+        assigned_to: assignedUserIds, // Store array of user IDs
+        updated_at: new Date().toISOString()
+      };
+      
+      let query = supabase
+        .from('raw_materials')
+        .update(dbData)
+        .eq('id', materialId);
+      
+      // Only filter by company if not NSight Admin
+      if (companyId !== 'all') {
+        query = query.eq('company_id', companyId);
+      }
+      
+      return query;
+    });
+    
+    const results = await Promise.all(updatePromises);
+    
+    // Check for errors
+    const errors = results.filter(result => result.error);
+    if (errors.length > 0) {
+      console.error('Errors updating material assignments:', errors);
+      throw new Error('Failed to update some material assignments');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating material assignments:', error);
+    return false;
+  }
+}; 

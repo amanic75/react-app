@@ -264,6 +264,7 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null, compa
       const newApp = {
         id: Date.now(),
         ...formData,
+        appType: formData.appName.toLowerCase().replace(/\s+/g, '-') || 'custom', // Generate appType from app name
         fields: formFields,
         schema: {
           tableName: formData.tableName,

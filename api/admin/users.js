@@ -76,6 +76,12 @@ export default async function handler(req, res) {
         }
         return await createUser(req, res);
       
+      case 'update':
+        if (req.method !== 'POST') {
+          return res.status(405).json({ error: 'Method not allowed for update action' });
+        }
+        return await updateUser(req, res);
+      
       case 'change-password':
         if (req.method !== 'POST') {
           return res.status(405).json({ error: 'Method not allowed for change-password action' });
@@ -85,7 +91,7 @@ export default async function handler(req, res) {
       default:
         return res.status(400).json({ 
           error: 'Invalid action',
-          validActions: ['create', 'change-password']
+          validActions: ['create', 'update', 'change-password']
         });
     }
 
@@ -253,6 +259,59 @@ async function createUser(req, res) {
       ...userData
     }
   });
+}
+
+// POST /api/admin/users?action=update - Update user profile
+async function updateUser(req, res) {
+  const { userId, updates } = req.body;
+
+  // Validate required fields
+  if (!userId || !updates) {
+    return res.status(400).json({ error: 'userId and updates are required' });
+  }
+
+  console.log('🔄 Updating user profile via API:', userId, updates);
+
+  try {
+    // Use upsert to create the profile if it doesn't exist, or update if it does
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .upsert({
+        id: userId,
+        email: updates.email,
+        first_name: updates.first_name,
+        last_name: updates.last_name,
+        role: updates.role,
+        department: updates.department,
+        app_access: updates.app_access,
+        updated_at: new Date().toISOString(),
+        created_at: new Date().toISOString() // This will be ignored on update
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Profile upsert error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to update user profile',
+        details: error.message 
+      });
+    }
+
+    console.log('✅ User profile updated successfully:', data);
+    return res.status(200).json({
+      success: true,
+      message: 'User profile updated successfully',
+      user: data
+    });
+
+  } catch (error) {
+    console.error('❌ Update user error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
 }
 
 // POST /api/admin/users?action=change-password - Change user password

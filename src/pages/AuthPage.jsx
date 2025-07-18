@@ -4,7 +4,6 @@ import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import ClearDataButton from '../components/ui/ClearDataButton';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -73,11 +72,19 @@ const AuthPage = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img
-            src="/chemformation-logo.png"
-            alt="Chemformation"
-            className="w-16 h-16 mx-auto mb-4"
-          />
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <img
+              src="/capacity chemical.png"
+              alt="Capacity Chemical"
+              className="h-16 w-auto"
+            />
+            <div className="h-12 w-px bg-slate-500"></div>
+            <img
+              src="/nsight.png"
+              alt="NSight"
+              className="h-16 w-auto"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-white">Capacity Chemicals</h1>
           <p className="text-slate-400 mt-2">Chemical Management System</p>
         </div>
@@ -189,15 +196,12 @@ const AuthPage = () => {
             <p className="text-xs text-slate-500 mt-3">
               Contact your administrator to create a new account.
             </p>
-            <div className="mt-3 flex justify-center">
-              <ClearDataButton className="text-xs px-2 py-1" />
-            </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="text-center mt-8 text-slate-500 text-sm">
-          <p>© 2024 Chemformation. All rights reserved.</p>
+          <p>© 2025 NSight. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -347,6 +347,7 @@ const UserManagementPage = () => {
   const handleSaveUser = async (updatedUser) => {
     try {
       const updates = {
+        email: updatedUser.email, // Include email for upsert
         first_name: updatedUser.name.split(' ')[0] || '',
         last_name: updatedUser.name.split(' ').slice(1).join(' ') || '',
         role: updatedUser.role,

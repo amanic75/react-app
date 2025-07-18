@@ -830,35 +830,31 @@ export const AuthProvider = ({ children }) => {
   // Update user profile (for admins)
   const updateUserProfile = async (userId, updates) => {
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Update timeout')), 10000)
-      );
+      console.log('🔄 Updating user profile via API for:', userId, updates);
       
-      const updatePromise = supabase
-        .from('user_profiles')
-        .update({
-          first_name: updates.first_name,
-          last_name: updates.last_name,
-          role: updates.role,
-          department: updates.department,
-          app_access: updates.app_access,
-          updated_at: new Date().toISOString()
+      // Use the backend API that has proper admin permissions
+      const response = await fetch('/api/admin/users?action=update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          updates
         })
-        .eq('id', userId)
-        .select()
-        .single();
+      });
 
-      const { data, error } = await Promise.race([updatePromise, timeoutPromise]);
-
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || 'Failed to update user profile');
       }
 
-      return { data, error: null };
+      const result = await response.json();
+      console.log('✅ User profile updated successfully via API:', result);
+      return { data: result.user, error: null };
     } catch (error) {
       console.error('❌ Update user profile failed:', error);
-      // Return success to keep UI working
-      return { data: userProfile, error: null };
+      return { data: null, error };
     }
   };
 

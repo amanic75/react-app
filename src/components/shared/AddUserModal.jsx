@@ -262,36 +262,63 @@ const AddUserModal = ({ isOpen, onClose, onSave }) => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-3">
                   App Access
                 </label>
-                <div className="space-y-3">
-                  {getAppOptions(formData.role).map(app => {
-                    const IconComponent = app.icon;
-                    const isSelected = formData.appAccess.includes(app.id);
-                    
-                    return (
-                      <button
-                        key={app.id}
-                        onClick={() => toggleAppAccess(app.id)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
-                          isSelected
-                            ? 'bg-blue-600 border-blue-500 text-white'
-                            : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
-                            isSelected ? 'bg-blue-500' : 'bg-slate-600'
-                          }`}>
-                            <IconComponent className="w-4 h-4" />
+                {formData.role === 'Employee' ? (
+                  <div className="space-y-3">
+                    {getAppOptions(formData.role).map(app => {
+                      const IconComponent = app.icon;
+                      const isSelected = formData.appAccess.includes(app.id);
+                      
+                      return (
+                        <button
+                          key={app.id}
+                          onClick={() => toggleAppAccess(app.id)}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-500 text-white'
+                              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 rounded-md flex items-center justify-center ${
+                              isSelected ? 'bg-blue-500' : 'bg-slate-600'
+                            }`}>
+                              <IconComponent className="w-4 h-4" />
+                            </div>
+                            <span className="font-medium">{app.name}</span>
                           </div>
-                          <span className="font-medium">{app.name}</span>
-                        </div>
-                        {isSelected && (
+                          {isSelected && (
+                            <Check className="w-5 h-5" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-400 mb-3">
+                      {formData.role === 'Capacity Admin' ? 'Capacity Admins automatically have access to all business applications' : 'NSight Admins automatically have access to all platform applications'}
+                    </p>
+                    {getAppOptions(formData.role).map(app => {
+                      const IconComponent = app.icon;
+                      const isSelected = formData.appAccess.includes(app.id);
+                      
+                      return (
+                        <div
+                          key={app.id}
+                          className="w-full flex items-center justify-between p-3 rounded-lg border bg-slate-800 border-slate-600 text-slate-400 opacity-75 cursor-not-allowed"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-md flex items-center justify-center bg-slate-600">
+                              <IconComponent className="w-4 h-4" />
+                            </div>
+                            <span className="font-medium">{app.name}</span>
+                          </div>
                           <Check className="w-5 h-5" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

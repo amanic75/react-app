@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { MessageCircle, X, Send, Minimize2, Paperclip, File, Image } from 'lucide-react';
+import { MessageCircle, X, Send, Minimize2, Paperclip, File, Image, AlertTriangle, CheckCircle, TrendingUp, Users, DollarSign, Shield } from 'lucide-react';
 import Card from '../ui/Card';
 import aiService from '../../lib/aiService';
 
@@ -9,7 +9,7 @@ const ChatBot = ({ onMaterialAdded }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your AI assistant specialized in chemical engineering and safety. I can help with chemical formulas, safety protocols, material specifications, regulatory compliance, and analyze documents you upload. How can I help you today?",
+      text: "Hello! I'm your enhanced AI assistant specialized in chemical engineering and manufacturing. I can help with:\n\n🔬 Formula optimization and cost reduction\n🛡️ Safety compliance and hazard analysis\n📦 Supplier intelligence and sourcing\n🔍 Quality troubleshooting and root cause analysis\n\nHow can I help optimize your operations today?",
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -82,15 +82,28 @@ const ChatBot = ({ onMaterialAdded }) => {
         content: msg.text
       }));
 
-      // Generate AI response
+      // Generate AI response with enhanced capabilities
       const aiResponse = await aiService.generateResponse(userInput, userFiles, conversationHistory);
       
-      // Handle different response types
+      // Handle enhanced response types
       const botResponse = {
         id: messages.length + 2,
         text: aiResponse.response || aiResponse,
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        
+        // Enhanced AI capabilities
+        capabilityType: aiResponse.capabilityType || 'general',
+        actionItems: aiResponse.actionItems || [],
+        recommendations: aiResponse.recommendations || [],
+        riskFactors: aiResponse.riskFactors || [],
+        costImpact: aiResponse.costImpact || null,
+        safetyLevel: aiResponse.safetyLevel || null,
+        suppliers: aiResponse.suppliers || [],
+        rootCauses: aiResponse.rootCauses || [],
+        preventiveMeasures: aiResponse.preventiveMeasures || [],
+        
+        // Existing material addition functionality
         materialAdded: aiResponse.materialAdded || false,
         materialData: aiResponse.materialData || null,
         successMessage: aiResponse.successMessage || null,
@@ -118,13 +131,147 @@ const ChatBot = ({ onMaterialAdded }) => {
     }
   };
 
-
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Enhanced message rendering for specialized AI capabilities
+  const renderEnhancedMessage = (message) => {
+    if (message.sender !== 'bot' || message.capabilityType === 'general') {
+      return null;
+    }
+
+    return (
+      <div className="mt-3 space-y-3">
+        {/* Action Items */}
+        {message.actionItems && message.actionItems.length > 0 && (
+          <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <CheckCircle className="h-4 w-4 text-blue-400" />
+              <h4 className="text-sm font-medium text-blue-200">Action Items</h4>
+            </div>
+            <ul className="space-y-1 text-xs text-blue-100">
+              {message.actionItems.map((item, index) => (
+                <li key={index} className="flex items-start space-x-2">
+                  <span className="text-blue-400 mt-1">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Recommendations */}
+        {message.recommendations && message.recommendations.length > 0 && (
+          <div className="bg-green-600 bg-opacity-20 border border-green-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <TrendingUp className="h-4 w-4 text-green-400" />
+              <h4 className="text-sm font-medium text-green-200">Recommendations</h4>
+            </div>
+            <ul className="space-y-1 text-xs text-green-100">
+              {message.recommendations.map((rec, index) => (
+                <li key={index} className="flex items-start space-x-2">
+                  <span className="text-green-400 font-bold">{index + 1}.</span>
+                  <span>{rec}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Cost Impact */}
+        {message.costImpact && (
+          <div className="bg-yellow-600 bg-opacity-20 border border-yellow-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-1">
+              <DollarSign className="h-4 w-4 text-yellow-400" />
+              <h4 className="text-sm font-medium text-yellow-200">Cost Impact</h4>
+            </div>
+            <p className="text-xs text-yellow-100">{message.costImpact}</p>
+          </div>
+        )}
+
+        {/* Safety Level Warning */}
+        {message.safetyLevel && message.safetyLevel !== 'LOW_RISK' && (
+          <div className={`bg-opacity-20 border rounded-lg p-3 ${
+            message.safetyLevel === 'HIGH_RISK' 
+              ? 'bg-red-600 border-red-500' 
+              : 'bg-orange-600 border-orange-500'
+          }`}>
+            <div className="flex items-center space-x-2 mb-1">
+              <AlertTriangle className={`h-4 w-4 ${
+                message.safetyLevel === 'HIGH_RISK' ? 'text-red-400' : 'text-orange-400'
+              }`} />
+              <h4 className={`text-sm font-medium ${
+                message.safetyLevel === 'HIGH_RISK' ? 'text-red-200' : 'text-orange-200'
+              }`}>
+                {message.safetyLevel === 'HIGH_RISK' ? 'High Risk Warning' : 'Safety Caution'}
+              </h4>
+            </div>
+            <p className={`text-xs ${
+              message.safetyLevel === 'HIGH_RISK' ? 'text-red-100' : 'text-orange-100'
+            }`}>
+              Review safety recommendations carefully before proceeding.
+            </p>
+          </div>
+        )}
+
+        {/* Supplier Options */}
+        {message.suppliers && message.suppliers.length > 0 && (
+          <div className="bg-purple-600 bg-opacity-20 border border-purple-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <Users className="h-4 w-4 text-purple-400" />
+              <h4 className="text-sm font-medium text-purple-200">Alternative Suppliers</h4>
+            </div>
+            <div className="space-y-2">
+              {message.suppliers.map((supplier, index) => (
+                <div key={index} className="text-xs text-purple-100">
+                  <div className="font-medium text-purple-200">{supplier.name}</div>
+                  <div className="text-purple-300 mt-1">{supplier.details}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Root Causes for Quality Issues */}
+        {message.rootCauses && message.rootCauses.length > 0 && (
+          <div className="bg-red-600 bg-opacity-20 border border-red-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <Shield className="h-4 w-4 text-red-400" />
+              <h4 className="text-sm font-medium text-red-200">Potential Root Causes</h4>
+            </div>
+            <ul className="space-y-1 text-xs text-red-100">
+              {message.rootCauses.map((cause, index) => (
+                <li key={index} className="flex items-start space-x-2">
+                  <span className="text-red-400 font-bold">{index + 1}.</span>
+                  <span>{cause}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Risk Factors */}
+        {message.riskFactors && message.riskFactors.length > 0 && (
+          <div className="bg-orange-600 bg-opacity-20 border border-orange-500 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-orange-400" />
+              <h4 className="text-sm font-medium text-orange-200">Risk Factors</h4>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {message.riskFactors.map((risk, index) => (
+                <span key={index} className="px-2 py-1 bg-orange-700 bg-opacity-50 rounded text-xs text-orange-100">
+                  {risk}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderFileAttachment = (file, isInMessage = false) => {
@@ -182,7 +329,7 @@ const ChatBot = ({ onMaterialAdded }) => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-slate-100">AI Assistant</h3>
-              <p className="text-xs text-slate-400">AI-Powered • File analysis supported</p>
+              <p className="text-xs text-slate-400">Enhanced AI • Formula optimization • Safety analysis</p>
             </div>
           </div>
           <div className="flex items-center space-x-1">
@@ -203,6 +350,39 @@ const ChatBot = ({ onMaterialAdded }) => {
 
         {!isMinimized && (
           <>
+            {/* Quick Start Panel - shown when conversation is short */}
+            {messages.length <= 1 && (
+              <div className="p-4 border-b border-slate-600 bg-slate-800">
+                <h4 className="text-sm font-medium text-slate-200 mb-3">Quick Start Examples</h4>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => setInputText("Optimize my cleaner formula for 15% cost reduction: Surfactant 30%, Solvent 25%, Water 45%")}
+                    className="text-left p-2 bg-blue-600 bg-opacity-20 border border-blue-500 rounded text-xs text-blue-200 hover:bg-opacity-30 transition-colors"
+                  >
+                    🔬 Formula optimization example
+                  </button>
+                  <button
+                    onClick={() => setInputText("Safety analysis: mixing sodium hypochlorite with citric acid")}
+                    className="text-left p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-xs text-red-200 hover:bg-opacity-30 transition-colors"
+                  >
+                    🛡️ Safety compliance check
+                  </button>
+                  <button
+                    onClick={() => setInputText("Find alternative suppliers for acetone - current supplier has 3-week lead times")}
+                    className="text-left p-2 bg-purple-600 bg-opacity-20 border border-purple-500 rounded text-xs text-purple-200 hover:bg-opacity-30 transition-colors"
+                  >
+                    📦 Supplier intelligence
+                  </button>
+                  <button
+                    onClick={() => setInputText("Quality issue: last 3 batches failed viscosity tests - viscosity too low")}
+                    className="text-left p-2 bg-orange-600 bg-opacity-20 border border-orange-500 rounded text-xs text-orange-200 hover:bg-opacity-30 transition-colors"
+                  >
+                    🔍 Quality troubleshooting
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
             <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-0">
               {messages.map((message) => (
@@ -219,7 +399,12 @@ const ChatBot = ({ onMaterialAdded }) => {
                         : 'bg-slate-700 text-slate-100'
                     }`}
                   >
-                    {message.text && <p className="text-sm mb-2">{message.text}</p>}
+                    {message.text && (
+                      <div className="text-sm mb-2 whitespace-pre-line">{message.text}</div>
+                    )}
+                    
+                    {/* Enhanced AI Capabilities UI */}
+                    {renderEnhancedMessage(message)}
                     
                     {/* Material Addition Success/Error Messages */}
                     {message.successMessage && (

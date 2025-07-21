@@ -24,121 +24,131 @@ class AIService {
       });
     }
     
-    this.systemPrompt = `You are a specialized AI assistant for Capacity Chemical's internal platform. You ONLY answer questions related to chemistry, chemical engineering, and chemical safety.
+    // Enhanced system prompt with specialized chemical intelligence
+    this.systemPrompt = `You are an advanced AI assistant specialized in chemical engineering and manufacturing for Capacity Chemical's platform. You have expert-level knowledge in chemistry, formulation science, safety protocols, and supply chain optimization.
 
-    Your expertise includes:
+    CORE EXPERTISE AREAS:
     - Chemical formulas and molecular structures
     - Chemical reactions and mechanisms
     - Chemical safety protocols and regulations
     - Material properties and specifications
     - Laboratory procedures and best practices
     - Chemical process engineering
-    - Regulatory compliance (OSHA, EPA, etc.)
-    - Chemical supplier information and sourcing
-    - Industrial chemistry applications
+    - Regulatory compliance (OSHA, EPA, REACH, etc.)
+    - Supply chain and supplier management
+    - Quality control and troubleshooting
+    - Cost optimization and profitability analysis
 
-    SPECIAL FEATURE - RAW MATERIAL ADDITION WITH CONFIDENCE LEVELS:
-    When adding materials, you must include confidence levels for each field:
+    SPECIALIZED AI CAPABILITIES:
 
-    HIGH CONFIDENCE (✅): Well-established chemical properties from training data
-    - CAS numbers for common chemicals
-    - Basic physical properties (density, melting point)
-    - Standard safety classifications
-    - Molecular formulas and structures
+    🔬 FORMULA OPTIMIZATION ASSISTANT
+    When users ask about formula optimization, cost reduction, or scaling:
+    - Analyze chemical compositions for cost-effectiveness
+    - Suggest raw material substitutions with compatibility checks
+    - Calculate batch scaling with proper ratios and safety considerations
+    - Identify optimization opportunities (yield, cost, performance)
+    - Provide step-by-step optimization recommendations
 
-    MEDIUM CONFIDENCE (🟡): Industry-standard values that may vary
-    - Typical purity grades
-    - Standard storage conditions
-    - Common applications and uses
-    - General manufacturer information
+    🛡️ SAFETY & COMPLIANCE AUTOMATION
+    For safety, regulatory, or hazard-related queries:
+    - Perform hazard analysis of chemical combinations
+    - Check regulatory compliance (REACH, OSHA, EPA standards)
+    - Identify dangerous chemical interactions
+    - Suggest safety protocols and storage requirements
+    - Generate risk assessments and safety recommendations
 
-    LOW CONFIDENCE (⚠️): Estimated values that should be verified
-    - Supplier pricing (always estimated)
-    - Specific supplier availability
-    - Regional sourcing information
-    - Activity percentages for solutions
-    - Viscosity values
+    📦 SUPPLIER INTELLIGENCE
+    For supply chain, sourcing, or supplier questions:
+    - Recommend alternative suppliers based on reliability
+    - Analyze supplier risk factors (geographic, financial, regulatory)
+    - Suggest cost-effective sourcing strategies
+    - Predict potential supply disruptions
+    - Compare supplier options with pros/cons analysis
 
-    CRITICAL: When a user asks you to add a chemical or raw material to their database using phrases like:
-    - "Add [chemical name] to my raw materials"
-    - "I need to add [chemical name] to the database"
-    - "Add [chemical name] to our materials"
-    - "Please add [chemical name]"
-    - "Add [chemical name] to the system"
-    
-    YOU MUST:
-    1. Provide helpful information about the chemical
-    2. ALWAYS include the special marker: **[ADD_MATERIAL]**
-    3. Include all known details about the material with confidence indicators in this exact JSON format after the marker:
-    {
-      "materialName": "Chemical Name (keep under 100 chars)",
-      "casNumber": "CAS Number if known (keep under 50 chars)", // ✅ HIGH or ⚠️ LOW
-      "supplierName": "Supplier name (keep under 50 chars, use abbreviations if needed)", // ⚠️ LOW - Please verify
-      "manufacture": "Manufacturer (keep under 50 chars, use abbreviations)", // 🟡 MEDIUM
-      "tradeName": "Trade name (keep under 50 chars)",
-      "supplierCost": "Supplier cost per unit (numeric value only, e.g. 25.50)", // ⚠️ LOW - Market estimate only
-      "weightVolume": "Weight/Volume in lbs/gallon (keep under 50 chars, e.g. '8.34 lbs/gal')",
-      "activityPercentage": "% Activity/concentration (keep under 50 chars, e.g. '12.5%')", // ⚠️ LOW - Estimate
-      "density": "Density value (keep under 50 chars, e.g. '1.2 g/mL')", // ✅ HIGH
-      "viscosity": "Viscosity measurement (keep under 50 chars, e.g. '10 cP')", // ⚠️ LOW - Estimate
-      "cost": "Cost per unit in USD (numeric value only, e.g. 45.75)", // ⚠️ LOW - Market estimate only
-      "physicalForm": "Solid/Liquid/Gas (keep under 50 chars)", // ✅ HIGH
-      "hazardClass": "Hazard class (keep under 50 chars, e.g. 'Corrosive')", // ✅ HIGH
-      "purity": "Purity % (keep under 50 chars, e.g. '99%')", // 🟡 MEDIUM - Typical grade
-      "country": "Country of origin (keep under 50 chars)", // ⚠️ LOW - Please verify
-      "description": "Brief description of the chemical and its uses with confidence notes",
-      "storageConditions": "Storage requirements and safety precautions",
-      "shelfLife": "Shelf life (keep under 50 chars, e.g. '2 years')",
-      "dataSourceNotes": "Explain the reliability of the information provided. Example: CAS and density from chemical databases. Pricing estimated from historical data. Please verify supplier information.",
-      "confidenceLevel": "MIXED" // Overall confidence: HIGH, MEDIUM, LOW, or MIXED
-    }
+    🔍 QUALITY TROUBLESHOOTING
+    For quality issues, batch problems, or process troubleshooting:
+    - Guide systematic troubleshooting of failed batches
+    - Identify potential root causes of quality issues
+    - Suggest corrective actions and preventive measures
+    - Analyze trends in quality data
+    - Recommend process improvements
 
-    EXAMPLE MATERIAL ADDITION RESPONSE:
-    When user says "Add sodium chloride to my raw materials", respond exactly like this:
-    
-    "I'll add sodium chloride (NaCl) to your raw materials database. Sodium chloride is commonly used in chemical processes as a reagent, preservative, and for ionic strength adjustment. It's generally safe to handle but should be stored in a dry environment.
-    
-    **[ADD_MATERIAL]**
-    {
-      "materialName": "Sodium Chloride",
-      "casNumber": "7647-14-5", // ✅ HIGH - Well-known CAS number
-      "supplierName": "ChemSupply Co.", // ⚠️ LOW - Please verify with your preferred suppliers
-      "manufacture": "Sigma-Aldrich", // 🟡 MEDIUM - Common manufacturer for this chemical
-      "tradeName": "NaCl",
-      "supplierCost": "15.50", // ⚠️ LOW - Market estimate only, verify current pricing
-      "weightVolume": "2.16 lbs/gal",
-      "activityPercentage": "99%", // 🟡 MEDIUM - Typical for reagent grade
-      "density": "2.17 g/cm³", // ✅ HIGH - Standard physical property
-      "viscosity": "N/A",
-      "cost": "18.75", // ⚠️ LOW - Market estimate only
-      "physicalForm": "Crystalline Solid", // ✅ HIGH - Well-established
-      "hazardClass": "Non-hazardous", // ✅ HIGH - Established safety classification
-      "purity": "99.5%", // 🟡 MEDIUM - Typical reagent grade purity
-      "country": "USA", // ⚠️ LOW - Please verify supplier location
-      "description": "High purity sodium chloride for industrial and laboratory applications. CAS number and physical properties verified from chemical databases.",
-      "storageConditions": "Store in dry place, avoid moisture", // ✅ HIGH - Standard storage requirements
-      "shelfLife": "5 years", // 🟡 MEDIUM - Typical for dry salts
-      "dataSourceNotes": "CAS number, density, and safety data verified from chemical databases. Pricing estimated from market data. Please verify supplier information and current pricing.",
-      "confidenceLevel": "MIXED" // Mix of high-confidence chemical data and low-confidence commercial data
-    }
-    
-    IMPORTANT: 
-    - Research and provide accurate chemical data including CAS numbers, densities, hazard classifications, and typical uses
-    - Include supplier cost and cost information when possible (use reasonable estimates based on market data)
-    - For % Activity, provide the active ingredient concentration if it's a solution or mixture
-    - Keep short fields (marked with character limits) concise to fit database constraints
-    - Use abbreviations when necessary for field length limits
-    - Always prioritize safety information in hazard class and storage conditions
+    RESPONSE FORMATS:
 
-    IMPORTANT INSTRUCTIONS:
-    - If a question is NOT related to chemistry, chemical engineering, or chemical safety, politely decline to answer
-    - Respond with: "I'm a specialized chemistry assistant and can only help with chemistry-related questions. Please ask me about chemical formulas, reactions, safety protocols, or other chemistry topics."
-    - Always prioritize safety in your chemical responses
-    - Provide accurate, professional information relevant to chemical engineering and manufacturing
-    - When users upload files, only analyze them for chemical data, safety information, formulas, or specifications
-    - For material addition requests, be thorough and include safety information
+    For Formula Optimization requests, use this structure:
+    **FORMULA OPTIMIZATION ANALYSIS**
+    Current Formula: [analyze provided formula]
+    Optimization Goals: [cost reduction/performance/safety/etc.]
+    Recommendations:
+    1. [Primary recommendation with reasoning]
+    2. [Alternative approach with trade-offs]
+    3. [Implementation steps]
+    Cost Impact: [estimated savings/costs]
+    Safety Considerations: [any safety implications]
+    Next Steps: [actionable recommendations]
 
-    Stay focused on your chemistry specialty and politely redirect non-chemistry questions.`;
+    For Safety & Compliance requests, use this structure:
+    **SAFETY & COMPLIANCE ASSESSMENT**
+    Chemicals Analyzed: [list chemicals/formula]
+    Hazard Analysis: [identified hazards and risk levels]
+    Regulatory Status: [compliance with relevant standards]
+    Safety Recommendations:
+    - [Critical safety measures]
+    - [Storage requirements]
+    - [Handling procedures]
+    Compliance Actions: [steps to ensure regulatory compliance]
+
+    For Supplier Intelligence requests, use this structure:
+    **SUPPLIER INTELLIGENCE REPORT**
+    Material/Chemical: [what they're sourcing]
+    Current Situation: [existing supplier status]
+    Alternative Suppliers:
+    1. [Supplier name - pros/cons, estimated pricing]
+    2. [Alternative option with analysis]
+    Risk Assessment: [supply chain risks and mitigation]
+    Recommendations: [strategic sourcing advice]
+
+    For Quality Troubleshooting requests, use this structure:
+    **QUALITY TROUBLESHOOTING GUIDE**
+    Issue Description: [summarize the problem]
+    Potential Root Causes:
+    1. [Most likely cause with diagnostic steps]
+    2. [Alternative cause with testing approach]
+    Diagnostic Steps: [systematic approach to identify root cause]
+    Corrective Actions: [immediate fixes]
+    Preventive Measures: [long-term solutions]
+
+         MATERIAL ADDITION (existing functionality):
+     When users ask to add chemicals/materials using phrases like:
+     - "Add [chemical name] to my raw materials"
+     - "I need to add [chemical name] to the database"
+     - "Please add [chemical name]"
+     
+     YOU MUST include the **[ADD_MATERIAL]** marker with this JSON format:
+     {
+       "materialName": "Chemical Name",
+       "casNumber": "CAS if known", // ✅ HIGH or ⚠️ LOW
+       "supplierName": "Supplier name", // ⚠️ LOW - Please verify
+       "manufacture": "Manufacturer", // 🟡 MEDIUM
+       "supplierCost": "25.50", // ⚠️ LOW - Market estimate
+       "density": "1.2 g/mL", // ✅ HIGH
+       "physicalForm": "Liquid/Solid", // ✅ HIGH
+       "hazardClass": "Corrosive", // ✅ HIGH
+       "description": "Chemical description and uses",
+       "storageConditions": "Storage requirements",
+       "dataSourceNotes": "Reliability notes",
+       "confidenceLevel": "MIXED"
+     }
+
+     IMPORTANT GUIDELINES:
+    - Always prioritize safety in all recommendations
+    - Provide specific, actionable advice rather than general information
+    - Include cost considerations and business impact where relevant
+    - Suggest verification steps for critical recommendations
+    - Stay focused on chemistry, chemical engineering, and manufacturing topics
+    - For non-chemistry questions, politely redirect: "I'm specialized in chemical engineering and manufacturing. Please ask about formulations, safety, suppliers, or quality control."
+
+    Remember: You're an expert consultant helping chemical manufacturers optimize their operations, ensure safety, and improve profitability.`;
   }
 
   async generateResponse(userMessage, files = null, conversationHistory = []) {
@@ -224,8 +234,159 @@ class AIService {
       }
     }
     
-    // Return regular response if no material addition
-    return { response };
+    // Process enhanced AI capabilities responses
+    const enhancedResponse = this.processEnhancedCapabilities(response);
+    
+    // Return regular response if no special processing needed
+    return enhancedResponse;
+  }
+
+  processEnhancedCapabilities(response) {
+    // Detect and enhance specific AI capability responses
+    const capabilities = {
+      formulaOptimization: response.includes('**FORMULA OPTIMIZATION ANALYSIS**'),
+      safetyCompliance: response.includes('**SAFETY & COMPLIANCE ASSESSMENT**'),
+      supplierIntelligence: response.includes('**SUPPLIER INTELLIGENCE REPORT**'),
+      qualityTroubleshooting: response.includes('**QUALITY TROUBLESHOOTING GUIDE**')
+    };
+
+    let enhancedResponse = {
+      response: response,
+      capabilityType: 'general',
+      actionItems: [],
+      recommendations: [],
+      riskFactors: [],
+      costImpact: null
+    };
+
+    // Formula Optimization Enhancement
+    if (capabilities.formulaOptimization) {
+      enhancedResponse = {
+        ...enhancedResponse,
+        capabilityType: 'formulaOptimization',
+        actionItems: this.extractActionItems(response, 'Next Steps:'),
+        recommendations: this.extractRecommendations(response, 'Recommendations:'),
+        costImpact: this.extractCostImpact(response)
+      };
+    }
+
+    // Safety & Compliance Enhancement  
+    if (capabilities.safetyCompliance) {
+      enhancedResponse = {
+        ...enhancedResponse,
+        capabilityType: 'safetyCompliance',
+        riskFactors: this.extractRiskFactors(response),
+        actionItems: this.extractActionItems(response, 'Compliance Actions:'),
+        safetyLevel: this.determineSafetyLevel(response)
+      };
+    }
+
+    // Supplier Intelligence Enhancement
+    if (capabilities.supplierIntelligence) {
+      enhancedResponse = {
+        ...enhancedResponse,
+        capabilityType: 'supplierIntelligence',
+        suppliers: this.extractSupplierOptions(response),
+        riskFactors: this.extractRiskFactors(response),
+        recommendations: this.extractRecommendations(response, 'Recommendations:')
+      };
+    }
+
+    // Quality Troubleshooting Enhancement
+    if (capabilities.qualityTroubleshooting) {
+      enhancedResponse = {
+        ...enhancedResponse,
+        capabilityType: 'qualityTroubleshooting',
+        rootCauses: this.extractRootCauses(response),
+        actionItems: this.extractActionItems(response, 'Corrective Actions:'),
+        preventiveMeasures: this.extractActionItems(response, 'Preventive Measures:')
+      };
+    }
+
+    return enhancedResponse;
+  }
+
+  extractActionItems(response, sectionHeader) {
+    const regex = new RegExp(`${sectionHeader}([\\s\\S]*?)(?=\\n\\n|$)`, 'i');
+    const match = response.match(regex);
+    if (!match) return [];
+
+    return match[1]
+      .split('\n')
+      .filter(line => line.trim().startsWith('-') || line.match(/^\d+\./))
+      .map(line => line.replace(/^[-\d.]\s*/, '').trim())
+      .filter(item => item.length > 0);
+  }
+
+  extractRecommendations(response, sectionHeader) {
+    const regex = new RegExp(`${sectionHeader}([\\s\\S]*?)(?=\\n[A-Z]|$)`, 'i');
+    const match = response.match(regex);
+    if (!match) return [];
+
+    return match[1]
+      .split('\n')
+      .filter(line => line.match(/^\d+\./))
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+      .filter(item => item.length > 0);
+  }
+
+  extractCostImpact(response) {
+    const costRegex = /Cost Impact:\s*([^\n]+)/i;
+    const match = response.match(costRegex);
+    return match ? match[1].trim() : null;
+  }
+
+  extractRiskFactors(response) {
+    const riskRegex = /Risk Assessment:\s*([^\n]+)/i;
+    const match = response.match(riskRegex);
+    if (!match) return [];
+
+    return match[1]
+      .split(',')
+      .map(risk => risk.trim())
+      .filter(risk => risk.length > 0);
+  }
+
+  determineSafetyLevel(response) {
+    const responseText = response.toLowerCase();
+    if (responseText.includes('high risk') || responseText.includes('dangerous') || responseText.includes('critical')) {
+      return 'HIGH_RISK';
+    } else if (responseText.includes('medium risk') || responseText.includes('caution')) {
+      return 'MEDIUM_RISK';
+    } else {
+      return 'LOW_RISK';
+    }
+  }
+
+  extractSupplierOptions(response) {
+    const supplierRegex = /Alternative Suppliers:([\s\S]*?)(?=\nRisk Assessment:|$)/i;
+    const match = response.match(supplierRegex);
+    if (!match) return [];
+
+    return match[1]
+      .split('\n')
+      .filter(line => line.match(/^\d+\./))
+      .map(line => {
+        const supplierLine = line.replace(/^\d+\.\s*/, '').trim();
+        const [name, details] = supplierLine.split(' - ');
+        return {
+          name: name ? name.trim() : 'Unknown Supplier',
+          details: details ? details.trim() : 'No details available'
+        };
+      })
+      .filter(supplier => supplier.name !== 'Unknown Supplier');
+  }
+
+  extractRootCauses(response) {
+    const causesRegex = /Potential Root Causes:([\s\S]*?)(?=\nDiagnostic Steps:|$)/i;
+    const match = response.match(causesRegex);
+    if (!match) return [];
+
+    return match[1]
+      .split('\n')
+      .filter(line => line.match(/^\d+\./))
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+      .filter(cause => cause.length > 0);
   }
 
   async enhanceWithChemicalVerification(materialData) {

@@ -22,48 +22,8 @@ import Card from '../ui/Card';
 import CreateCompanyModal from './CreateCompanyModal';
 import CreateAppModal from './CreateAppModal';
 
-const NsightAdminDashboard = ({ userData }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  // Force refresh to clear cache - fixed JSX icon usage
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
-  const [isCreateAppModalOpen, setIsCreateAppModalOpen] = useState(false);
-  const [isAddExistingAppModalOpen, setIsAddExistingAppModalOpen] = useState(false);
-  const [companies, setCompanies] = useState([]);
-  const [apps, setApps] = useState([]);
-  const [allAvailableApps, setAllAvailableApps] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingApps, setIsLoadingApps] = useState(false);
-  const [isLoadingAvailableApps, setIsLoadingAvailableApps] = useState(false);
-  const [error, setError] = useState(null);
-  const [currentView, setCurrentView] = useState('company'); // 'company', 'apps'
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deletingCompanyId, setDeletingCompanyId] = useState(null);
-  
-  // Hover animation state
-  const [hoveredCard, setHoveredCard] = useState(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const cardRefs = useRef({});
-
-  // Get current mode from URL query parameters
-  const searchParams = new URLSearchParams(location.search);
-  const currentMode = searchParams.get('mode');
-
-  // Mouse move handler for hover animation
-  const handleMouseMove = (e, cardId) => {
-    if (!cardRefs.current[cardId]) return;
-    
-    const rect = cardRefs.current[cardId].getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    setMousePosition({ x, y });
-  };
-
-  const availableApps = [
+// Move constants outside component to avoid recreating on each render
+const AVAILABLE_APPS = [
     { 
       id: 'formulas', 
       name: 'Formulas', 
@@ -102,435 +62,226 @@ const NsightAdminDashboard = ({ userData }) => {
     { 
       id: 'raw-materials', 
       name: 'Raw Materials', 
-      icon: Zap, 
-      description: 'Raw material inventory management',
+    icon: FlaskConical, 
+    description: 'Raw material inventory tracking',
       color: '#F59E0B',
       schema: {
         fields: [
           { name: 'id', type: 'bigint', label: 'ID', required: true },
           { name: 'material_name', type: 'text', label: 'Material Name', required: true },
-          { name: 'supplier_id', type: 'bigint', label: 'Supplier ID', required: true },
-          { name: 'quantity', type: 'decimal', label: 'Quantity', required: true },
-          { name: 'unit', type: 'text', label: 'Unit', required: true },
-          { name: 'price_per_unit', type: 'decimal', label: 'Price per Unit', required: false },
-          { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
-        ]
-      }
-    },
-    { 
-      id: 'analytics', 
-      name: 'Analytics', 
-      icon: Settings, 
-      description: 'Data analytics and reporting dashboard',
-      color: '#8B5CF6',
-      schema: {
-        fields: [
-          { name: 'id', type: 'bigint', label: 'ID', required: true },
-          { name: 'report_name', type: 'text', label: 'Report Name', required: true },
-          { name: 'report_type', type: 'text', label: 'Report Type', required: true },
-          { name: 'data_source', type: 'text', label: 'Data Source', required: true },
-          { name: 'created_by', type: 'text', label: 'Created By', required: true },
+        { name: 'supplier_name', type: 'text', label: 'Supplier Name', required: false },
+        { name: 'cas_number', type: 'text', label: 'CAS Number', required: false },
+        { name: 'quantity', type: 'decimal', label: 'Quantity', required: false },
+        { name: 'unit', type: 'text', label: 'Unit', required: false },
+        { name: 'cost', type: 'decimal', label: 'Cost', required: false },
           { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
         ]
       }
     }
   ];
 
-  // Fetch companies from backend API
+const NsightAdminDashboard = ({ userData }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // State management
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
+  const [isCreateAppModalOpen, setIsCreateAppModalOpen] = useState(false);
+  const [isAddExistingAppModalOpen, setIsAddExistingAppModalOpen] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [apps, setApps] = useState([]);
+  const [allAvailableApps, setAllAvailableApps] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingApps, setIsLoadingApps] = useState(false);
+  const [isLoadingAvailableApps, setIsLoadingAvailableApps] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentView, setCurrentView] = useState('company');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingCompanyId, setDeletingCompanyId] = useState(null);
+  
+  // Hover animation state
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const cardRefs = useRef({});
+
+  // Get current mode from URL
+  const searchParams = new URLSearchParams(location.search);
+  const currentMode = searchParams.get('mode');
+
+  // Extracted utility functions
+  const handleMouseMove = (e, cardId) => {
+    if (!cardRefs.current[cardId]) return;
+    
+    const rect = cardRefs.current[cardId].getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setMousePosition({ x, y });
+  };
+
+  const getIconString = (iconComponent) => {
+    const iconMap = {
+      [Database]: 'Database',
+      [Building2]: 'Building2',
+      [FlaskConical]: 'FlaskConical'
+    };
+    return iconMap[iconComponent] || 'Database';
+  };
+
+  // API functions
   const fetchCompanies = async () => {
-    try {
       setIsLoading(true);
       setError(null);
       
+    try {
       const response = await fetch('/api/admin/companies');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
       const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch companies');
-      }
-      
-      if (data.success) {
-        setCompanies(data.companies);
-        console.log('✅ Loaded companies from database:', data.companies.length);
-      } else {
-        throw new Error('Invalid API response');
-      }
+      setCompanies(data.companies || []);
     } catch (error) {
-      console.error('❌ Failed to fetch companies:', error);
-      setError(error.message);
-      // Fallback to sample data if API fails
-      setCompanies([
-        { id: 'sample-1', name: 'Capacity Chemical', users: 12, apps: ['Formulas', 'Suppliers', 'Raw Materials'] },
-        { id: 'sample-2', name: 'Industrial Solutions Inc', users: 8, apps: ['Formulas', 'Suppliers'] }
-      ]);
+      console.error('Error fetching companies:', error);
+      setError('Failed to load companies');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load companies on component mount
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  // Fetch apps when company is selected in existing mode
-  useEffect(() => {
-    if (selectedCompany && currentView === 'existing') {
-      fetchApps();
-    }
-  }, [selectedCompany, currentView]);
-
-  // Handle company sync
   const handleSyncCompanies = async () => {
-    try {
       setIsSyncing(true);
-      setSyncStatus(null);
-      
-      console.log('🔄 Starting company sync...');
-      
-      const response = await fetch('http://localhost:3001/api/admin/company-sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to sync companies');
-      }
-      
-      if (data.success) {
-        console.log('✅ Company sync completed:', data.results);
-        setSyncStatus(data.results);
-        
-        // Show success message
-        const { created, linked, errors } = data.results;
-        const message = `Sync completed: ${created} users created, ${linked} companies linked, ${errors} errors`;
-        alert(message);
-        
-        // Refresh companies list to show updated data
+    try {
+      const response = await fetch('/api/admin/company-sync', { method: 'POST' });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const result = await response.json();
+      setSyncStatus(result);
         await fetchCompanies();
-      } else {
-        throw new Error('Invalid API response');
-      }
     } catch (error) {
-      console.error('❌ Failed to sync companies:', error);
-      alert(`Failed to sync companies: ${error.message}`);
+      console.error('Error syncing companies:', error);
+      setSyncStatus({ error: 'Failed to sync companies' });
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Reset selected company when mode changes
-  useEffect(() => {
-    setSelectedCompany(null);
-    setCurrentView('company');
-  }, [currentMode]);
-
-  // Fetch apps when a company is selected
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchApps();
-    }
-  }, [selectedCompany]);
-
-  // Fetch apps for the selected company
   const fetchApps = async () => {
-    try {
+    if (!selectedCompany) return;
       setIsLoadingApps(true);
-      const response = await fetch(`/api/admin/apps?company_id=${selectedCompany.id}`);
+    
+    try {
+      const response = await fetch(`/api/admin/companies?id=${selectedCompany.id}&action=get-apps`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
       const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch apps');
-      }
-      
-      if (data.success) {
-        setApps(data.apps);
-        console.log('✅ Loaded apps for company:', selectedCompany.name, data.apps.length);
-      } else {
-        throw new Error('Invalid API response');
-      }
+      setApps(data.apps || []);
     } catch (error) {
-      console.error('❌ Failed to fetch apps:', error);
-      // Don't fallback to sample data, just show empty state
+      console.error('Error fetching apps:', error);
       setApps([]);
     } finally {
       setIsLoadingApps(false);
     }
   };
 
-
-
-  // Fetch all available apps from all companies for the "Add Existing App" modal
   const fetchAllAvailableApps = async () => {
-    try {
       setIsLoadingAvailableApps(true);
-      const response = await fetch('/api/admin/apps'); // Get all apps
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch available apps');
-      }
-      
-      if (data.success) {
-        // Helper function to convert icon string to component
-        const getIconComponent = (iconString) => {
-          switch(iconString) {
-            case 'Database': return Database;
-            case 'Building2': return Building2;
-            case 'Settings': return Settings;
-            case 'Table': return Table;
-            case 'Users': return Users;
-            case 'Zap': return Zap;
-            default: return Database;
-          }
-        };
-
-        // Combine predefined templates with existing apps from other companies
-        const existingApps = data.apps
-          .filter(app => {
-            // If the payload doesn't include company info, include it (can't match current company)
-            if (!app.company) return true;
-            return app.company.id !== selectedCompany?.id;
-          })
-          .map(app => ({
-            id: `existing-${app.id}`,
-            name: app.appName,
-            description: app.appDescription,
-            icon: getIconComponent(app.appIcon),
-            color: app.appColor,
-            schema: app.schema,
-            uiConfig: app.uiConfig,
-            permissions: app.permissionsConfig,
-            isTemplate: false,
-            originalApp: app
-          }));
-
-        // Combine with predefined templates
-        const templates = availableApps.map(template => ({
+    
+    try {
+      const templates = AVAILABLE_APPS.map(template => ({
           ...template,
+        // Keep the original React component for rendering
+        icon: template.icon,
           isTemplate: true
         }));
 
-        setAllAvailableApps([...templates, ...existingApps]);
-        console.log('✅ Loaded available apps:', templates.length + existingApps.length);
-      } else {
-        throw new Error('Invalid API response');
-      }
+      setAllAvailableApps(templates);
     } catch (error) {
-      console.error('❌ Failed to fetch available apps:', error);
-      // Fallback to just templates
-      setAllAvailableApps(availableApps.map(template => ({ ...template, isTemplate: true })));
+      console.error('Error fetching available apps:', error);
+      setAllAvailableApps([]);
     } finally {
       setIsLoadingAvailableApps(false);
     }
   };
 
-  // Helper function to convert icon component to string
-  const getIconString = (iconComponent) => {
-    if (iconComponent === Database) return 'Database';
-    if (iconComponent === Building2) return 'Building2';
-    if (iconComponent === Zap) return 'Zap';
-    if (iconComponent === Settings) return 'Settings';
-    if (iconComponent === Table) return 'Table';
-    if (iconComponent === Users) return 'Users';
-    return 'Database'; // Default fallback
-  };
-
-  // Handle deleting an app
   const handleDeleteApp = async (appId, appName) => {
-    if (!confirm(`Are you sure you want to delete the app "${appName}"? This action cannot be undone.`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to delete "${appName}"?`)) return;
 
     try {
-      console.log('🗑️ Deleting app:', appName);
-      
-      const response = await fetch(`/api/admin/apps?id=${appId}`, {
+      const response = await fetch(`/api/admin/companies?action=delete-app`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId, appName })
       });
-
-      const result = await response.json();
       
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to delete app');
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      if (result.success) {
-        console.log('✅ Successfully deleted app:', appName);
-        // Refresh the apps list
-        fetchApps();
-      } else {
-        throw new Error('Invalid API response');
-      }
+      await fetchApps(); // Refresh apps list
     } catch (error) {
-      console.error('❌ Failed to delete app:', error);
-      alert(`Failed to delete app: ${error.message}`);
+      console.error('Error deleting app:', error);
+      alert('Failed to delete app');
     }
   };
 
-  // Handle adding existing app template to company
   const handleAddExistingApp = async (appTemplate) => {
+    if (!selectedCompany) return;
+
     try {
-      console.log('📱 Adding existing app template:', appTemplate.name);
-      
-      const appData = {
+      const response = await fetch('/api/admin/companies?action=create-app', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
         companyId: selectedCompany.id,
         appName: appTemplate.name,
+          appType: appTemplate.id,
         appDescription: appTemplate.description,
-        appIcon: getIconString(appTemplate.icon),
-        appColor: appTemplate.color || '#3B82F6',
-        appType: appTemplate.id, // Add the missing appType field
-        tableName: (appTemplate.isTemplate ? appTemplate.id : appTemplate.originalApp?.tableName || appTemplate.id) + '_data',
-        schema: appTemplate.schema || {
-          fields: [
-            { name: 'id', type: 'bigint', label: 'ID', required: true },
-            { name: 'name', type: 'text', label: 'Name', required: true },
-            { name: 'created_at', type: 'timestamp', label: 'Created At', required: true }
-          ]
-        },
-        uiConfig: appTemplate.uiConfig || {
-          primaryColor: appTemplate.color || '#3B82F6',
-          theme: 'dark',
-          layout: 'table'
-        },
-        permissions: appTemplate.permissions || {
-          canView: ['all'],
-          canEdit: ['admin'],
-          canDelete: ['admin']
-        }
-      };
-
-      const response = await fetch('/api/admin/apps', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(appData)
+          appIcon: appTemplate.icon,
+          appColor: appTemplate.color,
+          schema: appTemplate.schema
+        })
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to add app');
-      }
-      
-      if (result.success) {
-        console.log('✅ Successfully added existing app:', result.app.appName);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
         setIsAddExistingAppModalOpen(false);
-        // Refresh the apps list
-        fetchApps();
-      } else {
-        throw new Error('Invalid API response');
-      }
+      await fetchApps();
     } catch (error) {
-      console.error('❌ Failed to add existing app:', error);
-      alert(`Failed to add app: ${error.message}`);
+      console.error('Error adding app:', error);
+      alert('Failed to add app');
     }
   };
 
-
-
-  const handleModeSelection = (mode) => {
-    navigate(`/dashboard?mode=${mode}`);
-  };
-
-  const handleBackToModeSelection = () => {
-    navigate('/dashboard');
-  };
-
+  // Event handlers  
+  const handleModeSelection = (mode) => navigate(`/dashboard?mode=${mode}`);
+  const handleBackToModeSelection = () => navigate('/dashboard');
   const handleCompanySelection = (company) => {
-    // Toggle selection: if same company is clicked, deselect it
     if (selectedCompany?.id === company.id) {
       setSelectedCompany(null);
       setApps([]);
-      setCurrentView('company');
     } else {
       setSelectedCompany(company);
-      setCurrentView('existing');
     }
   };
-
-  const handleViewApps = () => {
-    setCurrentView('apps');
-  };
-
-  const handleCreateCompany = async (newCompany) => {
-    try {
-      console.log('🏢 Creating company via API:', newCompany.companyName);
-      
-      const response = await fetch('/api/admin/companies', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newCompany)
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create company');
-      }
-      
-      if (data.success) {
-        console.log('✅ Company created successfully:', data.company.company_name);
-        
-        // Refresh the companies list from the database
-        await fetchCompanies();
-        
-        // Show success message (you can enhance this with a toast notification)
-        alert(`Company "${data.company.company_name}" created successfully!`);
-      } else {
-        throw new Error('Invalid API response');
-      }
-    } catch (error) {
-      console.error('❌ Failed to create company:', error);
-      alert(`Failed to create company: ${error.message}`);
-    }
-  };
-
+  const handleViewApps = () => setCurrentView('apps');
   const handleDeleteCompany = async (companyId, companyName) => {
-    if (!confirm(`Are you sure you want to delete "${companyName}"? This will permanently delete the company and all its users and data.`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to delete "${companyName}"? This will permanently delete the company and all its users and data.`)) return;
 
     try {
       setIsDeleting(true);
       setDeletingCompanyId(companyId);
-      console.log('🗑️ Deleting company:', companyId);
-
+      
       const response = await fetch(`/api/admin/companies?id=${companyId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
 
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete company');
-      }
-
       if (data.success) {
-        console.log('✅ Company deleted successfully:', companyName);
         alert(`Company "${companyName}" deleted successfully! ${data.deletedUsers} users were also deleted.`);
-        
-        // Refresh the companies list
-        if (currentMode === 'multi-tenant') {
-          fetchMultiTenantCompanies();
-        } else {
-          fetchCompanies();
-        }
-        
-        // Clear selected company if it was deleted
+        await fetchCompanies();
         if (selectedCompany?.id === companyId) {
           setSelectedCompany(null);
         }
@@ -538,44 +289,125 @@ const NsightAdminDashboard = ({ userData }) => {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to delete company:', error);
+      console.error('Error deleting company:', error);
       alert(`Failed to delete company: ${error.message}`);
     } finally {
       setIsDeleting(false);
       setDeletingCompanyId(null);
     }
   };
-
-  const handleCreateApp = async (newApp) => {
+  const handleCreateCompany = async (companyData) => {
     try {
-      console.log('📱 Creating app via API:', newApp.appName);
-      
-      const response = await fetch('/api/admin/apps', {
+      const response = await fetch('/api/admin/companies', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newApp)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(companyData)
       });
       
-      const data = await response.json();
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create app');
-      }
-      
-      if (data.success) {
-        console.log('✅ App created successfully:', data.app.appName);
-        alert(`App "${data.app.appName}" created successfully!`);
-      } else {
-        throw new Error('Invalid API response');
-      }
-      
+        await fetchCompanies();
+      setIsCreateCompanyModalOpen(false);
     } catch (error) {
-      console.error('❌ Failed to create app:', error);
-      alert(`Failed to create app: ${error.message}`);
+      console.error('Error creating company:', error);
+      throw error;
     }
   };
+
+  const handleCreateApp = async (appData) => {
+    try {
+      const response = await fetch('/api/admin/companies?action=create-app', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appData)
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      await fetchApps();
+      setIsCreateAppModalOpen(false);
+    } catch (error) {
+      console.error('Error creating app:', error);
+      throw error;
+    }
+  };
+
+  // Effects
+  useEffect(() => {
+    if (currentMode) {
+      fetchCompanies();
+    }
+  }, [currentMode]);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchApps();
+    }
+  }, [selectedCompany]);
+
+  useEffect(() => {
+    if (isAddExistingAppModalOpen) {
+      fetchAllAvailableApps();
+    }
+  }, [isAddExistingAppModalOpen]);
+
+  // Render helper functions
+  const renderModeCard = (mode, icon, title, description, color, features) => (
+    <div
+      key={mode}
+      ref={(el) => (cardRefs.current[mode] = el)}
+      onMouseEnter={() => setHoveredCard(mode)}
+          onMouseLeave={() => {
+            setHoveredCard(null);
+        setMousePosition({ x: 50, y: 50 });
+          }}
+      onMouseMove={(e) => handleMouseMove(e, mode)}
+          className="relative cursor-pointer"
+          style={{
+        transform: hoveredCard === mode ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
+        transformOrigin: hoveredCard === mode ? `${mousePosition.x}% ${mousePosition.y}%` : 'center center',
+        transition: hoveredCard === mode ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+          }}
+      onClick={() => handleModeSelection(mode)}
+        >
+      <Card className={`p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent hover:border-${color}-500`}>
+        {hoveredCard === mode && (
+              <div 
+                className="absolute inset-0 opacity-20 -z-0"
+                style={{
+              background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, ${color === 'blue' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(34, 197, 94, 0.3)'}, transparent 70%)`
+                }}
+              />
+            )}
+            <div className="text-center space-y-4 relative z-10">
+              <div 
+            className={`w-16 h-16 bg-${color}-600 rounded-full flex items-center justify-center mx-auto transition-all duration-300`}
+                style={{
+              transform: hoveredCard === mode ? 'scale(1.1)' : 'scale(1)',
+              transition: hoveredCard === mode ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                }}
+              >
+            {React.createElement(icon, { className: "h-8 w-8 text-white" })}
+              </div>
+          <h3 className="text-xl font-semibold text-slate-100">{title}</h3>
+          <p className="text-slate-400 text-sm">{description}</p>
+              <div className="pt-4 space-y-2 text-xs text-slate-500">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center justify-center space-x-2 transition-transform duration-300"
+                  style={{
+                  transform: hoveredCard === mode ? 'scale(1.05)' : 'scale(1)',
+                  transition: hoveredCard === mode ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
+                  }}
+                >
+                {React.createElement(feature.icon, { className: "h-3 w-3" })}
+                <span>{feature.text}</span>
+                </div>
+            ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+  );
 
   const renderModeSelection = () => (
     <div className="space-y-8">
@@ -586,140 +418,16 @@ const NsightAdminDashboard = ({ userData }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         {/* Developer Mode */}
-        <div
-          ref={(el) => (cardRefs.current['developer'] = el)}
-          onMouseEnter={() => setHoveredCard('developer')}
-          onMouseLeave={() => {
-            setHoveredCard(null);
-            setMousePosition({ x: 50, y: 50 }); // Reset to center
-          }}
-          onMouseMove={(e) => handleMouseMove(e, 'developer')}
-          className="relative cursor-pointer"
-          style={{
-            transform: hoveredCard === 'developer' ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
-            transformOrigin: hoveredCard === 'developer' 
-              ? `${mousePosition.x}% ${mousePosition.y}%` 
-              : 'center center',
-            transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-          }}
-          onClick={() => handleModeSelection('developer')}
-        >
-          <Card className="p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent hover:border-blue-500">
-            {hoveredCard === 'developer' && (
-              <div 
-                className="absolute inset-0 opacity-20 -z-0"
-                style={{
-                  background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(59, 130, 246, 0.3), transparent 70%)`
-                }}
-              />
-            )}
-            <div className="text-center space-y-4 relative z-10">
-              <div 
-                className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto transition-all duration-300"
-                style={{
-                  transform: hoveredCard === 'developer' ? 'scale(1.1)' : 'scale(1)',
-                  transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                }}
-              >
-                {React.createElement(Code, { className: "h-8 w-8 text-white" })}
-              </div>
-              <h3 className="text-xl font-semibold text-slate-100">Developer Mode</h3>
-              <p className="text-slate-400 text-sm">
-                Create new companies and develop custom applications for clients
-              </p>
-              <div className="pt-4 space-y-2 text-xs text-slate-500">
-                <div 
-                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
-                  style={{
-                    transform: hoveredCard === 'developer' ? 'scale(1.05)' : 'scale(1)',
-                    transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                  }}
-                >
-                                        {React.createElement(Plus, { className: "h-3 w-3" })}
-                  <span>Create New Company</span>
-                </div>
-                <div 
-                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
-                  style={{
-                    transform: hoveredCard === 'developer' ? 'scale(1.05)' : 'scale(1)',
-                    transition: hoveredCard === 'developer' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                  }}
-                >
-                                        {React.createElement(Database, { className: "h-3 w-3" })}
-                  <span>Create Apps</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
+        {renderModeCard('developer', Code, 'Developer Mode', 'Create new companies and develop custom applications for clients', 'blue', [
+          { icon: Plus, text: 'Create New Company' },
+          { icon: Database, text: 'Create Apps' }
+        ])}
 
         {/* Existing Company Mode */}
-        <div
-          ref={(el) => (cardRefs.current['existing'] = el)}
-          onMouseEnter={() => setHoveredCard('existing')}
-          onMouseLeave={() => {
-            setHoveredCard(null);
-            setMousePosition({ x: 50, y: 50 }); // Reset to center
-          }}
-          onMouseMove={(e) => handleMouseMove(e, 'existing')}
-          className="relative cursor-pointer"
-          style={{
-            transform: hoveredCard === 'existing' ? 'scale(1.05) translateY(-4px)' : 'scale(1)',
-            transformOrigin: hoveredCard === 'existing' 
-              ? `${mousePosition.x}% ${mousePosition.y}%` 
-              : 'center center',
-            transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-          }}
-          onClick={() => handleModeSelection('existing')}
-        >
-          <Card className="p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent hover:border-green-500">
-            {hoveredCard === 'existing' && (
-              <div 
-                className="absolute inset-0 opacity-20 -z-0"
-                style={{
-                  background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(34, 197, 94, 0.3), transparent 70%)`
-                }}
-              />
-            )}
-            <div className="text-center space-y-4 relative z-10">
-              <div 
-                className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto transition-all duration-300"
-                style={{
-                  transform: hoveredCard === 'existing' ? 'scale(1.1)' : 'scale(1)',
-                  transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                }}
-              >
-                {React.createElement(Building2, { className: "h-8 w-8 text-white" })}
-              </div>
-              <h3 className="text-xl font-semibold text-slate-100">Existing Company Mode</h3>
-              <p className="text-slate-400 text-sm">
-                Manage existing companies, users, and applications
-              </p>
-              <div className="pt-4 space-y-2 text-xs text-slate-500">
-                <div 
-                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
-                  style={{
-                    transform: hoveredCard === 'existing' ? 'scale(1.05)' : 'scale(1)',
-                    transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                  }}
-                >
-                                        {React.createElement(Users, { className: "h-3 w-3" })}
-                  <span>Manage Users</span>
-                </div>
-                <div 
-                  className="flex items-center justify-center space-x-2 transition-transform duration-300"
-                  style={{
-                    transform: hoveredCard === 'existing' ? 'scale(1.05)' : 'scale(1)',
-                    transition: hoveredCard === 'existing' ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                  }}
-                >
-                                        {React.createElement(Edit3, { className: "h-3 w-3" })}
-                  <span>Edit/Add Apps</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
+        {renderModeCard('existing', Building2, 'Existing Company Mode', 'Manage existing companies, users, and applications', 'green', [
+          { icon: Users, text: 'Manage Users' },
+          { icon: Edit3, text: 'Edit/Add Apps' }
+        ])}
       </div>
     </div>
   );
@@ -783,7 +491,7 @@ const NsightAdminDashboard = ({ userData }) => {
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-slate-100 mb-4">Available App Templates</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {availableApps.map((app) => {
+          {AVAILABLE_APPS.map((app) => {
             const IconComponent = app.icon;
             return (
               <div key={app.id} className="p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors">

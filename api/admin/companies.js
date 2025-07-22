@@ -31,12 +31,19 @@ export default async function handler(req, res) {
     }
 
     // Route based on URL path and method
-    const { id } = req.query;
+    const { id, action } = req.query;
+    console.log('🔍 Request params:', { id, action, method: req.method });
     
     if (id) {
       // Operations on specific company: /api/admin/companies?id=123
       switch (req.method) {
         case 'GET':
+          // Handle specific actions
+          if (action === 'get-apps') {
+            console.log('🎯 Routing to getCompanyApps');
+            return await getCompanyApps(req, res, id);
+          }
+          console.log('🎯 Routing to getCompany');
           return await getCompany(req, res, id);
         case 'PUT':
           return await updateCompany(req, res, id);
@@ -51,6 +58,17 @@ export default async function handler(req, res) {
         case 'GET':
           return await listCompanies(req, res);
         case 'POST':
+          // Handle repair action
+          console.log('🔍 POST action check:', action);
+          if (action === 'repair-user-links') {
+            console.log('🎯 Routing to repairUserLinks');
+            return await repairUserLinks(req, res);
+          }
+          if (action === 'fix-user-profile') {
+            console.log('🎯 Routing to fixUserProfile');
+            return await fixUserProfile(req, res);
+          }
+          console.log('🎯 Routing to createCompany');
           return await createCompany(req, res);
         default:
           return res.status(405).json({ error: 'Method not allowed' });
@@ -238,17 +256,21 @@ async function createCompany(req, res) {
 
         if (profileError) {
           console.error(`❌ Failed to create profile for ${companyData.adminUserEmail}:`, profileError);
-          // Continue without admin user - can be created later via sync
+          // Don't continue silently - this is critical
+          throw new Error(`Profile creation failed: ${profileError.message}`);
         } else {
           console.log(`✅ Created new admin user: ${companyData.adminUserEmail}`);
           adminUser = profileData;
           adminCreated = true;
+          console.log(`🎯 Admin user set:`, { id: adminUser.id, email: adminUser.email });
         }
       }
     }
 
-    // Link admin user to company
+    // Link admin user to company - THIS IS CRITICAL!
     if (adminUser) {
+      console.log(`🔗 Attempting to link user ${adminUser.id} to company ${newCompany.id}`);
+      
       const { error: linkError } = await supabaseAdmin
         .from('company_users')
         .upsert([{
@@ -263,10 +285,23 @@ async function createCompany(req, res) {
         });
 
       if (linkError) {
-        console.error(`❌ Failed to link admin user to company ${companyData.companyName}:`, linkError);
+        console.error(`❌ CRITICAL: Failed to link admin user to company ${companyData.companyName}:`, linkError);
+        // This should not fail silently - it's a critical error
+        return res.status(500).json({
+          error: 'Company created but failed to link admin user',
+          details: `Please run repair function for ${companyData.adminUserEmail}`,
+          linkError: linkError.message
+        });
       } else {
         console.log(`✅ Successfully linked ${companyData.adminUserEmail} to ${companyData.companyName}`);
       }
+    } else {
+      console.error(`❌ CRITICAL: No admin user found to link to company ${companyData.companyName}`);
+      // This is also critical - every company needs an admin user
+      return res.status(500).json({
+        error: 'Company created but no admin user available',
+        details: `Admin user creation failed for ${companyData.adminUserEmail}`
+      });
     }
   } catch (error) {
     console.error('❌ Error creating admin user:', error);
@@ -524,6 +559,95 @@ async function getCompany(req, res, companyId) {
   return res.status(200).json({
     success: true,
     company: transformedCompany
+  });
+}
+
+// Helper functions for app metadata
+function getAppDescription(appId) {
+  const descriptions = {
+    'formulas': 'Chemical formula management system',
+    'suppliers': 'Supplier relationship management', 
+    'raw-materials': 'Raw material inventory management',
+    'products': 'Product catalog management',
+    'quality-control': 'Quality control and testing',
+    'production': 'Production planning and tracking',
+    'inventory': 'Inventory management system',
+    'reports': 'Reporting and analytics dashboard'
+  };
+  return descriptions[appId] || 'Application management system';
+}
+
+function getAppIcon(appId) {
+  const icons = {
+    'formulas': 'Database',
+    'suppliers': 'Building2',
+    'raw-materials': 'FlaskConical', 
+    'products': 'Table',
+    'quality-control': 'Settings',
+    'production': 'Zap',
+    'inventory': 'Database',
+    'reports': 'Table'
+  };
+  return icons[appId] || 'Database';
+}
+
+function getAppColor(appId) {
+  const colors = {
+    'formulas': '#10B981',
+    'suppliers': '#3B82F6',
+    'raw-materials': '#F59E0B',
+    'products': '#8B5CF6',
+    'quality-control': '#EF4444',
+    'production': '#06B6D4',
+    'inventory': '#84CC16',
+    'reports': '#F97316'
+  };
+  return colors[appId] || '#6B7280';
+}
+
+// GET /api/admin/companies?id=123&action=get-apps - Get company apps
+async function getCompanyApps(req, res, companyId) {
+  console.log('📱 GETCOMPANYAPPS FUNCTION CALLED! Fetching apps for company:', companyId);
+
+  const { data: apps, error } = await supabaseAdmin
+    .from('company_apps')
+    .select(`
+      app_id,
+      app_name,
+      enabled,
+      configuration
+    `)
+    .eq('company_id', companyId)
+    .eq('enabled', true);
+
+  if (error) {
+    console.error('❌ Failed to fetch company apps:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch company apps',
+      details: error.message 
+    });
+  }
+
+  // Transform data to match frontend expectations
+  const transformedApps = (apps || []).map(app => ({
+    id: app.app_id,
+    appId: app.app_id,
+    appName: app.app_name,
+    appDescription: getAppDescription(app.app_id),
+    appIcon: getAppIcon(app.app_id),
+    appColor: getAppColor(app.app_id),
+    status: app.enabled ? 'Active' : 'Inactive',
+    recordCount: 0, // TODO: Get actual record count
+    userCount: 0,   // TODO: Get actual user count
+    enabled: app.enabled,
+    configuration: app.configuration
+  }));
+
+  console.log('✅ Company apps fetched successfully:', transformedApps.length, 'apps');
+
+  return res.status(200).json({
+    success: true,
+    apps: transformedApps
   });
 }
 
@@ -802,44 +926,270 @@ function getAppName(appId) {
     'compliance': 'Compliance',
     'quality': 'Quality Control'
   };
-  return appNames[appId] || appId;
+    return appNames[appId] || appId;
 }
 
-// Helper function to get app description
-function getAppDescription(appId) {
-  const descriptions = {
-    'formulas': 'Chemical formula management system',
-    'raw-materials': 'Raw material inventory management',
-    'suppliers': 'Supplier relationship management',
-    'analytics': 'Data analytics and reporting',
-    'compliance': 'Regulatory compliance tracking',
-    'quality': 'Quality control and testing'
-  };
-  return descriptions[appId] || '';
+// POST /api/admin/companies?action=repair-user-links - Fix missing company-user links
+async function repairUserLinks(req, res) {
+  console.log('🔧 Repairing missing company-user links...');
+  
+  try {
+    // Get all companies
+    const { data: companies, error: companiesError } = await supabaseAdmin
+      .from('companies')
+      .select('id, company_name, admin_user_email');
+    
+    if (companiesError) {
+      throw companiesError;
+    }
+    
+    let repairedCount = 0;
+    const repairs = [];
+    
+    for (const company of companies) {
+      if (!company.admin_user_email) continue;
+      
+      // Find user by email
+      let { data: userProfile, error: userError } = await supabaseAdmin
+        .from('user_profiles')
+        .select('id, email, first_name, last_name')
+        .eq('email', company.admin_user_email)
+        .single();
+      
+      if (userError || !userProfile) {
+        console.log(`⚠️ User profile not found for ${company.admin_user_email}, checking auth...`);
+        
+        // Check if user exists in auth but missing profile
+        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) {
+          console.error('❌ Failed to list auth users:', listError);
+          continue;
+        }
+        
+        const authUser = users.find(user => user.email === company.admin_user_email);
+        if (authUser) {
+          console.log(`🆕 Creating missing profile for ${company.admin_user_email}`);
+          
+          // Create missing user profile
+          const { data: newProfile, error: createError } = await supabaseAdmin
+            .from('user_profiles')
+            .insert({
+              id: authUser.id,
+              email: company.admin_user_email,
+              first_name: authUser.user_metadata?.first_name || company.admin_user_email.split('@')[0],
+              last_name: authUser.user_metadata?.last_name || '',
+              role: 'Capacity Admin',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error(`❌ Failed to create profile for ${company.admin_user_email}:`, createError);
+            continue;
+          }
+          
+          console.log(`✅ Created profile for ${company.admin_user_email}`);
+          userProfile = newProfile;
+        } else {
+          console.log(`❌ User not found in auth for ${company.admin_user_email}`);
+          continue;
+        }
+      }
+      
+      // Check if company_users link exists
+      const { data: existingLink, error: linkError } = await supabaseAdmin
+        .from('company_users')
+        .select('id')
+        .eq('company_id', company.id)
+        .eq('user_id', userProfile.id)
+        .single();
+      
+      if (existingLink) {
+        console.log(`✅ Link already exists for ${company.admin_user_email} -> ${company.company_name}`);
+        continue;
+      }
+      
+      // Create missing link
+      const { error: insertError } = await supabaseAdmin
+        .from('company_users')
+        .insert({
+          company_id: company.id,
+          user_id: userProfile.id,
+          role: 'Admin',
+          status: 'Active',
+          added_at: new Date().toISOString()
+        });
+      
+      if (insertError) {
+        console.error(`❌ Failed to link ${company.admin_user_email} to ${company.company_name}:`, insertError);
+      } else {
+        console.log(`✅ Successfully linked ${company.admin_user_email} to ${company.company_name}`);
+        repairedCount++;
+        repairs.push({
+          company: company.company_name,
+          user: company.admin_user_email,
+          userId: userProfile.id
+        });
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: `Repaired ${repairedCount} missing company-user links`,
+      repairedCount,
+      repairs
+    });
+    
+  } catch (error) {
+    console.error('❌ Error repairing company-user links:', error);
+    return res.status(500).json({
+      error: 'Failed to repair company-user links',
+      details: error.message
+    });
+  }
 }
 
-// Helper function to get app icon
-function getAppIcon(appId) {
-  const icons = {
-    'formulas': 'Database',
-    'raw-materials': 'Zap',
-    'suppliers': 'Users',
-    'analytics': 'Settings',
-    'compliance': 'Shield',
-    'quality': 'CheckCircle'
-  };
-  return icons[appId] || 'Database';
+// POST /api/admin/companies?action=fix-user-profile - Fix specific user profile by user ID
+async function fixUserProfile(req, res) {
+  console.log('🔧 Fixing specific user profile...');
+  
+  try {
+    const { userId, email } = req.body;
+    
+    if (!userId && !email) {
+      return res.status(400).json({
+        error: 'Either userId or email is required'
+      });
+    }
+    
+    console.log('🎯 Fixing user profile for:', { userId, email });
+    
+    let targetUserId = userId;
+    let targetEmail = email;
+    
+    // If we have email but no userId, find the userId from auth
+    if (email && !userId) {
+      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        throw new Error(`Failed to list auth users: ${listError.message}`);
+      }
+      
+      const authUser = users.find(user => user.email === email);
+      if (!authUser) {
+        return res.status(404).json({
+          error: `User with email ${email} not found in auth system`
+        });
+      }
+      
+      targetUserId = authUser.id;
+      targetEmail = authUser.email;
+    }
+    
+    // If we have userId but no email, get email from auth
+    if (userId && !email) {
+      const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (userError || !authUser.user) {
+        return res.status(404).json({
+          error: `User with ID ${userId} not found in auth system`
+        });
+      }
+      
+      targetEmail = authUser.user.email;
+    }
+    
+    console.log('🔍 Target user identified:', { id: targetUserId, email: targetEmail });
+    
+    // Check if user profile already exists
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('*')
+      .eq('id', targetUserId)
+      .single();
+    
+    if (existingProfile) {
+      console.log('✅ User profile already exists:', existingProfile.email);
+      return res.status(200).json({
+        success: true,
+        message: 'User profile already exists',
+        profile: existingProfile
+      });
+    }
+    
+    // Get user details from auth
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+    if (authError || !authUser.user) {
+      throw new Error(`Failed to get user from auth: ${authError?.message || 'User not found'}`);
+    }
+    
+    // Create the missing user profile
+    const { data: newProfile, error: createError } = await supabaseAdmin
+      .from('user_profiles')
+      .insert({
+        id: targetUserId,
+        email: targetEmail,
+        first_name: authUser.user.user_metadata?.first_name || targetEmail.split('@')[0],
+        last_name: authUser.user.user_metadata?.last_name || '',
+        role: authUser.user.user_metadata?.role || 'Capacity Admin',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (createError) {
+      throw new Error(`Failed to create user profile: ${createError.message}`);
+    }
+    
+    console.log('✅ User profile created successfully:', newProfile.email);
+    
+    // Try to auto-link to company if this user is a company admin
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/companies');
+      if (response.ok) {
+        const { companies } = await response.json();
+        const matchingCompany = companies.find(company => 
+          company.adminUserEmail === targetEmail
+        );
+        
+        if (matchingCompany) {
+          console.log(`🔗 Auto-linking to company: ${matchingCompany.name}`);
+          
+          const { error: linkError } = await supabaseAdmin
+            .from('company_users')
+            .upsert({
+              company_id: matchingCompany.id,
+              user_id: targetUserId,
+              role: 'Admin',
+              status: 'Active',
+              added_at: new Date().toISOString()
+            }, {
+              onConflict: 'company_id,user_id'
+            });
+          
+          if (!linkError) {
+            console.log(`✅ Auto-linked to ${matchingCompany.name}`);
+          }
+        }
+      }
+    } catch (linkingError) {
+      console.log('⚠️ Auto-linking failed but profile created successfully');
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'User profile created and linked successfully',
+      profile: newProfile
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fixing user profile:', error);
+    return res.status(500).json({
+      error: 'Failed to fix user profile',
+      details: error.message
+    });
+  }
 }
 
-// Helper function to get app color
-function getAppColor(appId) {
-  const colors = {
-    'formulas': '#10B981',
-    'raw-materials': '#F59E0B',
-    'suppliers': '#8B5CF6',
-    'analytics': '#3B82F6',
-    'compliance': '#EF4444',
-    'quality': '#14B8A6'
-  };
-  return colors[appId] || '#6B7280';
-} 
+   

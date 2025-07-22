@@ -150,6 +150,66 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Auto-link user to company if they are a company admin
+  const autoLinkToCompany = async (userProfile) => {
+    try {
+      console.log('🔗 Checking if user should be auto-linked to a company:', userProfile.email);
+      
+      // Find any company where this user is the admin
+      const response = await fetch('/api/admin/companies');
+      if (!response.ok) {
+        console.log('⚠️ Could not fetch companies for auto-linking');
+        return;
+      }
+      
+      const { companies } = await response.json();
+      const matchingCompany = companies.find(company => 
+        company.adminUserEmail === userProfile.email
+      );
+      
+      if (!matchingCompany) {
+        console.log('ℹ️ No matching company found for auto-linking');
+        return;
+      }
+      
+      console.log(`🎯 Found matching company: ${matchingCompany.name} for ${userProfile.email}`);
+      
+      // Check if link already exists
+      const { data: existingLink, error: linkError } = await supabase
+        .from('company_users')
+        .select('id')
+        .eq('company_id', matchingCompany.id)
+        .eq('user_id', userProfile.id)
+        .single();
+      
+      if (existingLink) {
+        console.log('✅ Company-user link already exists');
+        return;
+      }
+      
+      // Create the missing link
+      const { error: insertError } = await supabase
+        .from('company_users')
+        .insert({
+          company_id: matchingCompany.id,
+          user_id: userProfile.id,
+          role: 'Admin',
+          status: 'Active',
+          added_at: new Date().toISOString()
+        });
+      
+      if (insertError) {
+        console.error('❌ Failed to auto-link user to company:', insertError);
+      } else {
+        console.log(`✅ Auto-linked ${userProfile.email} to ${matchingCompany.name}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in auto-linking process:', error);
+      // Don't throw - this is a bonus feature, not critical
+    }
+  };
+
   // Create user profile in database with fallback
   const createUserProfile = async (userId) => {
     try {
@@ -231,6 +291,10 @@ export const AuthProvider = ({ children }) => {
       }
 
       console.log('✅ User profile created in database:', data);
+      
+      // CRITICAL: Auto-link to company if this user is a company admin
+      await autoLinkToCompany(data);
+      
       return data;
     } catch (error) {
       console.error('❌ Database profile creation failed:', error);

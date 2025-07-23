@@ -139,18 +139,6 @@ const LoginPage = () => {
               {isSigningIn ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
-          
-          <div className="mt-6 text-sm text-slate-300">
-            <p className="font-medium mb-2">Example Login Credentials:</p>
-            <div className="space-y-1">
-              <p><span className="font-medium text-purple-300">Capacity Admin:</span> admintest@capacity.com / password</p>
-              <p><span className="font-medium text-indigo-300">NSight Admin:</span> nsight@nsight-inc.com / password</p>
-              <p><span className="font-medium text-blue-300">Employee:</span> employee@domain.com / password</p>
-            </div>
-            <p className="mt-3 text-xs text-slate-400">
-              The system automatically detects your role based on your email address.
-            </p>
-          </div>
         </Card>
       </div>
     </div>

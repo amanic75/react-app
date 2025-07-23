@@ -172,31 +172,6 @@ const AuthPage = () => {
               )}
             </Button>
           </form>
-
-          {/* Demo Instructions */}
-          <div className="mt-6 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
-            <h3 className="text-sm font-medium text-slate-200 mb-2">🎮 Demo Accounts</h3>
-            <p className="text-xs text-slate-400 mb-3">
-              Use these demo accounts to test different dashboard types:
-            </p>
-            <div className="space-y-2 text-xs">
-              <div className="p-2 bg-slate-600/50 rounded">
-                <p className="text-blue-300 font-medium">capacity.admin@capacitychemicals.com</p>
-                <p className="text-slate-400">password123 • Capacity Admin Dashboard</p>
-              </div>
-              <div className="p-2 bg-slate-600/50 rounded">
-                <p className="text-green-300 font-medium">nsight.admin@capacitychemicals.com</p>
-                <p className="text-slate-400">password123 • Nsight Admin Dashboard</p>
-              </div>
-              <div className="p-2 bg-slate-600/50 rounded">
-                <p className="text-yellow-300 font-medium">employee@capacitychemicals.com</p>
-                <p className="text-slate-400">password123 • Employee Dashboard</p>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-3">
-              Contact your administrator to create a new account.
-            </p>
-          </div>
         </div>
 
         {/* Footer */}

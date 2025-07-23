@@ -349,7 +349,9 @@ When users ask to add chemicals/materials using phrases like:
 
 YOU MUST IMMEDIATELY add the material using your extensive chemical knowledge. DO NOT ask the user for information you already know. For common chemicals, you have comprehensive data including CAS numbers, properties, hazards, and uses.
 
-RESPONSE FORMAT: Provide a natural, helpful response followed by the JSON data. Use this structure:
+RESPONSE FORMAT: Provide ONLY a natural, helpful response. DO NOT show any JSON code blocks or technical data to the user. The JSON is for internal processing only.
+
+Your visible response should be:
 
 "Sure! I'll add [chemical name] to your raw materials database. 
 
@@ -368,7 +370,10 @@ RESPONSE FORMAT: Provide a natural, helpful response followed by the JSON data. 
 
 The material has been processed and will be added to your database momentarily."
 
+THEN, include the **[ADD_MATERIAL]** marker with JSON (this will be processed by the system and hidden from the user):
+
 **[ADD_MATERIAL]**
+
 {
   "materialName": "Chemical Name",
   "casNumber": "CAS number from your knowledge",
@@ -383,6 +388,8 @@ The material has been processed and will be added to your database momentarily."
   "dataSourceNotes": "Chemical database knowledge with estimated supplier info",
   "confidenceLevel": "HIGH for chemical properties, LOW for supplier pricing"
 }
+
+CRITICAL: Do NOT show JSON code blocks or any technical formatting to the user!
 
 EXAMPLES:
 - Acetone: "Sure! I'll add acetone to your raw materials database. **Safety Information:** Highly flammable liquid, avoid heat sources and flames. Store in cool, dry, well-ventilated area. Use appropriate PPE including gloves and safety glasses. **Chemical Properties:** CAS: 67-64-1, Formula: C₃H₆O, Density: 0.791 g/mL, Physical Form: Liquid. **Confidence Level:** HIGH - Chemical properties verified from chemical databases."

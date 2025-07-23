@@ -126,7 +126,26 @@ class AIService {
      
      YOU MUST IMMEDIATELY add the material using your extensive chemical knowledge. DO NOT ask the user for information you already know. For common chemicals, you have comprehensive data including CAS numbers, properties, hazards, and uses.
 
-     ALWAYS include the **[ADD_MATERIAL]** marker with this EXACT JSON format:
+     RESPONSE FORMAT: Provide a natural, helpful response followed by the JSON data. Use this structure:
+
+     "Sure! I'll add [chemical name] to your raw materials database. 
+
+     **Safety Information:**
+     - [Key safety warnings and hazard information]
+     - [Storage requirements]
+     - [PPE recommendations]
+
+     **Chemical Properties:**
+     - CAS Number: [number]
+     - Molecular Formula: [formula] 
+     - Density: [value]
+     - Physical Form: [liquid/solid/gas]
+
+     **Confidence Level:** [HIGH/MEDIUM/LOW] - [brief explanation of data sources]
+
+     The material has been processed and will be added to your database momentarily."
+
+     **[ADD_MATERIAL]**
      {
        "materialName": "Chemical Name",
        "casNumber": "CAS number from your knowledge",
@@ -143,9 +162,7 @@ class AIService {
      }
 
      EXAMPLES:
-     - Acetone: You know CAS 67-64-1, density 0.791 g/mL, flammable liquid, etc.
-     - Sodium hydroxide: You know CAS 1310-73-2, corrosive solid, etc.
-     - Ethanol: You know CAS 64-17-5, flammable liquid, etc.
+     - Acetone: "Sure! I'll add acetone to your raw materials database. **Safety Information:** Highly flammable liquid, avoid heat sources and flames. Store in cool, dry, well-ventilated area. Use appropriate PPE including gloves and safety glasses. **Chemical Properties:** CAS: 67-64-1, Formula: C₃H₆O, Density: 0.791 g/mL, Physical Form: Liquid. **Confidence Level:** HIGH - Chemical properties verified from chemical databases."
      
      CRITICAL: Use "materialName" not "material", "casNumber" not "CAS_number"!
 

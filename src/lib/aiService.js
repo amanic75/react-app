@@ -126,10 +126,16 @@ class AIService {
      
      YOU MUST IMMEDIATELY add the material using your extensive chemical knowledge. DO NOT ask the user for information you already know. For common chemicals, you have comprehensive data including CAS numbers, properties, hazards, and uses.
 
-     RESPONSE FORMAT: Provide ONLY a natural, helpful response. DO NOT show any JSON code blocks or technical data to the user. The JSON is for internal processing only.
+     RESPONSE FORMAT: You MUST provide BOTH a natural response AND the technical JSON data. The user will only see the natural response, but the system needs the JSON to process the material addition.
 
-     Your visible response should be:
+     STRUCTURE YOUR RESPONSE EXACTLY LIKE THIS:
 
+     [Natural user-friendly response]
+
+     **[ADD_MATERIAL]**
+     {JSON data}
+
+     STEP 1 - USER VISIBLE RESPONSE:
      "Sure! I'll add [chemical name] to your raw materials database. 
 
      **Safety Information:**
@@ -147,10 +153,8 @@ class AIService {
 
      The material has been processed and will be added to your database momentarily."
 
-     THEN, include the **[ADD_MATERIAL]** marker with JSON (this will be processed by the system and hidden from the user):
-
+     STEP 2 - TECHNICAL DATA (REQUIRED FOR PROCESSING):
      **[ADD_MATERIAL]**
-
      {
        "materialName": "Chemical Name",
        "casNumber": "CAS number from your knowledge",
@@ -166,7 +170,7 @@ class AIService {
        "confidenceLevel": "HIGH for chemical properties, LOW for supplier pricing"
      }
 
-     CRITICAL: Do NOT show JSON code blocks or any technical formatting to the user!
+     CRITICAL: You MUST include both parts - the system filters out the JSON from what users see!
 
      EXAMPLES:
      - Acetone: "Sure! I'll add acetone to your raw materials database. **Safety Information:** Highly flammable liquid, avoid heat sources and flames. Store in cool, dry, well-ventilated area. Use appropriate PPE including gloves and safety glasses. **Chemical Properties:** CAS: 67-64-1, Formula: C₃H₆O, Density: 0.791 g/mL, Physical Form: Liquid. **Confidence Level:** HIGH - Chemical properties verified from chemical databases."

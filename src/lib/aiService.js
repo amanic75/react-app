@@ -158,19 +158,26 @@ class AIService {
      {
        "materialName": "Chemical Name",
        "casNumber": "CAS number from your knowledge",
-       "supplierName": "Generic Chemical Supply Co",
-       "manufacture": "Standard Chemical Manufacturer",
-       "supplierCost": "estimated market price",
-       "density": "known density value",
+       "supplierName": "Estimated supplier like Sigma-Aldrich or Fisher Scientific",
+       "manufacture": "Known manufacturer if available",
+       "supplierCost": "25.50",
+       "density": "1.2 g/mL",
        "physicalForm": "Liquid/Solid/Gas",
        "hazardClass": "Flammable/Corrosive/Toxic/etc",
-       "description": "Chemical properties, molecular formula, and common uses",
+       "description": "Chemical properties, molecular formula, and common uses. Enhanced with PubChem verification data.",
        "storageConditions": "Proper storage requirements based on chemical properties",
-       "dataSourceNotes": "Chemical database knowledge with estimated supplier info",
-       "confidenceLevel": "HIGH for chemical properties, LOW for supplier pricing"
+       "country": "United States",
+       "purity": "99%",
+       "shelfLife": "2 years",
+       "weightVolume": "1L",
+       "activityPercentage": "100%",
+       "viscosity": "1.0 cP",
+       "tradeName": "Commercial name if applicable",
+       "dataSourceNotes": "Chemical database knowledge with estimated supplier info. Properties verified via PubChem database.",
+       "confidenceLevel": "HIGH for chemical properties, MEDIUM for supplier pricing"
      }
 
-     CRITICAL: You MUST include both parts - the system filters out the JSON from what users see!
+     CRITICAL: You MUST include both parts. DO NOT use code block formatting - just raw JSON. The system automatically hides technical data from users!
 
      EXAMPLES:
      - Acetone: "Sure! I'll add acetone to your raw materials database. **Safety Information:** Highly flammable liquid, avoid heat sources and flames. Store in cool, dry, well-ventilated area. Use appropriate PPE including gloves and safety glasses. **Chemical Properties:** CAS: 67-64-1, Formula: C₃H₆O, Density: 0.791 g/mL, Physical Form: Liquid. **Confidence Level:** HIGH - Chemical properties verified from chemical databases."

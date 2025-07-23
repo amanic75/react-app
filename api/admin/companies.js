@@ -926,7 +926,7 @@ function getAppName(appId) {
     'compliance': 'Compliance',
     'quality': 'Quality Control'
   };
-    return appNames[appId] || appId;
+  return appNames[appId] || appId;
 }
 
 // POST /api/admin/companies?action=repair-user-links - Fix missing company-user links

@@ -160,7 +160,7 @@ class AIService {
        "casNumber": "CAS number from your knowledge",
        "supplierName": "Estimated supplier like Sigma-Aldrich or Fisher Scientific",
        "manufacture": "Known manufacturer if available",
-       "supplierCost": "25.50",
+       "supplierCost": "realistic price estimate based on chemical type and availability",
        "density": "1.2 g/mL",
        "physicalForm": "Liquid/Solid/Gas",
        "hazardClass": "Flammable/Corrosive/Toxic/etc",

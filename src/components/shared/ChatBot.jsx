@@ -350,38 +350,7 @@ const ChatBot = ({ onMaterialAdded }) => {
 
         {!isMinimized && (
           <>
-            {/* Quick Start Panel - shown when conversation is short */}
-            {messages.length <= 1 && (
-              <div className="p-4 border-b border-slate-600 bg-slate-800">
-                <h4 className="text-sm font-medium text-slate-200 mb-3">Quick Start Examples</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  <button
-                    onClick={() => setInputText("Optimize my cleaner formula for 15% cost reduction: Surfactant 30%, Solvent 25%, Water 45%")}
-                    className="text-left p-2 bg-blue-600 bg-opacity-20 border border-blue-500 rounded text-xs text-blue-200 hover:bg-opacity-30 transition-colors"
-                  >
-                    🔬 Formula optimization example
-                  </button>
-                  <button
-                    onClick={() => setInputText("Safety analysis: mixing sodium hypochlorite with citric acid")}
-                    className="text-left p-2 bg-red-600 bg-opacity-20 border border-red-500 rounded text-xs text-red-200 hover:bg-opacity-30 transition-colors"
-                  >
-                    🛡️ Safety compliance check
-                  </button>
-                  <button
-                    onClick={() => setInputText("Find alternative suppliers for acetone - current supplier has 3-week lead times")}
-                    className="text-left p-2 bg-purple-600 bg-opacity-20 border border-purple-500 rounded text-xs text-purple-200 hover:bg-opacity-30 transition-colors"
-                  >
-                    📦 Supplier intelligence
-                  </button>
-                  <button
-                    onClick={() => setInputText("Quality issue: last 3 batches failed viscosity tests - viscosity too low")}
-                    className="text-left p-2 bg-orange-600 bg-opacity-20 border border-orange-500 rounded text-xs text-orange-200 hover:bg-opacity-30 transition-colors"
-                  >
-                    🔍 Quality troubleshooting
-                  </button>
-                </div>
-              </div>
-            )}
+
 
             {/* Messages */}
             <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-0">

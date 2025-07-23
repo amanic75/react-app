@@ -341,66 +341,54 @@ Diagnostic Steps: [systematic approach to identify root cause]
 Corrective Actions: [immediate fixes]
 Preventive Measures: [long-term solutions]
 
-MATERIAL ADDITION (existing functionality):
-When users ask to add chemicals/materials using phrases like:
-- "Add [chemical name] to my raw materials"
-- "I need to add [chemical name] to the database" 
-- "Please add [chemical name]"
+MATERIAL ADDITION - MAXIMUM REALISM REQUIRED:
+When users ask to add chemicals/materials, you MUST provide the most realistic, accurate data possible using your extensive chemical knowledge. Every field must be chemically accurate and industry-appropriate.
 
-YOU MUST IMMEDIATELY add the material using your extensive chemical knowledge. DO NOT ask the user for information you already know. For common chemicals, you have comprehensive data including CAS numbers, properties, hazards, and uses.
+RESPONSE STRUCTURE - User sees clean response, system processes JSON:
 
-RESPONSE FORMAT: You MUST provide BOTH a natural response AND the technical JSON data. The user will only see the natural response, but the system needs the JSON to process the material addition.
-
-STRUCTURE YOUR RESPONSE EXACTLY LIKE THIS:
-
-[Natural user-friendly response]
+[Natural user response with safety info]
 
 **[ADD_MATERIAL]**
-{JSON data}
+{Complete realistic material data}
 
-STEP 1 - USER VISIBLE RESPONSE:
-"Sure! I'll add [chemical name] to your raw materials database. 
+     USER RESPONSE FORMAT (KEEP IT SHORT):
+     "Sure! Adding [chemical name] - CAS: [number], [physical form], [key hazard warning]. Added successfully."
 
-**Safety Information:**
-- [Key safety warnings and hazard information]
-- [Storage requirements]
-- [PPE recommendations]
-
-**Chemical Properties:**
-- CAS Number: [number]
-- Molecular Formula: [formula] 
-- Density: [value]
-- Physical Form: [liquid/solid/gas]
-
-**Confidence Level:** [HIGH/MEDIUM/LOW] - [brief explanation of data sources]
-
-The material has been processed and will be added to your database momentarily."
-
-STEP 2 - TECHNICAL DATA (REQUIRED FOR PROCESSING):
+TECHNICAL DATA - MAXIMUM REALISM REQUIRED:
 **[ADD_MATERIAL]**
 {
-  "materialName": "Chemical Name",
-  "casNumber": "CAS number from your knowledge",
-  "supplierName": "Estimated supplier like Sigma-Aldrich or Fisher Scientific",
-  "manufacture": "Known manufacturer if available", 
-  "supplierCost": "realistic price estimate based on chemical type and availability",
-  "density": "1.2 g/mL",
-  "physicalForm": "Liquid/Solid/Gas",
-  "hazardClass": "Flammable/Corrosive/Toxic/etc",
-  "description": "Chemical properties, molecular formula, and common uses. Enhanced with PubChem verification data.",
-  "storageConditions": "Proper storage requirements based on chemical properties",
-  "country": "United States",
-  "purity": "99%",
-  "shelfLife": "2 years",
-  "weightVolume": "1L",
-  "activityPercentage": "100%",
-  "viscosity": "1.0 cP",
-  "tradeName": "Commercial name if applicable",
-  "dataSourceNotes": "Chemical database knowledge with estimated supplier info. Properties verified via PubChem database.",
-  "confidenceLevel": "HIGH for chemical properties, MEDIUM for supplier pricing"
+  "materialName": "[Exact chemical name]",
+  "casNumber": "[Real CAS number - use your knowledge]",
+  "tradeName": "[Common trade name if widely known, or same as material name]",
+  "supplierName": "[Realistic major supplier - Fisher Scientific, Sigma-Aldrich, VWR, etc.]",
+  "manufacture": "[Actual major manufacturer if known - BASF, Dow, etc.]",
+  "supplierCost": "[Realistic market price - vary by chemical rarity/complexity]",
+  "density": "[Accurate density in g/mL]",
+  "physicalForm": "[Solid/Liquid/Gas at room temperature]",
+  "hazardClass": "[Accurate GHS classification - Flammable/Corrosive/Toxic/Oxidizing]",
+  "purity": "[Typical commercial grade - 95%, 99%, 99.9%, ACS grade, etc.]",
+  "shelfLife": "[Realistic based on chemical stability - 6 months to 5 years]",
+  "weightVolume": "[Realistic lbs/gallon for liquids or lbs/ft³ for solids]",
+  "activityPercentage": "[100% for pure chemicals, lower for solutions]",
+  "viscosity": "[Accurate viscosity in cP for liquids]",
+  "country": "[Major production country - USA, Germany, China, etc.]",
+  "storageConditions": "[Specific requirements - temperature, atmosphere, light sensitivity]",
+  "description": "[Comprehensive: molecular formula, uses, properties, enhanced with database verification notes]",
+  "dataSourceNotes": "[Mention chemical database verification and source confidence]",
+  "confidenceLevel": "[HIGH for common chemicals, MEDIUM for specialty]"
 }
 
-CRITICAL: You MUST include both parts. DO NOT use code block formatting - just raw JSON. The system automatically hides technical data from users!
+PRICING GUIDELINES - BE REALISTIC:
+- Common solvents (acetone, ethanol): $15-40/L
+- Laboratory reagents: $30-100/kg  
+- Specialty chemicals: $100-500/kg
+- Rare/complex compounds: $500-2000/kg
+- Controlled substances: "Restricted - Contact DEA licensed supplier"
+
+REALISM EXAMPLES:
+- Acetone: CAS 67-64-1, Sigma-Aldrich, $18.50/L, 0.791 g/mL, Flammable, 99.5% purity
+- Sodium Hydroxide: CAS 1310-73-2, Fisher Scientific, $35.00/kg, Corrosive, ACS grade
+- Benzene: CAS 71-43-2, $45.00/L, Carcinogenic, requires special handling
 
 EXAMPLES:
 - Acetone: "Sure! I'll add acetone to your raw materials database. **Safety Information:** Highly flammable liquid, avoid heat sources and flames. Store in cool, dry, well-ventilated area. Use appropriate PPE including gloves and safety glasses. **Chemical Properties:** CAS: 67-64-1, Formula: C₃H₆O, Density: 0.791 g/mL, Physical Form: Liquid. **Confidence Level:** HIGH - Chemical properties verified from chemical databases."

@@ -369,7 +369,10 @@ const ChatBot = ({ onMaterialAdded }) => {
                     }`}
                   >
                     {message.text && (
-                      <div className="text-sm mb-2 whitespace-pre-line">{message.text}</div>
+                      <div className="text-sm mb-2 whitespace-pre-line">{
+                        // Only show the part before **[ADD_MATERIAL]**
+                        message.text.split('**[ADD_MATERIAL]**')[0].trim()
+                      }</div>
                     )}
                     
                     {/* Enhanced AI Capabilities UI */}

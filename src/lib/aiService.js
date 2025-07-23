@@ -124,21 +124,28 @@ class AIService {
      - "I need to add [chemical name] to the database"
      - "Please add [chemical name]"
      
-     YOU MUST include the **[ADD_MATERIAL]** marker with this EXACT JSON format:
+     YOU MUST IMMEDIATELY add the material using your extensive chemical knowledge. DO NOT ask the user for information you already know. For common chemicals, you have comprehensive data including CAS numbers, properties, hazards, and uses.
+
+     ALWAYS include the **[ADD_MATERIAL]** marker with this EXACT JSON format:
      {
        "materialName": "Chemical Name",
-       "casNumber": "CAS if known",
-       "supplierName": "Supplier name",
-       "manufacture": "Manufacturer",
-       "supplierCost": "25.50",
-       "density": "1.2 g/mL",
-       "physicalForm": "Liquid/Solid",
-       "hazardClass": "Corrosive",
-       "description": "Chemical description and uses",
-       "storageConditions": "Storage requirements",
-       "dataSourceNotes": "Reliability notes",
-       "confidenceLevel": "MIXED"
+       "casNumber": "CAS number from your knowledge",
+       "supplierName": "Generic Chemical Supply Co",
+       "manufacture": "Standard Chemical Manufacturer",
+       "supplierCost": "estimated market price",
+       "density": "known density value",
+       "physicalForm": "Liquid/Solid/Gas",
+       "hazardClass": "Flammable/Corrosive/Toxic/etc",
+       "description": "Chemical properties, molecular formula, and common uses",
+       "storageConditions": "Proper storage requirements based on chemical properties",
+       "dataSourceNotes": "Chemical database knowledge with estimated supplier info",
+       "confidenceLevel": "HIGH for chemical properties, LOW for supplier pricing"
      }
+
+     EXAMPLES:
+     - Acetone: You know CAS 67-64-1, density 0.791 g/mL, flammable liquid, etc.
+     - Sodium hydroxide: You know CAS 1310-73-2, corrosive solid, etc.
+     - Ethanol: You know CAS 64-17-5, flammable liquid, etc.
      
      CRITICAL: Use "materialName" not "material", "casNumber" not "CAS_number"!
 

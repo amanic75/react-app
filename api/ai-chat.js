@@ -82,17 +82,48 @@ const chemicalDB = new ChemicalDatabaseService();
 async function processResponseWithVerification(response) {
   // Check if the response contains a material addition request
   if (response.includes('**[ADD_MATERIAL]**')) {
+    console.log('🎯 Backend: Found ADD_MATERIAL marker, processing...');
     try {
       const parts = response.split('**[ADD_MATERIAL]**');
       const informationPart = parts[0].trim();
       const jsonPart = parts[1].trim();
+      
+      console.log('📝 Backend: JSON part to parse:', jsonPart);
       
       // Extract JSON from the response
       const jsonMatch = jsonPart.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         // Clean JSON by removing comments (// text) that AI includes for confidence indicators
         const cleanedJson = jsonMatch[0].replace(/\/\/[^\r\n]*/g, '').trim();
+        console.log('🧹 Backend: Cleaned JSON:', cleanedJson);
+        
         const materialData = JSON.parse(cleanedJson);
+        console.log('✅ Backend: Parsed material data:', materialData);
+        
+        // Handle legacy field names - convert "material" to "materialName"
+        if (materialData.material && !materialData.materialName) {
+          materialData.materialName = materialData.material;
+          delete materialData.material;
+          console.log('🔄 Backend: Converted "material" field to "materialName"');
+        }
+        
+        // Handle other legacy field names
+        if (materialData.CAS_number && !materialData.casNumber) {
+          materialData.casNumber = materialData.CAS_number;
+          delete materialData.CAS_number;
+        }
+        if (materialData.chemical_name && !materialData.description) {
+          materialData.description = materialData.chemical_name;
+        }
+        
+        if (!materialData.materialName) {
+          console.error('❌ Backend: Missing materialName field in:', materialData);
+          return {
+            response: informationPart,
+            materialAdded: false,
+            errorMessage: "❌ Invalid material data format. Missing material name."
+          };
+        }
         
         console.log('🔍 Backend: Verifying chemical data with PubChem for:', materialData.materialName);
         
@@ -117,6 +148,13 @@ async function processResponseWithVerification(response) {
           materialAdded: true,
           materialData: enhancedData,
           successMessage: `✅ Chemical data verified with ${enhancedData.confidenceLevel} confidence!`,
+        };
+      } else {
+        console.error('❌ Backend: No JSON found in response part:', jsonPart);
+        return {
+          response: informationPart,
+          materialAdded: false,
+          errorMessage: "❌ No valid JSON found in material addition response."
         };
       }
     } catch (error) {
@@ -304,7 +342,28 @@ Corrective Actions: [immediate fixes]
 Preventive Measures: [long-term solutions]
 
 MATERIAL ADDITION (existing functionality):
-When users ask to add chemicals/materials, include the **[ADD_MATERIAL]** marker with proper JSON format and confidence levels.
+When users ask to add chemicals/materials using phrases like:
+- "Add [chemical name] to my raw materials"
+- "I need to add [chemical name] to the database"
+- "Please add [chemical name]"
+
+YOU MUST include the **[ADD_MATERIAL]** marker with this EXACT JSON format:
+{
+  "materialName": "Chemical Name",
+  "casNumber": "CAS if known",
+  "supplierName": "Supplier name", 
+  "manufacture": "Manufacturer",
+  "supplierCost": "25.50",
+  "density": "1.2 g/mL",
+  "physicalForm": "Liquid/Solid",
+  "hazardClass": "Corrosive",
+  "description": "Chemical description and uses",
+  "storageConditions": "Storage requirements",
+  "dataSourceNotes": "Reliability notes",
+  "confidenceLevel": "MIXED"
+}
+
+CRITICAL: Use "materialName" not "material", "casNumber" not "CAS_number"!
 
 IMPORTANT GUIDELINES:
 - Always prioritize safety in all recommendations

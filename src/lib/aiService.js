@@ -124,21 +124,23 @@ class AIService {
      - "I need to add [chemical name] to the database"
      - "Please add [chemical name]"
      
-     YOU MUST include the **[ADD_MATERIAL]** marker with this JSON format:
+     YOU MUST include the **[ADD_MATERIAL]** marker with this EXACT JSON format:
      {
        "materialName": "Chemical Name",
-       "casNumber": "CAS if known", // ✅ HIGH or ⚠️ LOW
-       "supplierName": "Supplier name", // ⚠️ LOW - Please verify
-       "manufacture": "Manufacturer", // 🟡 MEDIUM
-       "supplierCost": "25.50", // ⚠️ LOW - Market estimate
-       "density": "1.2 g/mL", // ✅ HIGH
-       "physicalForm": "Liquid/Solid", // ✅ HIGH
-       "hazardClass": "Corrosive", // ✅ HIGH
+       "casNumber": "CAS if known",
+       "supplierName": "Supplier name",
+       "manufacture": "Manufacturer",
+       "supplierCost": "25.50",
+       "density": "1.2 g/mL",
+       "physicalForm": "Liquid/Solid",
+       "hazardClass": "Corrosive",
        "description": "Chemical description and uses",
        "storageConditions": "Storage requirements",
        "dataSourceNotes": "Reliability notes",
        "confidenceLevel": "MIXED"
      }
+     
+     CRITICAL: Use "materialName" not "material", "casNumber" not "CAS_number"!
 
      IMPORTANT GUIDELINES:
     - Always prioritize safety in all recommendations

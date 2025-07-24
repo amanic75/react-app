@@ -67,8 +67,8 @@ const RawMaterialsPage = () => {
   const loadMaterials = async () => {
     try {
       setLoading(true);
-      const data = await getAllMaterials();
-      setRawMaterials(data);
+      const { data } = await getAllMaterials();
+      setRawMaterials(data || []);
       setError(null);
     } catch (err) {
       console.error('Error loading materials:', err);

@@ -50,8 +50,8 @@ const SuppliersPage = () => {
     const loadSuppliers = async () => {
       try {
         setLoading(true);
-        const data = await getAllSuppliers();
-        setSuppliers(data);
+        const { data } = await getAllSuppliers();
+        setSuppliers(data || []);
         setError(null);
       } catch (err) {
         console.error('Error loading suppliers:', err);

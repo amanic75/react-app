@@ -54,8 +54,8 @@ const FormulasPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getAllFormulas();
-        setFormulas(data);
+        const { data } = await getAllFormulas();
+        setFormulas(data || []);
       } catch (err) {
         console.error('Error loading formulas:', err);
         setError('Failed to load formulas. Please check your database connection.');

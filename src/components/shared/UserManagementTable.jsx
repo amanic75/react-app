@@ -5,13 +5,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { 
-  getActivity, 
-  getActivitySummary, 
-  formatTimestamp, 
-  getActivityColor, 
-  ACTIVITY_TYPES 
-} from '../../lib/loginActivity';
+// Removed: import { getActivity, getActivitySummary, formatTimestamp, getActivityColor, ACTIVITY_TYPES } from '../../lib/loginActivity';
 
 const UserManagementTable = () => {
   const [users, setUsers] = useState([]);
@@ -142,16 +136,14 @@ const UserManagementTable = () => {
         updated_at: profile.updated_at
       }));
 
-      // Get activity data from API (production) or localStorage (development fallback)
+      // Get activity data from API only
       let recentActivity = [];
       let summary = { totalLogins: 0, totalLogouts: 0, uniqueUsers: 0 };
       let apiOnlineUsers = [];
-
       try {
         const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
           ? 'http://localhost:3001/api/activity-summary'
           : '/api/activity-summary';
-        
         const response = await fetch(apiUrl);
         if (response.ok) {
           const apiData = await response.json();
@@ -159,56 +151,29 @@ const UserManagementTable = () => {
             summary = apiData.summary;
             apiOnlineUsers = apiData.onlineUsers || [];
             recentActivity = apiData.summary.recentActivity || [];
-    
           }
         } else {
           throw new Error(`API responded with ${response.status}`);
         }
       } catch (error) {
-        console.warn('⚠️ Failed to fetch activity from API, using localStorage fallback:', error.message);
-        // Fallback to localStorage for development
-        recentActivity = getActivity({ limit: 50 });
-        summary = getActivitySummary(24);
+        recentActivity = [];
+        summary = { totalLogins: 0, totalLogouts: 0, uniqueUsers: 0 };
       }
-      
-      // Track online users - use API data if available, otherwise fallback to localStorage logic
+      // Track online users - use API data only
       let onlineUserEmails = new Set();
-      
       if (apiOnlineUsers.length > 0) {
-        // Use API online users data (more reliable)
         apiOnlineUsers.forEach(user => {
           onlineUserEmails.add(user.user_email);
         });
-  
-      } else {
-        // Fallback to localStorage logic for development
-        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-        
-        // Process activity to determine who's online
-        const userLastActivity = {};
-        recentActivity.forEach(act => {
-          if (!userLastActivity[act.userEmail] || new Date(act.timestamp) > new Date(userLastActivity[act.userEmail].timestamp)) {
-            userLastActivity[act.userEmail] = act;
-          }
-        });
-        
-        Object.entries(userLastActivity).forEach(([email, lastAct]) => {
-          const actTime = new Date(lastAct.timestamp);
-          if (actTime > thirtyMinutesAgo && lastAct.type === ACTIVITY_TYPES.LOGIN) {
-            onlineUserEmails.add(email);
-          }
-        });
       }
-      
       // Update last login times from activity data
       const usersWithActivity = allUsers.map(user => {
         const userActivity = recentActivity.filter(act => act.userEmail === user.email);
-        const lastLogin = userActivity.find(act => act.type === ACTIVITY_TYPES.LOGIN);
-        
+        const lastLogin = userActivity.find(act => act.type === 'login');
         return {
           ...user,
           lastLoginActivity: lastLogin,
-          recentActivity: userActivity.slice(0, 5), // Last 5 activities
+          recentActivity: userActivity.slice(0, 5),
           isOnline: onlineUserEmails.has(user.email)
         };
       });
@@ -402,13 +367,13 @@ const UserManagementTable = () => {
                   <td className="py-3 px-4">
                     {user.lastLoginActivity ? (
                       <div className="flex items-center space-x-2">
-                        <Activity className={`w-4 h-4 ${getActivityColor(user.lastLoginActivity.type, user.lastLoginActivity.timestamp)}`} />
+                        <Activity className={`w-4 h-4 text-blue-400`} />
                         <div>
                           <div className="text-sm text-slate-300">
-                            {formatTimestamp(user.lastLoginActivity.timestamp)}
+                            {new Date(user.lastLoginActivity.timestamp).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {user.lastLoginActivity.type === ACTIVITY_TYPES.LOGIN ? 'Last login' : 'Last logout'}
+                            {user.lastLoginActivity.type === 'login' ? 'Last login' : 'Last logout'}
                           </div>
                         </div>
                       </div>
@@ -468,12 +433,12 @@ const UserManagementTable = () => {
                             {user.recentActivity && user.recentActivity.length > 0 ? (
                               user.recentActivity.map((activity, idx) => (
                                 <div key={idx} className="flex items-center space-x-3 text-sm">
-                                  <Activity className={`w-3 h-3 ${getActivityColor(activity.type, activity.timestamp)}`} />
+                                  <Activity className={`w-3 h-3 text-blue-400`} />
                                   <span className="text-slate-300">
-                                    {activity.type === ACTIVITY_TYPES.LOGIN ? 'Login' : 'Logout'}
+                                    {activity.type === 'login' ? 'Login' : 'Logout'}
                                   </span>
                                   <span className="text-slate-500">
-                                    {formatTimestamp(activity.timestamp)}
+                                    {new Date(activity.timestamp).toLocaleDateString()}
                                   </span>
                                 </div>
                               ))

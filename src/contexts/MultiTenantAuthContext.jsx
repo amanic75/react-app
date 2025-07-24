@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import multiTenantDB from '../lib/multiTenantDatabase';
-import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
+// Removed: import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
 
 const MultiTenantAuthContext = createContext();
 
@@ -241,10 +241,10 @@ export const MultiTenantAuthProvider = ({ children }) => {
       // loadUserWithTenant will be called automatically by auth state change
       
       // Record login activity
-      recordActivity(ACTIVITY_TYPES.LOGIN, email, {
-        name: data.user.user_metadata?.first_name || email.split('@')[0],
-        role: getUserRole(data.user)
-      });
+      // recordActivity(ACTIVITY_TYPES.LOGIN, email, {
+      //   name: data.user.user_metadata?.first_name || email.split('@')[0],
+      //   role: getUserRole(data.user)
+      // });
 
       return { success: true };
 
@@ -260,12 +260,12 @@ export const MultiTenantAuthProvider = ({ children }) => {
   const signOut = async () => {
     try {
       // Record logout activity
-      if (user && userProfile) {
-        recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, {
-          name: `${userProfile.first_name} ${userProfile.last_name}`.trim(),
-          role: userProfile.role
-        });
-      }
+      // if (user && userProfile) {
+      //   recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, {
+      //     name: `${userProfile.first_name} ${userProfile.last_name}`.trim(),
+      //     role: userProfile.role
+      //   });
+      // }
 
       const { error } = await supabase.auth.signOut();
       if (error) {

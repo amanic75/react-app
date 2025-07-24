@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
+// Removed: import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
 
 const AuthContext = createContext();
 
@@ -590,7 +590,7 @@ export const AuthProvider = ({ children }) => {
         };
 
         // Store in localStorage for immediate UI updates
-        recordActivity(ACTIVITY_TYPES.LOGIN, data.user.email, userData);
+        // recordActivity(ACTIVITY_TYPES.LOGIN, data.user.email, userData);
         
         // Store in database for persistence and cross-session tracking
         try {
@@ -638,7 +638,7 @@ export const AuthProvider = ({ children }) => {
         };
 
         // Store in localStorage for immediate UI updates
-        recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, userData);
+        // recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, userData);
         
         // Store in database for persistence and cross-session tracking
         try {

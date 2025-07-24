@@ -1,50 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, LogIn, LogOut, Users, Activity } from 'lucide-react';
-import { 
-  getActivity, 
-  getActivitySummary, 
-  formatTimestamp, 
-  getActivityColor, 
-  ACTIVITY_TYPES 
-} from '../../lib/loginActivity';
+// Removed: import { getActivity, getActivitySummary, formatTimestamp, getActivityColor, ACTIVITY_TYPES } from '../../lib/loginActivity';
 
 const LoginActivityPanel = () => {
   const [activity, setActivity] = useState([]);
   const [summary, setSummary] = useState({});
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Load activity data
-  const loadActivity = () => {
-    const recentActivity = getActivity({ limit: 15 });
-    const activitySummary = getActivitySummary(24);
-    
-    setActivity(recentActivity);
-    setSummary(activitySummary);
+  // Helper functions for formatting
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const getActivityColor = (type, timestamp) => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - new Date(timestamp)) / (1000 * 60));
+    if (type === 'login') {
+      if (diffInMinutes < 5) return 'text-green-400';
+      if (diffInMinutes < 30) return 'text-green-500';
+      return 'text-blue-400';
+    } else {
+      if (diffInMinutes < 5) return 'text-orange-400';
+      return 'text-slate-400';
+    }
+  };
+
+  // Load activity data from backend API only
+  const loadActivity = async () => {
+    try {
+      const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
+        ? 'http://localhost:3001/api/activity-summary'
+        : '/api/activity-summary';
+      const response = await fetch(apiUrl);
+      if (response.ok) {
+        const apiData = await response.json();
+        if (apiData.success) {
+          setActivity(apiData.summary.recentActivity || []);
+          setSummary(apiData.summary);
+        }
+      } else {
+        setActivity([]);
+        setSummary({});
+      }
+    } catch (error) {
+      setActivity([]);
+      setSummary({});
+    }
   };
 
   useEffect(() => {
-    // Load initial data
     loadActivity();
-
-    // Set up real-time updates
-    const handleActivityUpdate = () => {
-      loadActivity();
-    };
-
-    // Listen for activity updates
-    window.addEventListener('loginActivityUpdate', handleActivityUpdate);
-
     // Refresh every 30 seconds
     const interval = setInterval(loadActivity, 30000);
-
-    return () => {
-      window.removeEventListener('loginActivityUpdate', handleActivityUpdate);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const ActivityIcon = ({ type }) => {
-    if (type === ACTIVITY_TYPES.LOGIN) {
+    if (type === 'login') {
       return React.createElement(LogIn, { className: "w-4 h-4 text-green-400" });
     } else {
       return React.createElement(LogOut, { className: "w-4 h-4 text-orange-400" });
@@ -137,7 +154,7 @@ const LoginActivityPanel = () => {
                     
                     <div className="text-right">
                       <div className={`text-sm font-medium ${getActivityColor(item.type, item.timestamp)}`}>
-                        {item.type === ACTIVITY_TYPES.LOGIN ? 'Logged in' : 'Logged out'}
+                        {item.type === 'login' ? 'Logged in' : 'Logged out'}
                       </div>
                       <div className="text-xs text-slate-500">
                         {formatTimestamp(item.timestamp)}

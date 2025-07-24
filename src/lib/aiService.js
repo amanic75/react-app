@@ -1,31 +1,8 @@
 import { addMaterial } from './materials';
 import ChemicalDatabaseService from './chemicalDatabaseService';
 
-// AI Service for handling AI chat requests
-// Enhanced with Level 2 chemical database verification
-
-class AIService {
-  constructor() {
-    // Check if we're in development or production
-    this.isDevelopment = import.meta.env.DEV;
-    this.apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/ai-chat';
-    
-    // Initialize chemical database service for Level 2 verification
-    this.chemicalDB = new ChemicalDatabaseService();
-    
-    // Only initialize OpenAI client in development
-    if (this.isDevelopment && import.meta.env.VITE_OPENAI_API_KEY) {
-      // Dynamic import to avoid loading OpenAI in production
-      import('openai').then(({ default: OpenAI }) => {
-        this.openai = new OpenAI({
-          apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-          dangerouslyAllowBrowser: true // Only for development
-        });
-      });
-    }
-    
-    // Enhanced system prompt with specialized chemical intelligence
-    this.systemPrompt = `You are an advanced AI assistant specialized in chemical engineering and manufacturing for Capacity Chemical's platform. You have expert-level knowledge in chemistry, formulation science, safety protocols, and supply chain optimization.
+// --- System Prompts ---
+const BASIC_SYSTEM_PROMPT = `You are an advanced AI assistant specialized in chemical engineering and manufacturing for Capacity Chemical's platform. You have expert-level knowledge in chemistry, formulation science, safety protocols, and supply chain optimization.
 
     CORE EXPERTISE AREAS:
     - Chemical formulas and molecular structures
@@ -181,36 +158,141 @@ class AIService {
     - For non-chemistry questions, politely redirect: "I'm specialized in chemical engineering and manufacturing. Please ask about formulations, safety, suppliers, or quality control."
 
     Remember: You're an expert consultant helping chemical manufacturers optimize their operations, ensure safety, and improve profitability.`;
+
+const ENHANCED_SYSTEM_PROMPT = `You are a specialized AI assistant for Capacity Chemical's internal platform with access to real-time chemical databases.
+
+    ENHANCED CAPABILITIES:
+    - You can lookup verified chemical data from PubChem, ChemSpider, and NIST
+    - You can access real-time supplier pricing (when configured)
+    - You provide confidence levels for all data
+    - You cross-validate information from multiple sources
+
+    WHEN TO USE FUNCTIONS:
+    - ALWAYS use lookup_chemical_data for any material addition request
+    - Use get_supplier_pricing if the user mentions needing current pricing
+    - Combine function results with your knowledge for comprehensive responses
+
+    MATERIAL ADDITION WORKFLOW:
+    1. When user requests to add a chemical, FIRST call lookup_chemical_data
+    2. If pricing is important, also call get_supplier_pricing
+    3. Combine verified data with reasonable estimates
+    4. Include confidence levels and data sources
+    5. Format with **[ADD_MATERIAL]** marker
+
+    CONFIDENCE LEVELS:
+    ✅ HIGH: Data from authoritative databases (PubChem, NIST)
+    🟡 MEDIUM: Cross-validated from multiple sources
+    ⚠️ LOW: AI estimates or single-source data
+
+    Always be transparent about data sources and encourage verification for critical applications.`;
+
+class AIService {
+  constructor() {
+    this.isDevelopment = import.meta.env.DEV;
+    this.apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/ai-chat';
+    this.chemicalDB = new ChemicalDatabaseService();
+    this.openai = null;
+    this.functions = [
+      {
+        name: "lookup_chemical_data",
+        description: "Get verified chemical properties from authoritative databases like PubChem",
+        parameters: {
+          type: "object",
+          properties: {
+            chemical_name: {
+              type: "string",
+              description: "The name of the chemical to look up"
+            },
+            cas_number: {
+              type: "string",
+              description: "CAS registry number if known (optional but more accurate)"
+            }
+          },
+          required: ["chemical_name"]
+        }
+      },
+      {
+        name: "get_supplier_pricing",
+        description: "Get real-time pricing from chemical suppliers (if API keys configured)",
+        parameters: {
+          type: "object",
+          properties: {
+            chemical_name: { type: "string" },
+            cas_number: { type: "string" },
+            quantity: { type: "string", description: "Quantity needed (e.g., '1L', '500g')" },
+            purity: { type: "string", description: "Required purity (e.g., '99%', 'ACS grade')" }
+          },
+          required: ["chemical_name"]
+        }
+      }
+    ];
+    // Only initialize OpenAI client in development
+    if (this.isDevelopment && import.meta.env.VITE_OPENAI_API_KEY) {
+      import('openai').then(({ default: OpenAI }) => {
+        this.openai = new OpenAI({
+          apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+          dangerouslyAllowBrowser: true
+        });
+      });
+    }
   }
 
-  async generateResponse(userMessage, files = null, conversationHistory = []) {
+  async generateResponse(userMessage, files = null, conversationHistory = [], options = { mode: 'basic' }) {
+    const mode = options.mode || 'basic';
+    const systemPrompt = mode === 'enhanced' ? ENHANCED_SYSTEM_PROMPT : BASIC_SYSTEM_PROMPT;
+    const useFunctionCalling = mode === 'enhanced';
     try {
-      // In production, use backend API (Level 2 verification handled by backend)
       if (!this.isDevelopment) {
-        return await this.generateResponseFromAPI(userMessage, files, conversationHistory);
+        return await this.generateResponseFromAPI(userMessage, files, conversationHistory, mode);
       }
-      
-      // In development, use direct OpenAI calls
       if (!this.openai) {
         throw new Error('OpenAI client not initialized. Check your API key.');
       }
-      
       const messages = [
-        { role: 'system', content: this.systemPrompt },
+        { role: 'system', content: systemPrompt },
         ...conversationHistory,
         { role: 'user', content: this.buildUserMessage(userMessage, files) }
       ];
-
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: messages,
-        max_tokens: 1000,
-        temperature: 0.7,
-        stream: false
-      });
-
-      const aiResponse = response.choices[0].message.content;
-      return await this.processResponse(aiResponse);
+      if (useFunctionCalling) {
+        // Enhanced mode: function calling
+        const response = await this.openai.chat.completions.create({
+          model: 'gpt-4-1106-preview',
+          messages: messages,
+          functions: this.functions,
+          function_call: 'auto',
+          max_tokens: 1000,
+          temperature: 0.7
+        });
+        const aiResponse = response.choices[0].message;
+        if (aiResponse.function_call) {
+          const functionResult = await this.handleFunctionCall(aiResponse.function_call);
+          messages.push(aiResponse);
+          messages.push({
+            role: 'function',
+            name: aiResponse.function_call.name,
+            content: JSON.stringify(functionResult)
+          });
+          const finalResponse = await this.openai.chat.completions.create({
+            model: 'gpt-4-1106-preview',
+            messages: messages,
+            max_tokens: 1000,
+            temperature: 0.7
+          });
+          return await this.processEnhancedResponse(finalResponse.choices[0].message.content, functionResult);
+        }
+        return await this.processEnhancedResponse(aiResponse.content);
+      } else {
+        // Basic mode: regular chat
+        const response = await this.openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: messages,
+          max_tokens: 1000,
+          temperature: 0.7,
+          stream: false
+        });
+        const aiResponse = response.choices[0].message.content;
+        return await this.processResponse(aiResponse);
+      }
     } catch (error) {
       console.error('AI Service Error:', error);
       throw new Error('Failed to generate AI response. Please try again.');
@@ -527,7 +609,7 @@ class AIService {
     };
   }
 
-  async generateResponseFromAPI(userMessage, files, conversationHistory) {
+  async generateResponseFromAPI(userMessage, files, conversationHistory, mode) {
     const response = await fetch(this.apiEndpoint, {
       method: 'POST',
       headers: {
@@ -538,7 +620,8 @@ class AIService {
       body: JSON.stringify({
         message: userMessage,
         files: files,
-        conversationHistory: conversationHistory
+        conversationHistory: conversationHistory,
+        mode: mode // Pass the mode to the backend
       })
     });
 
@@ -596,6 +679,74 @@ class AIService {
     return data.response;
   }
 
+  async handleFunctionCall(functionCall) {
+    const functionName = functionCall.name;
+    const functionArgs = JSON.parse(functionCall.arguments);
+
+    if (functionName === 'lookup_chemical_data') {
+      const { chemical_name, cas_number } = functionArgs;
+      return await this.chemicalDB.getEnhancedChemicalData(chemical_name, cas_number);
+    } else if (functionName === 'get_supplier_pricing') {
+      const { chemical_name, cas_number, quantity, purity } = functionArgs;
+      return await this.chemicalDB.getSupplierPricing(chemical_name, cas_number, quantity, purity);
+    } else {
+      console.warn(`Unknown function called: ${functionName}`);
+      return { error: `Unknown function called: ${functionName}` };
+    }
+  }
+
+  async processEnhancedResponse(response, functionResult = null) {
+    if (response.includes('**[ADD_MATERIAL]**')) {
+      try {
+        const parts = response.split('**[ADD_MATERIAL]**');
+        const informationPart = parts[0].trim();
+        const jsonPart = parts[1].trim();
+        
+        const jsonMatch = jsonPart.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          const cleanedJson = jsonMatch[0].replace(/\/\/[^\r\n]*/g, '').trim();
+          const materialData = JSON.parse(cleanedJson);
+          
+          const enhancedData = await this.enhanceWithChemicalVerification(materialData);
+          const validatedData = this.validateMaterialData(enhancedData);
+          const savedMaterial = await addMaterial(validatedData);
+
+          if (savedMaterial) {
+            return {
+              response: informationPart,
+              materialAdded: true,
+              materialData: savedMaterial,
+              successMessage: `✅ Successfully added "${validatedData.materialName}" with ${validatedData.confidenceLevel} confidence verification!`
+            };
+          } else {
+            return {
+              response: informationPart,
+              materialAdded: false,
+              errorMessage: "❌ Failed to save the material to the database. Please try again or add it manually."
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error processing material addition:', error);
+        return {
+          response: response.replace('**[ADD_MATERIAL]**', ''),
+          materialAdded: false,
+          errorMessage: "❌ Error processing material addition. Please try again."
+        };
+      }
+    }
+
+    // Process enhanced AI capabilities responses
+    const enhancedResponse = this.processEnhancedCapabilities(response);
+    
+    // If function call was made, append the function result to the response
+    if (functionResult) {
+      enhancedResponse.functionResult = functionResult;
+    }
+
+    return enhancedResponse;
+  }
+
   buildUserMessage(text, files) {
     let message = text;
     
@@ -637,7 +788,7 @@ class AIService {
 
     try {
       const messages = [
-        { role: 'system', content: this.systemPrompt },
+        { role: 'system', content: BASIC_SYSTEM_PROMPT }, // Use basic prompt for streaming
         ...conversationHistory,
         { role: 'user', content: this.buildUserMessage(userMessage, files) }
       ];

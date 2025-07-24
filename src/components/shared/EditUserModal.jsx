@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { X, FolderOpen, FlaskConical, Users, Check, Trash2, Code, Building2, Lock } from 'lucide-react';
 import Button from '../ui/Button';
 import ChangePasswordModal from './ChangePasswordModal';
+import useFormState from '../../hooks/useFormState';
 
 const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRole, onChangePassword }) => {
-  const [formData, setFormData] = useState({
+  const initialState = {
     name: '',
     email: '',
     contact: '',
-    role: '',
-    credentials: '',
+    role: 'Employee',
+    credentials: getDefaultCredentials('Employee'),
     appAccess: []
-  });
+  };
+  const { formData, setFormData, handleInputChange, resetForm } = useFormState(initialState);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   const getAppOptions = (userRole) => {
@@ -65,7 +67,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
         appAccess: user.appAccess || []
       });
     }
-  }, [user]);
+  }, [user, setFormData]);
 
   // Update credentials and app access when role changes
   useEffect(() => {
@@ -83,13 +85,6 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
       }
     }
   }, [formData.role, user]);
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
   const toggleAppAccess = (appId) => {
     setFormData(prev => ({

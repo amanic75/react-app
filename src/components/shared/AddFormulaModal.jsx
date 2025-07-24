@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Search, ChevronLeft, ChevronRight, Check, AlertCircle,
 import Button from '../ui/Button';
 import { getAllMaterials } from '../../lib/materials';
 import aiService from '../../lib/aiService';
+import useFormState from '../../hooks/useFormState';
 
 const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -13,14 +14,13 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
   // AI material addition state
   const [isAddingWithAI, setIsAddingWithAI] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
-  
-  // Form data
-  const [formulaData, setFormulaData] = useState({
+  const initialState = {
     name: '',
     targetDrumPrice: '',
     targetTotePrice: '',
     ingredients: []
-  });
+  };
+  const { formData: formulaData, handleInputChange, setFormData, resetForm } = useFormState(initialState);
 
   // Load raw materials when modal opens
   useEffect(() => {
@@ -28,12 +28,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
       loadRawMaterials();
       // Reset form when opening
       setCurrentStep(1);
-      setFormulaData({
-        name: '',
-        targetDrumPrice: '',
-        targetTotePrice: '',
-        ingredients: []
-      });
+      resetForm();
       setErrors({});
       setMaterialSearchTerm('');
     }
@@ -101,18 +96,6 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form inputs
-  const handleInputChange = (field, value) => {
-    setFormulaData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
-
   // Handle ingredient management
   const addIngredient = (material) => {
     const newIngredient = {
@@ -125,7 +108,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
       casNumber: material.casNumber
     };
     
-    setFormulaData(prev => ({
+    setFormData(prev => ({
       ...prev,
       ingredients: [...prev.ingredients, newIngredient]
     }));
@@ -133,7 +116,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const updateIngredient = (ingredientId, field, value) => {
-    setFormulaData(prev => ({
+    setFormData(prev => ({
       ...prev,
       ingredients: prev.ingredients.map(ing =>
         ing.id === ingredientId ? { ...ing, [field]: value } : ing
@@ -142,7 +125,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const removeIngredient = (ingredientId) => {
-    setFormulaData(prev => ({
+    setFormData(prev => ({
       ...prev,
       ingredients: prev.ingredients.filter(ing => ing.id !== ingredientId)
     }));
@@ -286,7 +269,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
                 <input
                   type="text"
                   value={formulaData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onChange={e => handleInputChange('name', e.target.value)}
                   className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.name ? 'border-red-500' : 'border-slate-600'
                   }`}
@@ -309,7 +292,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
                     type="number"
                     step="0.01"
                     value={formulaData.targetDrumPrice}
-                    onChange={(e) => handleInputChange('targetDrumPrice', e.target.value)}
+                    onChange={e => handleInputChange('targetDrumPrice', e.target.value)}
                     className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.targetDrumPrice ? 'border-red-500' : 'border-slate-600'
                     }`}
@@ -331,7 +314,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
                     type="number"
                     step="0.01"
                     value={formulaData.targetTotePrice}
-                    onChange={(e) => handleInputChange('targetTotePrice', e.target.value)}
+                    onChange={e => handleInputChange('targetTotePrice', e.target.value)}
                     className={`w-full px-3 py-2 bg-slate-700 border rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.targetTotePrice ? 'border-red-500' : 'border-slate-600'
                     }`}

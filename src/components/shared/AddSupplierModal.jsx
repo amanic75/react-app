@@ -1,50 +1,30 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import useFormState from '../../hooks/useFormState';
 
 const AddSupplierModal = ({ isOpen, onClose }) => {
-  const [formData, setFormData] = useState({
+  const initialState = {
     supplierName: '',
     supplierId: '',
     supplierEmail: '',
     supplierContact: '',
     packagingCode: '',
     standardCost: ''
-  });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
+  const { formData, handleInputChange, resetForm } = useFormState(initialState);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission
     console.log('New supplier data:', formData);
     // Reset form after successful submission
-    setFormData({
-      supplierName: '',
-      supplierId: '',
-      supplierEmail: '',
-      supplierContact: '',
-      packagingCode: '',
-      standardCost: ''
-    });
+    resetForm();
     onClose();
   };
 
   const handleCancel = () => {
     // Reset form data
-    setFormData({
-      supplierName: '',
-      supplierId: '',
-      supplierEmail: '',
-      supplierContact: '',
-      packagingCode: '',
-      standardCost: ''
-    });
+    resetForm();
     onClose();
   };
 
@@ -75,7 +55,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               type="text"
               name="supplierName"
               value={formData.supplierName}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('supplierName', e.target.value)}
               placeholder="Enter supplier name"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -91,7 +71,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               type="text"
               name="supplierId"
               value={formData.supplierId}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('supplierId', e.target.value)}
               placeholder="Enter supplier ID"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -107,7 +87,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               type="email"
               name="supplierEmail"
               value={formData.supplierEmail}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('supplierEmail', e.target.value)}
               placeholder="Enter supplier email"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -123,7 +103,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               type="tel"
               name="supplierContact"
               value={formData.supplierContact}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('supplierContact', e.target.value)}
               placeholder="Enter contact number"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -139,7 +119,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               type="text"
               name="packagingCode"
               value={formData.packagingCode}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('packagingCode', e.target.value)}
               placeholder="Enter packaging code"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -157,7 +137,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
               min="0"
               name="standardCost"
               value={formData.standardCost}
-              onChange={handleInputChange}
+              onChange={e => handleInputChange('standardCost', e.target.value)}
               placeholder="Enter standard cost"
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required

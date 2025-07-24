@@ -39,28 +39,23 @@ const FormulaDetailPage = () => {
     const loadFormula = async () => {
       try {
         setLoading(true);
-    console.log('Loading formula with ID:', formulaId);
     
         const foundFormula = await getFormulaById(formulaId);
-    console.log('Found formula:', foundFormula);
-    
-    if (foundFormula) {
-      setFormula(foundFormula);
+    const { data } = foundFormula;
+    if (data) {
+      setFormula(data);
       setEditableFormula({
-        name: foundFormula.name,
-        totalCost: foundFormula.totalCost,
-        finalSalePriceDrum: foundFormula.finalSalePriceDrum,
-        finalSalePriceTote: foundFormula.finalSalePriceTote,
-        ingredients: [...foundFormula.ingredients],
-        assigned_to: foundFormula.assigned_to || []
+        name: data.name,
+        totalCost: data.totalCost,
+        finalSalePriceDrum: data.finalSalePriceDrum,
+        finalSalePriceTote: data.finalSalePriceTote,
+        ingredients: [...data.ingredients],
+        assigned_to: data.assigned_to || []
       });
-      console.log('Formula state set successfully');
     } else {
-      console.log('No formula found for ID:', formulaId);
-          setError('Formula not found');
-        }
+      setError('Formula not found');
+    }
       } catch (err) {
-        console.error('Error loading formula:', err);
         setError('Failed to load formula');
       } finally {
         setLoading(false);
@@ -72,7 +67,6 @@ const FormulaDetailPage = () => {
 
   // Reset edit state when navigating to different formula
   useEffect(() => {
-    console.log('FormulaDetailPage rendered with formulaId:', formulaId);
     
     // Reset edit state when navigating to different formula
     setIsEditing(false);
@@ -80,12 +74,9 @@ const FormulaDetailPage = () => {
     setDeletedDocuments([]);
     
     return () => {
-      console.log('FormulaDetailPage cleanup');
     };
   }, [formulaId]);
 
-  console.log('Current formula state:', formula);
-  console.log('Current editableFormula state:', editableFormula);
 
   // Show loading state
   if (loading) {
@@ -102,7 +93,6 @@ const FormulaDetailPage = () => {
 
   // Show error or not found state
   if (error || !formula) {
-    console.log('Rendering Formula Not Found page');
     return (
       <DashboardLayout>
         <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -153,7 +143,6 @@ const FormulaDetailPage = () => {
 
   const handleDeleteDocument = (documentId) => {
     setDeletedDocuments(prev => [...prev, documentId]);
-    console.log('Deleted document ID:', documentId);
   };
 
   const filteredExistingDocuments = existingDocuments.filter(doc => !deletedDocuments.includes(doc.id));
@@ -170,7 +159,6 @@ const FormulaDetailPage = () => {
       formulaId: formulaId
     }));
     setUploadedFiles(prev => [...prev, ...newFiles]);
-    console.log('Uploading files for formula:', formulaId, newFiles);
   };
 
   const handleDragOver = (e) => {
@@ -239,10 +227,8 @@ const FormulaDetailPage = () => {
         const updatedFormula = await updateFormula(formula.id, editableFormula);
         if (updatedFormula) {
           setFormula(updatedFormula);
-          console.log('Formula saved successfully:', updatedFormula);
         }
       }
-      console.log('Deleted documents:', deletedDocuments);
       setIsEditing(false);
       setShowMaterialSearch(false);
       setMaterialSearchTerm('');
@@ -288,8 +274,8 @@ const FormulaDetailPage = () => {
   // Load raw materials for ingredient search
   const loadRawMaterials = async () => {
     try {
-      const materials = await getAllMaterials();
-      setRawMaterials(materials);
+      const { data } = await getAllMaterials();
+      setRawMaterials(data || []);
     } catch (error) {
       console.error('Error loading raw materials:', error);
     }
@@ -335,8 +321,8 @@ const FormulaDetailPage = () => {
       
       if (response.materialAdded && response.materialData) {
         // Refresh materials list
-        const updatedMaterials = await getAllMaterials();
-        setRawMaterials(updatedMaterials);
+        const { data: updatedMaterials } = await getAllMaterials();
+        setRawMaterials(updatedMaterials || []);
         
         // Auto-add the new material to the formula
         const newMaterial = response.materialData;
@@ -366,7 +352,6 @@ const FormulaDetailPage = () => {
   };
 
   const handleFieldChange = (field, value) => {
-    console.log('Field change:', field, value);
     setEditableFormula(prev => ({
       ...prev,
       [field]: value
@@ -791,7 +776,6 @@ const FormulaDetailPage = () => {
                           if (isEditing) {
                             handleDeleteDocument(file.id);
                           } else {
-                            console.log('Download existing file:', file.name);
                           }
                         }}
                         className={`p-1 transition-colors ${
@@ -871,7 +855,6 @@ const FormulaDetailPage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('Download file:', file.name);
                         }}
                         className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
                         title="Download"

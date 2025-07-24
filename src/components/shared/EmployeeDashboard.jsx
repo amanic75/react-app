@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, FolderOpen, FlaskConical, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
-import { getUsers } from '../../lib/data';
+import { getAllUsers } from '../../lib/users';
 
 const EmployeeDashboard = ({ userData }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,13 +24,14 @@ const EmployeeDashboard = ({ userData }) => {
 
   // Load users for app access display
   useEffect(() => {
-    const loadUsers = () => {
-      setUsers(getUsers());
+    const loadUsers = async () => {
+      const usersFromBackend = await getAllUsers();
+      setUsers(usersFromBackend);
     };
-    
     loadUsers();
-    const interval = setInterval(loadUsers, 2000);
-    return () => clearInterval(interval);
+    // Optionally, set up polling or remove interval for production
+    // const interval = setInterval(loadUsers, 2000);
+    // return () => clearInterval(interval);
   }, []);
 
   // Get users who have access to a specific app

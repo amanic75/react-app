@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
 import AddFormulaModal from '../components/shared/AddFormulaModal';
-import { getAllFormulas, addFormula } from '../lib/supabaseData';
+import { getAllFormulas, addFormula } from '../lib/formulas';
 import { useAuth } from '../contexts/AuthContext';
 import { filterByTab } from '../lib/filterUtils';
 

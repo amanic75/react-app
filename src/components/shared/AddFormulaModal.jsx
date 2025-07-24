@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Search, ChevronLeft, ChevronRight, Check, AlertCircle, Bot, Sparkles } from 'lucide-react';
 import Button from '../ui/Button';
-import { getAllMaterials } from '../../lib/supabaseData';
+import { getAllMaterials } from '../../lib/materials';
 import aiService from '../../lib/aiService';
 
 const AddFormulaModal = ({ isOpen, onClose, onSave }) => {

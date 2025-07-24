@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import { getAllMaterials, generateMaterialId } from '../lib/supabaseData';
+import { getAllMaterials } from '../lib/materials';
 import { useAuth } from '../contexts/AuthContext';
 import { filterByTab } from '../lib/filterUtils';
 
@@ -103,7 +103,7 @@ const RawMaterialsPage = () => {
 
   // Handle clicking on a material name to navigate to detail page
   const handleMaterialClick = (material) => {
-    const materialId = generateMaterialId(material.materialName);
+    const materialId = material.id; // Assuming material.id is the unique identifier
     navigate(`/raw-materials/${materialId}`);
   };
 

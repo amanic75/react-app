@@ -3,7 +3,8 @@ import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2,
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
-import { getFormulaById, updateFormula, getAllFormulas, deleteFormula, getAllMaterials } from '../lib/supabaseData';
+import { getFormulaById, updateFormula, getAllFormulas, deleteFormula } from '../lib/formulas';
+import { getAllMaterials } from '../lib/materials';
 import aiService from '../lib/aiService';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeAssignmentSelector from '../components/shared/EmployeeAssignmentSelector';

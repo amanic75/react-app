@@ -1,4 +1,4 @@
-import { addMaterial } from './supabaseData';
+import { addMaterial } from './materials';
 import ChemicalDatabaseService from './chemicalDatabaseService';
 
 // AI Service for handling AI chat requests

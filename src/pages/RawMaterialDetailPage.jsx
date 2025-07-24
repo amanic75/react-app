@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
-import { getMaterialById, updateMaterial, getAllMaterials, generateMaterialId, deleteMaterial } from '../lib/supabaseData';
+import { getMaterialById, updateMaterial, getAllMaterials, deleteMaterial } from '../lib/materials';
 import { useTheme } from '../contexts/ThemeContext';
 
 const RawMaterialDetailPage = () => {

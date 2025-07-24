@@ -6,7 +6,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
 import EditSupplierModal from '../components/shared/EditSupplierModal';
 import AddSupplierModal from '../components/shared/AddSupplierModal';
-import { getAllSuppliers } from '../lib/supabaseData';
+import { getAllSuppliers } from '../lib/suppliers';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (

@@ -36,8 +36,8 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
 
   const loadRawMaterials = async () => {
     try {
-      const materials = await getAllMaterials();
-      setRawMaterials(materials);
+      const { data } = await getAllMaterials();
+      setRawMaterials(data || []);
     } catch (error) {
       console.error('Error loading raw materials:', error);
     }

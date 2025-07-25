@@ -4,6 +4,18 @@ import Button from '../ui/Button';
 import ChangePasswordModal from './ChangePasswordModal';
 import useFormState from '../../hooks/useFormState';
 
+const getDefaultCredentials = (userRole) => {
+  switch (userRole) {
+    case 'Capacity Admin':
+      return 'admin/secure pass';
+    case 'NSight Admin':
+      return 'nsight-admin/enterprise pass';
+    case 'Employee':
+    default:
+      return 'user/temporary pass';
+  }
+};
+
 const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRole, onChangePassword }) => {
   const initialState = {
     name: '',
@@ -28,18 +40,6 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
         { id: 'raw-materials', name: 'Raw Materials', icon: FlaskConical },
         { id: 'suppliers', name: 'Suppliers', icon: Users }
       ];
-    }
-  };
-
-  const getDefaultCredentials = (userRole) => {
-    switch (userRole) {
-      case 'Capacity Admin':
-        return 'admin/secure pass';
-      case 'NSight Admin':
-        return 'nsight-admin/enterprise pass';
-      case 'Employee':
-      default:
-        return 'user/temporary pass';
     }
   };
 

@@ -38,7 +38,7 @@ const LoginPage = () => {
       // Don't redirect here - let useEffect handle it once userProfile is loaded
       // The auth state change will trigger the redirect to the appropriate dashboard
     } catch (error) {
-      console.error('Login error:', error);
+      // console.error removed
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSigningIn(false);

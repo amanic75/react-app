@@ -4,12 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('🔑 Key check:', {
-  hasServiceRole: !!serviceRoleKey,
-  hasAnon: !!anonKey,
-  serviceRolePreview: serviceRoleKey ? serviceRoleKey.substring(0, 20) + '...' : 'NOT SET',
-  anonPreview: anonKey ? anonKey.substring(0, 20) + '...' : 'NOT SET'
-});
+
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -80,7 +75,6 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('❌ System monitoring API error:', error);
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 
@@ -114,7 +108,6 @@ async function getServerStatus(req, res) {
       environment: 'production'
     });
   } catch (error) {
-    console.error('❌ Server status error:', error);
     return res.status(500).json({ 
       error: 'Failed to get server status', 
       details: error.message,
@@ -153,8 +146,6 @@ async function getNetworkStatus(req, res) {
         status = 'poor';
       }
       
-      console.log(`🌐 Network test completed: ${latency}ms (${status})`);
-      
       return res.status(200).json({
         latency: `${latency}ms`,
         status: status,
@@ -164,8 +155,6 @@ async function getNetworkStatus(req, res) {
       });
       
     } catch (networkError) {
-      console.error('❌ Network test failed:', networkError.message);
-      
       return res.status(200).json({
         latency: 'timeout',
         status: 'poor',
@@ -175,7 +164,6 @@ async function getNetworkStatus(req, res) {
       });
     }
   } catch (error) {
-    console.error('❌ Network monitoring error:', error);
     return res.status(500).json({
       error: 'Internal server error',
       latency: 'error',
@@ -206,12 +194,12 @@ async function getDatabaseHealth(req, res) {
       healthChecks.connectionTest.status = error ? 'failed' : 'healthy';
       
       if (error) {
-        console.error('Connection test error:', error);
+        // Connection test error
       }
     } catch (error) {
       healthChecks.connectionTest.responseTime = Date.now() - connectionStart;
       healthChecks.connectionTest.status = 'failed';
-      console.error('Connection test failed:', error);
+      // console.error removed
     }
 
     // Test 2: Query performance test
@@ -226,12 +214,12 @@ async function getDatabaseHealth(req, res) {
       healthChecks.queryTest.status = error ? 'failed' : 'healthy';
       
       if (error) {
-        console.error('Query test error:', error);
+        // console.error removed
       }
     } catch (error) {
       healthChecks.queryTest.responseTime = Date.now() - queryStart;
       healthChecks.queryTest.status = 'failed';
-      console.error('Query test failed:', error);
+      // console.error removed
     }
 
     // Determine overall health
@@ -250,7 +238,7 @@ async function getDatabaseHealth(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Database health check error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to check database health', 
       details: error.message,
@@ -290,7 +278,7 @@ async function getResourceUsage(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Resource monitoring error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get resource usage', 
       details: error.message 
@@ -404,7 +392,7 @@ async function getErrorMonitoring(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Error monitoring failed:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get error monitoring data', 
       details: error.message,
@@ -473,32 +461,23 @@ async function getUsageAnalytics(req, res) {
         .select('id, email, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      console.log('🔍 User profiles select query debug:', {
-        usersData: users,
-        usersLength: users?.length,
-        userError: userError,
-        hasUsers: !!users && users.length > 0
-      });
+
 
       if (userError) {
-        console.error('User count error:', userError);
+        // console.error removed
       } else {
         const totalUsers = users?.length || 0;
         const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const usersLast24h = users?.filter(user => new Date(user.updated_at || user.created_at) > last24Hours).length || 0;
         
-        console.log('📊 User analysis:', {
-          totalUsers,
-          usersLast24h,
-          last24HoursThreshold: last24Hours.toISOString()
-        });
+
         
         analytics.activeUsers.current = currentActiveUsers; // Use real active users
         analytics.activeUsers.last24Hours = usersLast24h;
         analytics.activeUsers.peakToday = Math.max(currentActiveUsers, usersLast24h);
       }
     } catch (dbError) {
-      console.error('Database query error:', dbError);
+      // console.error removed
     }
 
     // Get API call statistics (simulated based on system monitoring requests)
@@ -512,7 +491,7 @@ async function getUsageAnalytics(req, res) {
 
     // Get database operations data
     try {
-      console.log('🔍 Querying database for operations data...');
+      // console.log removed
       
       // Count different types of database operations
       const [materialsCount, formulasCount, suppliersCount, usersCount] = await Promise.all([
@@ -522,20 +501,7 @@ async function getUsageAnalytics(req, res) {
         supabase.from('user_profiles').select('count', { count: 'exact' })
       ]);
 
-      console.log('📊 Database counts:', {
-        materials: materialsCount.count,
-        formulas: formulasCount.count,
-        suppliers: suppliersCount.count,
-        users: usersCount.count
-      });
 
-      // Debug user_profiles query specifically
-      console.log('🔍 User profiles query debug:', {
-        userCountData: usersCount.data,
-        userCountError: usersCount.error,
-        userCountStatus: usersCount.status,
-        userCountStatusText: usersCount.statusText
-      });
 
       const totalReadOps = (materialsCount.count || 0) + (formulasCount.count || 0) + (suppliersCount.count || 0);
       const totalWriteOps = Math.ceil(totalReadOps * 0.1); // Estimate 10% of reads are writes
@@ -562,9 +528,9 @@ async function getUsageAnalytics(req, res) {
         growthRate: '+2.5%' // Estimated growth rate
       };
 
-      console.log('✅ Database operations and storage data calculated successfully');
+      // console.log removed
     } catch (dbError) {
-      console.error('❌ Database operations query error:', dbError);
+      // console.error removed
       analytics.databaseOperations = {
         readOperations: 0,
         writeOperations: 0,
@@ -594,7 +560,7 @@ async function getUsageAnalytics(req, res) {
       analytics.responseTime.p99 = 'Error';
     }
 
-    console.log('📊 Usage Analytics Response:', JSON.stringify(analytics, null, 2));
+    // console.log removed
     
     return res.status(200).json({
       ...analytics,
@@ -603,7 +569,7 @@ async function getUsageAnalytics(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Usage analytics error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get usage analytics', 
       details: error.message 
@@ -629,7 +595,7 @@ async function getHistoricalData(req, res) {
         userGrowthData = users;
       }
     } catch (error) {
-      console.error('User growth data error:', error);
+      // console.error removed
     }
 
     // Get data creation over time
@@ -651,7 +617,7 @@ async function getHistoricalData(req, res) {
       // Sort by creation time
       dataCreationTimeline.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     } catch (error) {
-      console.error('Data creation timeline error:', error);
+      // console.error removed
     }
 
     // Generate hourly data for the last 24 hours based on real data
@@ -717,7 +683,7 @@ async function getHistoricalData(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Historical data error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get historical data', 
       details: error.message 
@@ -751,13 +717,13 @@ async function getSupabaseMetrics(req, res) {
       queryTests.push(userQueryTime);
       
       if (userError) {
-        console.error('User query error:', userError);
+        // console.error removed
         metrics.queryPerformance.slowQueries++;
       } else {
         metrics.authStatus.activeUsers = users?.length || 0;
       }
     } catch (error) {
-      console.error('User query failed:', error);
+      // console.error removed
       metrics.queryPerformance.slowQueries++;
     }
 
@@ -773,11 +739,11 @@ async function getSupabaseMetrics(req, res) {
       queryTests.push(materialsQueryTime);
       
       if (materialsError) {
-        console.error('Materials query error:', materialsError);
+        // console.error removed
         metrics.queryPerformance.slowQueries++;
       }
     } catch (error) {
-      console.error('Materials query failed:', error);
+      // console.error removed
       metrics.queryPerformance.slowQueries++;
     }
 
@@ -793,11 +759,11 @@ async function getSupabaseMetrics(req, res) {
       queryTests.push(formulasQueryTime);
       
       if (formulasError) {
-        console.error('Formulas query error:', formulasError);
+        // console.error removed
         metrics.queryPerformance.slowQueries++;
       }
     } catch (error) {
-      console.error('Formulas query failed:', error);
+      // console.error removed
       metrics.queryPerformance.slowQueries++;
     }
 
@@ -868,7 +834,7 @@ async function getSupabaseMetrics(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Supabase metrics error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get Supabase metrics', 
       details: error.message,
@@ -911,7 +877,7 @@ async function getAllMetrics(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ All metrics error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to get all metrics', 
       details: error.message 

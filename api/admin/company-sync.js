@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     // Check environment variables
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('Missing Supabase environment variables');
+      // console.error removed
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('❌ Company sync error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
 // GET /api/admin/company-sync - Get sync status
 async function getCompanySyncStatus(req, res) {
-  console.log('📋 Checking company sync status');
+  // console.log removed
 
   try {
     // Get all companies (simplified query to avoid relationship conflicts)
@@ -68,7 +68,7 @@ async function getCompanySyncStatus(req, res) {
       .order('created_at', { ascending: false });
 
     if (companiesError) {
-      console.error('❌ Failed to fetch companies:', companiesError);
+      // console.error removed
       return res.status(500).json({ 
         error: 'Failed to fetch companies',
         details: companiesError.message 
@@ -102,7 +102,7 @@ async function getCompanySyncStatus(req, res) {
       companiesSynced: syncStatus.filter(s => !s.syncStatus.needsSync).length
     };
 
-    console.log(`✅ Sync status retrieved: ${summary.companiesNeedingSync}/${summary.totalCompanies} companies need sync`);
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -111,7 +111,7 @@ async function getCompanySyncStatus(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Error checking sync status:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to check sync status',
       details: error.message 
@@ -121,7 +121,7 @@ async function getCompanySyncStatus(req, res) {
 
 // POST /api/admin/company-sync - Sync companies with their admin users
 async function syncCompaniesWithUsers(req, res) {
-  console.log('🔄 Starting company-user sync process');
+  // console.log removed
 
   try {
     // Get all companies that need syncing (simplified query to avoid relationship conflicts)
@@ -139,7 +139,7 @@ async function syncCompaniesWithUsers(req, res) {
       .order('created_at', { ascending: false });
 
     if (companiesError) {
-      console.error('❌ Failed to fetch companies for sync:', companiesError);
+      // console.error removed
       return res.status(500).json({ 
         error: 'Failed to fetch companies for sync',
         details: companiesError.message 
@@ -157,7 +157,7 @@ async function syncCompaniesWithUsers(req, res) {
     // Process each company
     for (const company of companies) {
       syncResults.processed++;
-      console.log(`🔄 Processing company: ${company.company_name} (${company.admin_user_email})`);
+      // console.log removed
 
       try {
         // Check if admin user already exists and is linked to this company via company_users table
@@ -169,7 +169,7 @@ async function syncCompaniesWithUsers(req, res) {
           .single();
 
         if (existingUserLink && !existingLinkError) {
-          console.log(`✅ Company ${company.company_name} already has valid admin user`);
+          // console.log removed
           syncResults.details.push({
             company: company.company_name,
             action: 'skipped',
@@ -188,7 +188,7 @@ async function syncCompaniesWithUsers(req, res) {
         let userId = existingUser?.id;
 
         if (!existingUser) {
-          console.log(`🆕 Creating new admin user for company: ${company.company_name}`);
+          // console.log removed
           
           // Create new user account
           const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -203,7 +203,7 @@ async function syncCompaniesWithUsers(req, res) {
           });
 
           if (authError) {
-            console.error(`❌ Failed to create auth user for ${company.admin_user_email}:`, authError);
+            // console.error removed
             syncResults.errors++;
             syncResults.details.push({
               company: company.company_name,
@@ -231,7 +231,7 @@ async function syncCompaniesWithUsers(req, res) {
             .single();
 
           if (profileError) {
-            console.error(`❌ Failed to create profile for ${company.admin_user_email}:`, profileError);
+            // console.error removed
             syncResults.errors++;
             syncResults.details.push({
               company: company.company_name,
@@ -241,10 +241,10 @@ async function syncCompaniesWithUsers(req, res) {
             continue;
           }
 
-          console.log(`✅ Created new admin user: ${company.admin_user_email}`);
+          // console.log removed
           syncResults.created++;
         } else {
-          console.log(`👤 Found existing user: ${company.admin_user_email}`);
+          // console.log removed
           
           // Update user role to Capacity Admin if needed
           if (existingUser.role !== 'Capacity Admin') {
@@ -257,9 +257,9 @@ async function syncCompaniesWithUsers(req, res) {
               .eq('id', existingUser.id);
 
             if (roleUpdateError) {
-              console.error(`❌ Failed to update role for ${company.admin_user_email}:`, roleUpdateError);
+              // console.error removed
             } else {
-              console.log(`✅ Updated role to Capacity Admin for ${company.admin_user_email}`);
+              // console.log removed
             }
           }
         }
@@ -279,7 +279,7 @@ async function syncCompaniesWithUsers(req, res) {
           });
 
         if (companyLinkError) {
-          console.error(`❌ Failed to link user to company ${company.company_name}:`, companyLinkError);
+          // console.error removed
           syncResults.errors++;
           syncResults.details.push({
             company: company.company_name,
@@ -289,7 +289,7 @@ async function syncCompaniesWithUsers(req, res) {
           continue;
         }
 
-        console.log(`✅ Successfully linked ${company.admin_user_email} to ${company.company_name}`);
+        // console.log removed
         syncResults.linked++;
         syncResults.details.push({
           company: company.company_name,
@@ -298,7 +298,7 @@ async function syncCompaniesWithUsers(req, res) {
         });
 
       } catch (error) {
-        console.error(`❌ Error processing company ${company.company_name}:`, error);
+        // console.error removed
         syncResults.errors++;
         syncResults.details.push({
           company: company.company_name,
@@ -308,7 +308,7 @@ async function syncCompaniesWithUsers(req, res) {
       }
     }
 
-    console.log(`✅ Sync completed: ${syncResults.created} created, ${syncResults.linked} linked, ${syncResults.errors} errors`);
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -317,7 +317,7 @@ async function syncCompaniesWithUsers(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Error during sync process:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to sync companies with users',
       details: error.message 

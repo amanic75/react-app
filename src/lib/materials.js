@@ -48,7 +48,7 @@ export const getAllMaterials = async () => {
       canonicalSMILES: material.canonical_smiles
     })), error: null };
   } catch (error) {
-    console.error('Error fetching materials:', error);
+    // console.error removed
     return { data: [], error };
   }
 };
@@ -101,7 +101,7 @@ export const getMaterialById = async (id) => {
       canonicalSMILES: data.canonical_smiles
     }, error: null };
   } catch (error) {
-    console.error('Error fetching material:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -186,7 +186,7 @@ export const addMaterial = async (materialData) => {
       canonicalSMILES: data.canonical_smiles
     }, error: null };
   } catch (error) {
-    console.error('Error adding material:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -272,7 +272,7 @@ export const updateMaterial = async (materialId, updatedData) => {
       canonicalSMILES: data.canonical_smiles
     }, error: null };
   } catch (error) {
-    console.error('Error updating material:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -291,7 +291,7 @@ export const deleteMaterial = async (materialId) => {
     if (error) throw error;
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting material:', error);
+    // console.error removed
     return { data: false, error };
   }
 }; 

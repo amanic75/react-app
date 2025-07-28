@@ -39,7 +39,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
       const { data } = await getAllMaterials();
       setRawMaterials(data || []);
     } catch (error) {
-      console.error('Error loading raw materials:', error);
+      // console.error removed
     }
   };
 
@@ -170,7 +170,7 @@ const AddFormulaModal = ({ isOpen, onClose, onSave }) => {
         }, 5000);
       }
     } catch (error) {
-      console.error('Error adding material with AI:', error);
+      // console.error removed
       setAiResponse('❌ Failed to add material with AI. Please try again.');
       setTimeout(() => {
         setIsAddingWithAI(false);

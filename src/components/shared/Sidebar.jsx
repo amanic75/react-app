@@ -18,7 +18,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const navigate = useNavigate();
 
   const handleNavigation = (path) => {
-    console.log('Navigating to:', path);
+    // console.log removed
     navigate(path);
   };
 
@@ -27,7 +27,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
       await signOut();
       navigate('/auth');
     } catch (error) {
-      console.error('Logout error:', error);
+      // console.error removed
     }
   };
 
@@ -99,7 +99,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('Button clicked:', link.label);
+                  // console.log removed
                   link.action();
                 }}
                 className="flex items-center w-full px-3 py-2 text-slate-200 hover:bg-slate-700 

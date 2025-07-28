@@ -56,13 +56,13 @@ export const AuthProvider = ({ children }) => {
       if (recentlyDeleted) {
         const deleteTime = parseInt(recentlyDeleted);
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
-        console.log('🔒 Checking deletion marker for user:', userId, 'deleteTime:', new Date(deleteTime), 'threshold:', new Date(tenMinutesAgo));
+        // console.log removed
         if (deleteTime > tenMinutesAgo) {
-          console.log('⚠️ User was recently deleted, not auto-creating profile');
+          // console.log removed
           return null;
         } else {
           // Clean up expired deletion marker
-          console.log('🧹 Cleaning up expired deletion marker for user:', userId);
+          // console.log removed
           localStorage.removeItem(`deleted_user_${userId}`);
         }
       }
@@ -81,25 +81,25 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error) {
-        console.error('❌ Database error fetching profile:', error);
+        // console.error removed
         
         // If no profile exists, try to create one (unless recently deleted)
         if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-          console.log('🔄 No profile in database for user:', userId);
+          // console.log removed
           
           // Double-check deletion marker before creating
           const stillDeleted = localStorage.getItem(`deleted_user_${userId}`);
           if (stillDeleted) {
-            console.log('🚫 User is marked as deleted, aborting profile creation');
+            // console.log removed
             return null;
           }
           
-          console.log('🆕 Creating new profile for user:', userId);
+          // console.log removed
           try {
             return await createUserProfile(userId);
           } catch (createError) {
-            console.error('❌ Database profile creation failed:', createError);
-            console.log('🚨 Falling back to auth-based profile');
+            // console.error removed
+            // console.log removed
             
             // Use fallbackUser if provided, otherwise try to get user
             if (fallbackUser) {
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }) => {
         }
         
         // For other errors, fall back to auth-based profile
-        console.log('🚨 Database unavailable, using auth-based profile');
+        // console.log removed
         
         // Use fallbackUser if provided, otherwise try to get user
         if (fallbackUser) {
@@ -128,13 +128,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // Check if it's a timeout - this is expected sometimes
       if (error.message === 'Profile fetch timeout') {
-        console.warn('⏱️ Profile fetch timed out after 1s, using fallback');
+        // console.warn removed
       } else {
-        console.error('❌ Error in getUserProfile:', error);
+        // console.error removed
       }
       
       // Always fall back to auth-based profile
-      console.log('🚨 Profile fetch failed, creating from auth data');
+      // console.log removed
       try {
         // Use fallbackUser if provided, otherwise try to get user
         if (fallbackUser) {
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }) => {
         const { data: { user } } = await supabase.auth.getUser();
         return createProfileFromAuth(user);
       } catch (authError) {
-        console.error('❌ Even auth fallback failed:', authError);
+        // console.error removed
         return null;
       }
     }
@@ -153,12 +153,12 @@ export const AuthProvider = ({ children }) => {
   // Auto-link user to company if they are a company admin
   const autoLinkToCompany = async (userProfile) => {
     try {
-      console.log('🔗 Checking if user should be auto-linked to a company:', userProfile.email);
+      // console.log removed
       
       // Find any company where this user is the admin
       const response = await fetch('/api/admin/companies');
       if (!response.ok) {
-        console.log('⚠️ Could not fetch companies for auto-linking');
+        // console.log removed
         return;
       }
       
@@ -168,11 +168,11 @@ export const AuthProvider = ({ children }) => {
       );
       
       if (!matchingCompany) {
-        console.log('ℹ️ No matching company found for auto-linking');
+        // console.log removed
         return;
       }
       
-      console.log(`🎯 Found matching company: ${matchingCompany.name} for ${userProfile.email}`);
+      // console.log removed
       
       // Check if link already exists
       const { data: existingLink, error: linkError } = await supabase
@@ -183,7 +183,7 @@ export const AuthProvider = ({ children }) => {
         .single();
       
       if (existingLink) {
-        console.log('✅ Company-user link already exists');
+        // console.log removed
         return;
       }
       
@@ -199,13 +199,13 @@ export const AuthProvider = ({ children }) => {
         });
       
       if (insertError) {
-        console.error('❌ Failed to auto-link user to company:', insertError);
+        // console.error removed
       } else {
-        console.log(`✅ Auto-linked ${userProfile.email} to ${matchingCompany.name}`);
+        // console.log removed
       }
       
     } catch (error) {
-      console.error('❌ Error in auto-linking process:', error);
+      // console.error removed
       // Don't throw - this is a bonus feature, not critical
     }
   };
@@ -213,7 +213,7 @@ export const AuthProvider = ({ children }) => {
   // Create user profile in database with fallback
   const createUserProfile = async (userId) => {
     try {
-      console.log('🔄 Creating user profile in database for ID:', userId);
+      // console.log removed
       
       // Check one more time if user was recently deleted (within last 10 minutes)
       const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
@@ -221,11 +221,11 @@ export const AuthProvider = ({ children }) => {
         const deleteTime = parseInt(recentlyDeleted);
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
         if (deleteTime > tenMinutesAgo) {
-          console.log('🚫 Aborting profile creation - user was recently deleted:', userId);
+          // console.log removed
           throw new Error('User was recently deleted');
         } else {
           // Clean up expired deletion marker
-          console.log('🧹 Create profile: Cleaning up expired deletion marker for user:', userId);
+          // console.log removed
           localStorage.removeItem(`deleted_user_${userId}`);
         }
       }
@@ -241,7 +241,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Could not get user info');
       }
 
-      console.log('👤 Creating profile for authenticated user:', user.email, 'requested userId:', userId);
+      // console.log removed
 
       // Extract name from email if no metadata exists
       const email = user.email;
@@ -261,10 +261,10 @@ export const AuthProvider = ({ children }) => {
       // Prioritize role from user_metadata (set during admin creation) over domain-based detection
       const finalRole = user.user_metadata?.role || role;
       
-      console.log('🔍 Role determination for user:', email);
-      console.log('  - Domain-based role:', role);
-      console.log('  - User metadata role:', user.user_metadata?.role);
-      console.log('  - Final role:', finalRole);
+      // console.log removed
+      // console.log removed
+      // console.log removed
+      // console.log removed
       
       const insertPromise = supabase
         .from('user_profiles')
@@ -286,18 +286,18 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
       if (error) {
-        console.error('❌ Error creating user profile in database:', error);
+        // console.error removed
         throw error;
       }
 
-      console.log('✅ User profile created in database:', data);
+      // console.log removed
       
       // CRITICAL: Auto-link to company if this user is a company admin
       await autoLinkToCompany(data);
       
       return data;
     } catch (error) {
-      console.error('❌ Database profile creation failed:', error);
+      // console.error removed
       throw error; // Let caller handle fallback
     }
   };
@@ -309,13 +309,13 @@ export const AuthProvider = ({ children }) => {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        console.log('🔍 Getting initial session...');
+        // console.log removed
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (error) {
-          console.error('❌ Error getting session:', error);
+          // console.error removed
           if (mounted) {
             setLoading(false);
           }
@@ -330,7 +330,7 @@ export const AuthProvider = ({ children }) => {
             const deleteTime = parseInt(recentlyDeleted);
             const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
             if (deleteTime > tenMinutesAgo) {
-              console.log('🚫 Initial session: User was recently deleted, not setting profile:', session.user.email);
+              // console.log removed
               if (mounted) {
                 setUser(null);
                 setUserProfile(null);
@@ -338,7 +338,7 @@ export const AuthProvider = ({ children }) => {
               }
               return;
             } else {
-              console.log('🧹 Initial session: Cleaning up expired deletion marker');
+              // console.log removed
               localStorage.removeItem(`deleted_user_${session.user.id}`);
             }
           }
@@ -352,7 +352,7 @@ export const AuthProvider = ({ children }) => {
               setUserProfile(profile);
             }
           } catch (profileError) {
-            console.error('❌ Profile loading failed completely:', profileError);
+            // console.error removed
             // Final fallback to auth data using session user
             if (mounted) {
               const fallbackProfile = createProfileFromAuth(session.user);
@@ -360,14 +360,14 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } else {
-          console.log('ℹ️ No active session found');
+          // console.log removed
           if (mounted) {
             setUser(null);
             setUserProfile(null);
           }
         }
       } catch (error) {
-        console.error('❌ Error in getInitialSession:', error);
+        // console.error removed
         if (mounted) {
           setUser(null);
           setUserProfile(null);
@@ -396,7 +396,7 @@ export const AuthProvider = ({ children }) => {
               const deleteTime = parseInt(recentlyDeleted);
               const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
               if (deleteTime > tenMinutesAgo) {
-                console.log('🚫 Auth state change: User was recently deleted, not setting profile:', session.user.email);
+                // console.log removed
                 // Don't set user or profile for recently deleted users
                 if (mounted) {
                   setUser(null);
@@ -404,7 +404,7 @@ export const AuthProvider = ({ children }) => {
                 }
                 return;
               } else {
-                console.log('🧹 Auth state change: Cleaning up expired deletion marker');
+                // console.log removed
                 localStorage.removeItem(`deleted_user_${session.user.id}`);
               }
             }
@@ -414,7 +414,7 @@ export const AuthProvider = ({ children }) => {
             // Skip profile refetch for USER_UPDATED events if we already have a profile
             // This prevents unnecessary database calls after password changes
             if (event === 'USER_UPDATED' && userProfile && userProfile.id === session.user.id) {
-              console.log('🔄 USER_UPDATED event - keeping existing profile to avoid refetch');
+              // console.log removed
               // Keep the existing profile, just update user object
               if (mounted) {
                 setLoading(false);
@@ -428,7 +428,7 @@ export const AuthProvider = ({ children }) => {
                 setUserProfile(profile);
               }
             } catch (profileError) {
-              console.error('❌ Profile loading failed in auth change:', profileError);
+              // console.error removed
               if (mounted) {
                 const fallbackProfile = createProfileFromAuth(session.user);
                 setUserProfile(fallbackProfile);
@@ -439,7 +439,7 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(null);
           }
         } catch (error) {
-          console.error('❌ Error in auth state change handler:', error);
+          // console.error removed
           if (mounted) {
             setUser(null);
             setUserProfile(null);
@@ -455,7 +455,7 @@ export const AuthProvider = ({ children }) => {
     // Safety timeout - reduced since we have faster individual timeouts
     const timeout = setTimeout(() => {
       if (mounted) {
-        console.log('⚠️ Auth timeout - forcing loading to false');
+        // console.log removed
         setLoading(false);
       }
     }, 15000); // Increased from 5000ms to 15000ms to allow profile fetch to complete
@@ -490,7 +490,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Sign up error:', error);
+      // console.error removed
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
@@ -501,8 +501,8 @@ export const AuthProvider = ({ children }) => {
   const adminCreateUser = async (email, password, userData = {}) => {
     try {
       setIsSigningIn(true);
-      console.log('🔧 Admin creating user:', email);
-      console.log('📋 UserData being sent to API:', userData);
+      // console.log removed
+      // console.log removed
       
       const requestBody = {
         email,
@@ -516,7 +516,7 @@ export const AuthProvider = ({ children }) => {
         }
       };
       
-      console.log('📤 Request body being sent:', requestBody);
+      // console.log removed
       
       // Use the consolidated API endpoint which uses service role key
       const response = await fetch('/api/admin/users?action=create', {
@@ -529,16 +529,16 @@ export const AuthProvider = ({ children }) => {
 
       const result = await response.json();
       
-      console.log('📥 API response:', result);
+      // console.log removed
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create user');
       }
 
-      console.log('✅ Admin user creation successful:', result);
+      // console.log removed
       return { data: result.user, error: null };
     } catch (error) {
-      console.error('❌ Admin user creation error:', error);
+      // console.error removed
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
@@ -560,13 +560,13 @@ export const AuthProvider = ({ children }) => {
 
       // Check if this account was recently deleted
       if (data.user) {
-        console.log('✅ Authentication successful, checking if account exists...');
+        // console.log removed
         const recentlyDeleted = localStorage.getItem(`deleted_user_${data.user.id}`);
         if (recentlyDeleted) {
           const deleteTime = parseInt(recentlyDeleted);
           const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
           if (deleteTime > tenMinutesAgo) {
-            console.log('🚫 Attempted login with deleted account:', data.user.email);
+            // console.log removed
             
             // Sign them out immediately
             await supabase.auth.signOut();
@@ -575,7 +575,7 @@ export const AuthProvider = ({ children }) => {
             throw new Error('This account has been deleted and is no longer available. Please contact your administrator if you believe this is an error.');
           } else {
             // Clean up expired deletion marker
-            console.log('🧹 Cleaning up expired deletion marker during login');
+            // console.log removed
             localStorage.removeItem(`deleted_user_${data.user.id}`);
           }
         }
@@ -608,17 +608,17 @@ export const AuthProvider = ({ children }) => {
               eventType: 'login'
             })
           });
-          console.log('📝 Login event stored in database for:', data.user.email);
+          // console.log removed
         } catch (dbError) {
-          console.warn('⚠️ Failed to store login event in database:', dbError.message);
+          // console.warn removed
         }
         
-        console.log('📝 Login activity recorded for:', data.user.email);
+        // console.log removed
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
+      // console.error removed
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
@@ -656,12 +656,12 @@ export const AuthProvider = ({ children }) => {
               eventType: 'logout'
             })
           });
-          console.log('📝 Logout event stored in database for:', user.email);
+          // console.log removed
         } catch (dbError) {
-          console.warn('⚠️ Failed to store logout event in database:', dbError.message);
+          // console.warn removed
         }
         
-        console.log('📝 Logout activity recorded for:', user.email);
+        // console.log removed
       }
 
       const { error } = await supabase.auth.signOut();
@@ -669,18 +669,18 @@ export const AuthProvider = ({ children }) => {
         // If session is already missing, treat as successful logout
         if (error.message?.includes('Auth session missing') || 
             error.name === 'AuthSessionMissingError') {
-          console.log('⚠️ Session already missing, clearing local state');
+          // console.log removed
         } else {
           throw error;
         }
       }
     } catch (error) {
-      console.error('Sign out error:', error);
+      // console.error removed
       
       // If it's a session missing error, don't throw - just clear state
       if (error.message?.includes('Auth session missing') || 
           error.name === 'AuthSessionMissingError') {
-        console.log('⚠️ Session missing error caught, clearing local state anyway');
+        // console.log removed
       } else {
         // For other errors, still clear state but re-throw
         setUser(null);
@@ -689,7 +689,7 @@ export const AuthProvider = ({ children }) => {
       }
     } finally {
       // Always clear local state regardless of Supabase response
-      console.log('🚪 Clearing local auth state');
+      // console.log removed
       setUser(null);
       setUserProfile(null);
     }
@@ -722,7 +722,7 @@ export const AuthProvider = ({ children }) => {
         setUserProfile(data);
         return { data, error: null };
       } catch (dbError) {
-        console.error('❌ Database update failed, updating auth metadata:', dbError);
+        // console.error removed
         
         // Fallback to auth metadata update
         const { data, error } = await supabase.auth.updateUser({
@@ -743,7 +743,7 @@ export const AuthProvider = ({ children }) => {
         return { data: updatedProfile, error: null };
       }
     } catch (error) {
-      console.error('Update profile error:', error);
+      // console.error removed
       return { data: null, error };
     }
   };
@@ -761,7 +761,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Change password error:', error);
+      // console.error removed
       return { data: null, error };
     }
   };
@@ -779,7 +779,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      console.error('Reset password error:', error);
+      // console.error removed
       return { data: null, error };
     }
   };
@@ -787,7 +787,7 @@ export const AuthProvider = ({ children }) => {
   // Get all users (with fallback) - Excludes soft-deleted users
   const getAllUsers = async () => {
     try {
-      console.log('🔍 Fetching all users from database...');
+      // console.log removed
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Get users timeout')), 10000)
@@ -804,11 +804,11 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('✅ Users fetched from database:', data.length);
+      // console.log removed
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Database users fetch failed:', error);
-      console.log('🚨 Falling back to current user only');
+      // console.error removed
+      // console.log removed
       return { 
         data: userProfile ? [userProfile] : [], 
         error: null 
@@ -822,7 +822,7 @@ export const AuthProvider = ({ children }) => {
 
       
       if (!companyId) {
-        console.warn('⚠️ No company ID provided, returning empty list');
+        // console.warn removed
         return { data: [], error: null };
       }
       
@@ -849,7 +849,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (!companyUsersData || companyUsersData.length === 0) {
-        console.log('✅ No users found for company', companyId);
+        // console.log removed
         return { data: [], error: null };
       }
 
@@ -879,7 +879,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data: users, error: null };
     } catch (error) {
-      console.error('❌ Company users fetch failed:', error);
+      // console.error removed
       return { 
         data: [], 
         error 
@@ -890,7 +890,7 @@ export const AuthProvider = ({ children }) => {
   // Update user profile (for admins)
   const updateUserProfile = async (userId, updates) => {
     try {
-      console.log('🔄 Updating user profile via API for:', userId, updates);
+      // console.log removed
       
       // Use the backend API that has proper admin permissions
       const response = await fetch('/api/admin/users?action=update', {
@@ -910,10 +910,10 @@ export const AuthProvider = ({ children }) => {
       }
 
       const result = await response.json();
-      console.log('✅ User profile updated successfully via API:', result);
+      // console.log removed
       return { data: result.user, error: null };
     } catch (error) {
-      console.error('❌ Update user profile failed:', error);
+      // console.error removed
       return { data: null, error };
     }
   };
@@ -921,19 +921,19 @@ export const AuthProvider = ({ children }) => {
   // Delete user profile (for admins) - Simple delete from database
   const deleteUserProfile = async (userId) => {
     try {
-      console.log('🗑️ Deleting user profile for ID:', userId);
+      // console.log removed
       
       // CRITICAL: Set deletion marker BEFORE deleting from database
       // This prevents race conditions where auth listeners recreate the user
       localStorage.setItem(`deleted_user_${userId}`, Date.now().toString());
-      console.log('🔒 Set deletion marker for user BEFORE deletion:', userId);
+      // console.log removed
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Delete timeout')), 10000)
       );
       
       // Delete from user_profiles table
-      console.log('🗃️ Deleting from user_profiles table...');
+      // console.log removed
       const deletePromise = supabase
         .from('user_profiles')
         .delete()
@@ -942,29 +942,29 @@ export const AuthProvider = ({ children }) => {
       const { error } = await Promise.race([deletePromise, timeoutPromise]);
 
       if (error) {
-        console.error('❌ Error deleting user profile:', error);
+        // console.error removed
         // Keep the deletion marker even if database deletion fails
         // This prevents auto-recreation attempts
-        console.log('🔒 Keeping deletion marker due to database error');
+        // console.log removed
         return { data: null, error: error };
       }
 
-      console.log('✅ User profile deleted from database');
-      console.log('✅ Delete successful - deletion marker will prevent auto-recreation');
+      // console.log removed
+      // console.log removed
       return { data: true, error: null };
     } catch (error) {
-      console.error('❌ Delete operation failed:', error);
+      // console.error removed
       
       // Check if it's a timeout or other error
       if (error.message === 'Delete timeout') {
-        console.log('⏱️ Delete operation timed out - database may be unavailable');
-        console.log('🔒 Keeping deletion marker due to timeout');
+        // console.log removed
+        // console.log removed
         return { data: null, error: new Error('Delete operation timed out. Please try again.') };
       }
       
       // For other errors, return the actual error
       // Keep deletion marker to prevent auto-recreation
-      console.log('🔒 Keeping deletion marker due to error');
+      // console.log removed
       return { data: null, error: error };
     }
   };
@@ -991,7 +991,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      console.error('❌ Assign user failed:', error);
+      // console.error removed
       return { data: null, error };
     }
   };

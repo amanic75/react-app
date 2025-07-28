@@ -67,13 +67,13 @@ const UserManagementTable = () => {
           .single();
 
         if (error) {
-          console.error('Error fetching company ID:', error);
+          // console.error removed
           return;
         }
 
         setCurrentCompanyId(data.company_id);
       } catch (error) {
-        console.error('Error in getCompanyId:', error);
+        // console.error removed
       }
     };
 
@@ -99,7 +99,7 @@ const UserManagementTable = () => {
       }
       
       if (error) {
-        console.error('Error loading users:', error);
+        // console.error removed
         return;
       }
 
@@ -193,7 +193,7 @@ const UserManagementTable = () => {
       setActivitySummary(summary);
       setOnlineUsers(onlineUserEmails);
     } catch (error) {
-      console.error('Error in loadData:', error);
+      // console.error removed
     }
   };
 

@@ -24,7 +24,7 @@ class MultiTenantDatabase {
 
   // Create isolated database for a new tenant
   async createTenantDatabase(companyId, companyName) {
-    console.log(`🏗️ Creating isolated database for company: ${companyName}`);
+    // console.log removed
     
     try {
       // Generate unique database name
@@ -57,18 +57,18 @@ class MultiTenantDatabase {
       // Store tenant configuration
       await this.storeTenantConfig(tenantConfig);
 
-      console.log(`✅ Database created successfully for: ${companyName}`);
+      // console.log removed
       return tenantConfig;
 
     } catch (error) {
-      console.error(`❌ Failed to create database for ${companyName}:`, error);
+      // console.error removed
       throw error;
     }
   }
 
   // Deploy schema to tenant database
   async deployTenantSchema(schemaName, companyId) {
-    console.log(`📋 Deploying schema to tenant: ${schemaName}`);
+    // console.log removed
 
     const tenantSchema = `
       -- Set search path to tenant schema
@@ -247,7 +247,7 @@ class MultiTenantDatabase {
       throw new Error(`Schema deployment failed: ${error.message}`);
     }
 
-    console.log(`✅ Schema deployed successfully for tenant: ${schemaName}`);
+    // console.log removed
   }
 
   // Get tenant-specific connection
@@ -322,7 +322,7 @@ class MultiTenantDatabase {
       .single();
 
     if (error) {
-      console.error(`Failed to get tenant config for ${companyId}:`, error);
+      // console.error removed
       return null;
     }
 
@@ -338,7 +338,7 @@ class MultiTenantDatabase {
 
   // Create company admin account
   async createCompanyAdmin(companyId, adminEmail, adminName, companyName) {
-    console.log(`👤 Creating admin account for ${companyName}: ${adminEmail}`);
+    // console.log removed
 
     try {
       // Create auth user
@@ -385,7 +385,7 @@ class MultiTenantDatabase {
         .update({ admin_user_email: adminEmail })
         .eq('id', companyId);
 
-      console.log(`✅ Admin account created successfully: ${adminEmail}`);
+      // console.log removed
       
       return {
         id: authUser.user.id,
@@ -396,14 +396,14 @@ class MultiTenantDatabase {
       };
 
     } catch (error) {
-      console.error(`❌ Failed to create admin account:`, error);
+      // console.error removed
       throw error;
     }
   }
 
   // Deploy initial apps to tenant
   async deployInitialApps(companyId, initialApps) {
-    console.log(`🚀 Deploying initial apps for company: ${companyId}`);
+    // console.log removed
 
     const tenantDb = await this.getTenantConnection(companyId);
 
@@ -465,9 +465,9 @@ class MultiTenantDatabase {
           .insert(template);
 
         if (error) {
-          console.error(`Failed to deploy app ${appId}:`, error);
+          // console.error removed
         } else {
-          console.log(`✅ App deployed: ${template.app_name}`);
+          // console.log removed
         }
       }
     }
@@ -482,7 +482,7 @@ class MultiTenantDatabase {
       .single();
 
     if (error) {
-      console.error(`Failed to get company ID for user ${userId}:`, error);
+      // console.error removed
       return null;
     }
 

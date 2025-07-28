@@ -54,7 +54,7 @@ const SuppliersPage = () => {
         setSuppliers(data || []);
         setError(null);
       } catch (err) {
-        console.error('Error loading suppliers:', err);
+        // console.error removed
         setError('Failed to load suppliers');
       } finally {
         setLoading(false);

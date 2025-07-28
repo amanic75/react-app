@@ -33,16 +33,14 @@ export default async function handler(req, res) {
       .gte('last_seen', twoMinutesAgo.toISOString());
 
     if (onlineError) {
-      console.error('Error fetching online users:', onlineError);
+      // Error fetching online users
     }
 
     // Get login/logout events from database using the new login-events API
     let loginEventsSummary;
     try {
       loginEventsSummary = await getLoginEventsSummary(hoursBack);
-      console.log('📊 Login events summary:', loginEventsSummary);
     } catch (error) {
-      console.error('Error fetching login events summary:', error);
       loginEventsSummary = {
         totalLogins: 0,
         totalLogouts: 0,
@@ -84,7 +82,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Activity summary error:', error);
     return res.status(500).json({ 
       error: 'Failed to get activity summary', 
       details: error.message 

@@ -61,17 +61,17 @@ const DashboardLayout = ({ children, onMaterialAdded }) => {
           // Only log errors after first few attempts, and reduce noise
           if (retryCount <= maxRetries) {
             if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-              console.warn(`📡 Activity tracking server not reachable (attempt ${retryCount}/${maxRetries})`);
+              // console.warn removed
             } else if (error.name === 'TimeoutError') {
-              console.warn(`⏱️ Activity tracking timeout (attempt ${retryCount}/${maxRetries})`);
+              // console.warn removed
             } else {
-              console.warn(`⚠️ Activity tracking error (attempt ${retryCount}/${maxRetries}):`, error.message);
+              // console.warn removed
             }
           }
           
           // Stop trying after max retries
           if (retryCount >= maxRetries) {
-            console.warn('🚫 Activity tracking disabled after repeated failures');
+            // console.warn removed
             return false; // Signal to stop heartbeat
           }
         }
@@ -87,7 +87,7 @@ const DashboardLayout = ({ children, onMaterialAdded }) => {
       const shouldContinue = await trackUserActivity();
       if (!shouldContinue) {
         clearInterval(heartbeatInterval);
-        console.warn('🔄 Activity tracking heartbeat stopped due to repeated failures');
+        // console.warn removed
       }
     }, 30000);
 

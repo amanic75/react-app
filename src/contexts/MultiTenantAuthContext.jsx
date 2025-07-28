@@ -27,7 +27,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        console.log('🔍 Initializing multi-tenant auth...');
+        // console.log removed
         
         // Get current session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -35,19 +35,19 @@ export const MultiTenantAuthProvider = ({ children }) => {
         if (!mounted) return;
 
         if (error) {
-          console.error('❌ Error getting session:', error);
+          // console.error removed
           setLoading(false);
           return;
         }
 
         if (session?.user) {
-          console.log('✅ Session found for user:', session.user.email);
+          // console.log removed
           await loadUserWithTenant(session.user);
         } else {
-          console.log('📝 No active session found');
+          // console.log removed
         }
       } catch (error) {
-        console.error('❌ Auth initialization error:', error);
+        // console.error removed
       } finally {
         if (mounted) {
           setLoading(false);
@@ -62,7 +62,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
+        // console.log removed
 
         if (session?.user) {
           await loadUserWithTenant(session.user);
@@ -89,7 +89,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
   // Load user and establish tenant connection
   const loadUserWithTenant = async (authUser) => {
     try {
-      console.log('👤 Loading user with tenant connection:', authUser.email);
+      // console.log removed
       
       setUser(authUser);
 
@@ -117,7 +117,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
           hasIsolatedDatabase: false
         });
         
-        console.log('✅ NSight Admin loaded successfully');
+        // console.log removed
         return;
       }
 
@@ -139,7 +139,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
         .single();
 
       if (profileError) {
-        console.error('❌ Failed to load user profile from tenant:', profileError);
+        // console.error removed
         // Fallback to creating profile from auth data
         const fallbackProfile = {
           id: authUser.id,
@@ -163,7 +163,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
         .single();
 
       if (companyError) {
-        console.error('❌ Failed to load company info:', companyError);
+        // console.error removed
         setCompanyInfo({
           id: companyId,
           name: authUser.user_metadata?.company_name || 'Unknown Company',
@@ -181,10 +181,10 @@ export const MultiTenantAuthProvider = ({ children }) => {
         });
       }
 
-      console.log('✅ User loaded with tenant connection successfully');
+      // console.log removed
 
     } catch (error) {
-      console.error('❌ Failed to load user with tenant:', error);
+      // console.error removed
       
       // Fallback to basic profile
       const fallbackProfile = {
@@ -236,7 +236,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('✅ Authentication successful, setting up tenant connection...');
+      // console.log removed
       
       // loadUserWithTenant will be called automatically by auth state change
       
@@ -249,7 +249,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
       return { success: true };
 
     } catch (error) {
-      console.error('❌ Multi-tenant sign in failed:', error);
+      // console.error removed
       return { success: false, error: error.message };
     } finally {
       setIsSigningIn(false);
@@ -278,10 +278,10 @@ export const MultiTenantAuthProvider = ({ children }) => {
       setTenantConnection(null);
       setCompanyInfo(null);
 
-      console.log('✅ Multi-tenant sign out successful');
+      // console.log removed
 
     } catch (error) {
-      console.error('❌ Multi-tenant sign out failed:', error);
+      // console.error removed
       throw error;
     }
   };
@@ -323,7 +323,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('❌ Failed to fetch user apps:', error);
+        // console.error removed
         return [];
       }
 
@@ -337,7 +337,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
       }));
 
     } catch (error) {
-      console.error('❌ Failed to get user apps:', error);
+      // console.error removed
       return [];
     }
   };
@@ -353,11 +353,11 @@ export const MultiTenantAuthProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('✅ Password changed successfully');
+      // console.log removed
       return { success: true };
 
     } catch (error) {
-      console.error('❌ Password change failed:', error);
+      // console.error removed
       return { success: false, error: error.message };
     }
   };
@@ -409,11 +409,11 @@ export const MultiTenantAuthProvider = ({ children }) => {
         throw new Error(`Failed to create user profile: ${profileError.message}`);
       }
 
-      console.log('✅ Tenant user created successfully:', profile.email);
+      // console.log removed
       return { success: true, user: profile };
 
     } catch (error) {
-      console.error('❌ Failed to create tenant user:', error);
+      // console.error removed
       return { success: false, error: error.message };
     }
   };
@@ -451,7 +451,7 @@ export const MultiTenantAuthProvider = ({ children }) => {
       return users;
 
     } catch (error) {
-      console.error('❌ Failed to get tenant users:', error);
+      // console.error removed
       return [];
     }
   };

@@ -65,25 +65,13 @@ export const filterByTabWithDebug = (items, activeTab, user, debug = false) => {
       shouldInclude = isUserAssigned(item.assigned_to, user.id);
       
       if (debug) {
-        console.log(`🔍 Assignment check for ${item.name || item.materialName || item.supplierName}:`, {
-          assigned_to: item.assigned_to,
-          assigned_to_type: typeof item.assigned_to,
-          assigned_to_isArray: Array.isArray(item.assigned_to),
-          user_id: user.id,
-          user_id_type: typeof user.id,
-          shouldInclude: shouldInclude,
-          reason: getAssignmentReason(item.assigned_to, user.id)
-        });
+        // Assignment check debug info
       }
     } else if (activeTab === 'created' && user) {
       shouldInclude = item.created_by === user.id;
       
       if (debug) {
-        console.log(`🔍 Creation check for ${item.name || item.materialName || item.supplierName}:`, {
-          created_by: item.created_by,
-          user_id: user.id,
-          shouldInclude: shouldInclude
-        });
+        // Creation check debug info
       }
     }
     
@@ -93,11 +81,7 @@ export const filterByTabWithDebug = (items, activeTab, user, debug = false) => {
   });
   
   if (debug) {
-    console.log(`📊 Filtering results for tab "${activeTab}":`, {
-      totalItems: items.length,
-      filteredItems: filteredItems.length,
-      user: user ? { id: user.id, email: user.email } : null
-    });
+    // Filtering results debug info
   }
   
   return filteredItems;

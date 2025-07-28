@@ -57,7 +57,7 @@ const FormulasPage = () => {
         const { data } = await getAllFormulas();
         setFormulas(data || []);
       } catch (err) {
-        console.error('Error loading formulas:', err);
+        // console.error removed
         setError('Failed to load formulas. Please check your database connection.');
       } finally {
         setLoading(false);
@@ -70,16 +70,16 @@ const FormulasPage = () => {
   // Handle adding new formula
   const handleAddFormula = async (formulaData) => {
     try {
-      console.log('Adding new formula:', formulaData);
+      // console.log removed
       const newFormula = await addFormula(formulaData);
       if (newFormula) {
         // Refresh the formulas list
         const updatedFormulas = await getAllFormulas();
         setFormulas(updatedFormulas);
-        console.log('Formula added successfully:', newFormula);
+        // console.log removed
       }
     } catch (error) {
-      console.error('Error adding formula:', error);
+      // console.error removed
       setError('Failed to add formula. Please try again.');
     }
   };

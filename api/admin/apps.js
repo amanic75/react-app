@@ -144,7 +144,7 @@ export default async function handler(req, res) {
         .eq('status', 'Active');
 
       if (usersError) {
-        console.error('⚠️ Failed to fetch company users for stats:', usersError);
+        // console.error removed
       }
 
       // Helper to compute userCount for a given appType
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
             .eq('company_id', company_id);
           return count || 0;
         } catch (err) {
-          console.error('⚠️ Failed to count records for', appType, err);
+          // console.error removed
           return 0;
         }
       };
@@ -214,7 +214,7 @@ export default async function handler(req, res) {
       } else {
         // Fall back to the apps table directly
         if (appsError) {
-          console.warn('View not available / error, falling back to basic query:', appsError);
+          // console.warn removed
         }
 
         const { data: basicApps, error: basicError } = await supabaseAdmin
@@ -256,11 +256,11 @@ export default async function handler(req, res) {
     // -------------------------
 
     if (req.method === 'POST') {
-      console.log('📥 POST /api/admin/apps - Request body:', JSON.stringify(req.body, null, 2));
+      // console.log removed
       
       const { companyId } = req.body || {};
       if (!companyId) {
-        console.error('❌ Missing companyId in request');
+        // console.error removed
         return res.status(400).json({ error: 'Company ID is required' });
       }
       
@@ -278,12 +278,12 @@ export default async function handler(req, res) {
         } = req.body;
 
         if (!appName || !tableName) {
-          console.error('❌ Missing required fields:', { appName, tableName });
+          // console.error removed
           return res.status(400).json({ error: 'appName and tableName are required' });
         }
         
         if (!appType) {
-          console.error('❌ Missing appType field');
+          // console.error removed
           return res.status(400).json({ error: 'appType is required' });
         }
 
@@ -296,12 +296,12 @@ export default async function handler(req, res) {
           .single();
 
         if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
-          console.error('❌ Error checking existing app:', checkError);
+          // console.error removed
           return res.status(500).json({ error: 'Failed to check existing app', details: checkError.message });
         }
 
         if (existingApp) {
-          console.error('❌ App already exists:', existingApp);
+          // console.error removed
           return res.status(409).json({ error: `${appName} app already exists for this company` });
         }
 
@@ -316,7 +316,7 @@ export default async function handler(req, res) {
           status: 'active'
         };
 
-        console.log('🔄 Inserting app with payload:', JSON.stringify(insertPayload, null, 2));
+        // console.log removed
 
         const { data: newApp, error: insertErr } = await supabaseAdmin
           .from('apps')
@@ -325,14 +325,14 @@ export default async function handler(req, res) {
           .single();
 
         if (insertErr) {
-          console.error('❌ Create app insert error:', insertErr);
+          // console.error removed
           return res.status(500).json({ error: 'Failed to create app', details: insertErr.message });
         }
 
-        console.log('✅ Successfully created app:', newApp);
+        // console.log removed
         return res.status(201).json({ success: true, app: newApp });
       } catch (e) {
-        console.error('❌ Create app unexpected error:', e);
+        // console.error removed
         return res.status(500).json({ error: 'Internal error', details: e.message });
       }
     }
@@ -340,7 +340,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
 
   } catch (error) {
-    console.error('❌ Apps API error:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Internal server error',
       details: error.message

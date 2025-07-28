@@ -6,6 +6,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
 import { getMaterialById, updateMaterial, getAllMaterials, deleteMaterial } from '../lib/materials';
 import { useTheme } from '../contexts/ThemeContext';
+import { generateSlug } from '../lib/utils';
 
 const RawMaterialDetailPage = () => {
   const navigate = useNavigate();
@@ -20,21 +21,15 @@ const RawMaterialDetailPage = () => {
     const loadMaterial = async () => {
       try {
         setLoading(true);
-        
-        // Since the URL uses generated IDs (like "sodium-hydroxide"), 
-        // we need to find the material by generated ID from the material name
-        const allMaterials = await getAllMaterials();
-        const foundMaterial = allMaterials.find(mat => 
-          generateMaterialId(mat.materialName) === materialId
-        );
-        
-        if (foundMaterial) {
-    setMaterial(foundMaterial);
+        // Fetch material directly by database ID
+        const { data, error } = await getMaterialById(materialId);
+        if (data) {
+          setMaterial(data);
         } else {
           setError('Material not found');
         }
       } catch (err) {
-        console.error('Error loading material:', err);
+        // console.error removed
         setError('Failed to load material');
       } finally {
         setLoading(false);
@@ -93,7 +88,7 @@ const RawMaterialDetailPage = () => {
     }
     setIsEditModalOpen(false);
     } catch (err) {
-      console.error('Error updating material:', err);
+      // console.error removed
       // You might want to show an error message to the user here
     }
   };
@@ -105,11 +100,11 @@ const RawMaterialDetailPage = () => {
         // Navigate back to raw materials list after successful deletion
         navigate('/raw-materials');
       } else {
-        console.error('Failed to delete material');
+        // console.error removed
         // You might want to show an error message to the user here
       }
     } catch (err) {
-      console.error('Error deleting material:', err);
+      // console.error removed
       // You might want to show an error message to the user here
     }
   };

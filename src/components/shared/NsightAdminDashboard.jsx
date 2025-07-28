@@ -143,7 +143,7 @@ const NsightAdminDashboard = ({ userData }) => {
       const data = await response.json();
       setCompanies(data.companies || []);
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      // console.error removed
       setError('Failed to load companies');
     } finally {
       setIsLoading(false);
@@ -160,7 +160,7 @@ const NsightAdminDashboard = ({ userData }) => {
       setSyncStatus(result);
         await fetchCompanies();
     } catch (error) {
-      console.error('Error syncing companies:', error);
+      // console.error removed
       setSyncStatus({ error: 'Failed to sync companies' });
     } finally {
       setIsSyncing(false);
@@ -178,7 +178,7 @@ const NsightAdminDashboard = ({ userData }) => {
       const data = await response.json();
       setApps(data.apps || []);
     } catch (error) {
-      console.error('Error fetching apps:', error);
+      // console.error removed
       setApps([]);
     } finally {
       setIsLoadingApps(false);
@@ -198,7 +198,7 @@ const NsightAdminDashboard = ({ userData }) => {
 
       setAllAvailableApps(templates);
     } catch (error) {
-      console.error('Error fetching available apps:', error);
+      // console.error removed
       setAllAvailableApps([]);
     } finally {
       setIsLoadingAvailableApps(false);
@@ -219,7 +219,7 @@ const NsightAdminDashboard = ({ userData }) => {
       
       await fetchApps(); // Refresh apps list
     } catch (error) {
-      console.error('Error deleting app:', error);
+      // console.error removed
       alert('Failed to delete app');
     }
   };
@@ -247,7 +247,7 @@ const NsightAdminDashboard = ({ userData }) => {
         setIsAddExistingAppModalOpen(false);
       await fetchApps();
     } catch (error) {
-      console.error('Error adding app:', error);
+      // console.error removed
       alert('Failed to add app');
     }
   };
@@ -289,7 +289,7 @@ const NsightAdminDashboard = ({ userData }) => {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('Error deleting company:', error);
+      // console.error removed
       alert(`Failed to delete company: ${error.message}`);
     } finally {
       setIsDeleting(false);
@@ -309,7 +309,7 @@ const NsightAdminDashboard = ({ userData }) => {
         await fetchCompanies();
       setIsCreateCompanyModalOpen(false);
     } catch (error) {
-      console.error('Error creating company:', error);
+      // console.error removed
       throw error;
     }
   };
@@ -327,7 +327,7 @@ const NsightAdminDashboard = ({ userData }) => {
       await fetchApps();
       setIsCreateAppModalOpen(false);
     } catch (error) {
-      console.error('Error creating app:', error);
+      // console.error removed
       throw error;
     }
   };

@@ -30,7 +30,7 @@ const EmployeeAssignmentSelector = ({
       
       // Get the current user's company ID from company_users table
       if (!userProfile?.id) {
-        console.warn('No user profile found');
+        // console.warn removed
         setEmployees([]);
         return;
       }
@@ -43,13 +43,13 @@ const EmployeeAssignmentSelector = ({
         .single();
 
       if (companyError || !companyUserData?.company_id) {
-        console.warn('No company found for current user:', companyError);
+        // console.warn removed
         setEmployees([]);
         return;
       }
 
       const companyId = companyUserData.company_id;
-      console.log('Found company ID:', companyId);
+      // console.log removed
       
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
@@ -60,7 +60,7 @@ const EmployeeAssignmentSelector = ({
       );
       setEmployees(filteredUsers);
     } catch (error) {
-      console.error('Error loading employees:', error);
+      // console.error removed
       setEmployees([]);
     } finally {
       setLoading(false);

@@ -65,19 +65,14 @@ export default async function handler(req, res) {
       .select();
 
     if (error) {
-      console.error('❌ Failed to insert login event:', error);
+      // console.error removed
       return res.status(500).json({ 
         error: 'Failed to record login event',
         details: error.message
       });
     }
 
-    console.log(`🔐 ${eventType.toUpperCase()} event recorded:`, {
-      user: userName || userEmail,
-      role: userRole,
-      sessionId: eventData.session_id,
-      timestamp: new Date().toISOString()
-    });
+
 
     // Also store in localStorage for immediate frontend updates (dual storage)
     // This ensures immediate UI updates while database provides persistence
@@ -99,7 +94,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Login events API error:', error);
     return res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message 
@@ -119,13 +113,11 @@ export const getRecentLoginEvents = async (hoursBack = 24) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching recent login events:', error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error in getRecentLoginEvents:', error);
     return [];
   }
 };
@@ -159,7 +151,6 @@ export const getLoginEventsSummary = async (hoursBack = 24) => {
       hoursBack: hoursBack
     };
   } catch (error) {
-    console.error('Error in getLoginEventsSummary:', error);
     return {
       totalLogins: 0,
       totalLogouts: 0,

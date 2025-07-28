@@ -74,7 +74,7 @@ const HeaderControls = () => {
       await signOut();
       navigate('/auth');
     } catch (error) {
-      console.error('Logout error:', error);
+      // console.error removed
     }
   };
 

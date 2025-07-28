@@ -72,12 +72,12 @@ const AppDetailPage = () => {
           appColor: data.app.appColor,
           appIcon: data.app.appIcon
         });
-        console.log('✅ Loaded app details:', data.app.appName);
+        // console.log removed
       } else {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to fetch app details:', error);
+      // console.error removed
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -86,7 +86,7 @@ const AppDetailPage = () => {
 
   const handleEditApp = async () => {
     try {
-      console.log('🔧 Updating app:', editForm.appName);
+      // console.log removed
       
       const response = await fetch(`/api/admin/apps?id=${appId}`, {
         method: 'PUT',
@@ -103,7 +103,7 @@ const AppDetailPage = () => {
       }
       
       if (result.success) {
-        console.log('✅ Successfully updated app:', editForm.appName);
+        // console.log removed
         setIsEditModalOpen(false);
         // Refresh the app details
         fetchAppDetails();
@@ -111,7 +111,7 @@ const AppDetailPage = () => {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to update app:', error);
+      // console.error removed
       alert(`Failed to update app: ${error.message}`);
     }
   };

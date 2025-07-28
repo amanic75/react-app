@@ -50,7 +50,6 @@ class ChemicalDatabaseService {
       
       return null;
     } catch (error) {
-      console.error('PubChem lookup error:', error);
       return null;
     }
   }
@@ -82,29 +81,23 @@ const chemicalDB = new ChemicalDatabaseService();
 async function processResponseWithVerification(response) {
   // Check if the response contains a material addition request
   if (response.includes('**[ADD_MATERIAL]**')) {
-    console.log('🎯 Backend: Found ADD_MATERIAL marker, processing...');
     try {
       const parts = response.split('**[ADD_MATERIAL]**');
       const informationPart = parts[0].trim();
       const jsonPart = parts[1].trim();
-      
-      console.log('📝 Backend: JSON part to parse:', jsonPart);
       
       // Extract JSON from the response
       const jsonMatch = jsonPart.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         // Clean JSON by removing comments (// text) that AI includes for confidence indicators
         const cleanedJson = jsonMatch[0].replace(/\/\/[^\r\n]*/g, '').trim();
-        console.log('🧹 Backend: Cleaned JSON:', cleanedJson);
         
         const materialData = JSON.parse(cleanedJson);
-        console.log('✅ Backend: Parsed material data:', materialData);
         
         // Handle legacy field names - convert "material" to "materialName"
         if (materialData.material && !materialData.materialName) {
           materialData.materialName = materialData.material;
           delete materialData.material;
-          console.log('🔄 Backend: Converted "material" field to "materialName"');
         }
         
         // Handle other legacy field names
@@ -117,7 +110,6 @@ async function processResponseWithVerification(response) {
         }
         
         if (!materialData.materialName) {
-          console.error('❌ Backend: Missing materialName field in:', materialData);
           return {
             response: informationPart,
             materialAdded: false,
@@ -125,22 +117,17 @@ async function processResponseWithVerification(response) {
           };
         }
         
-        console.log('🔍 Backend: Verifying chemical data with PubChem for:', materialData.materialName);
-        
         // LEVEL 2 ENHANCEMENT: Verify chemical data with PubChem
         const enhancedData = await enhanceWithChemicalVerification(materialData);
         
         // Ensure we have valid enhanced data
         if (!enhancedData || !enhancedData.materialName) {
-          console.error('❌ Backend: Enhanced data is invalid:', enhancedData);
           return {
             response: informationPart,
             materialAdded: false,
             errorMessage: "❌ Chemical verification failed. Using AI estimates only."
           };
         }
-        
-        console.log('✅ Backend: Enhanced data ready:', enhancedData.materialName, 'confidence:', enhancedData.confidenceLevel);
         
         // Return enhanced response (frontend will handle database saving)
         return {
@@ -150,7 +137,6 @@ async function processResponseWithVerification(response) {
           successMessage: `✅ Chemical data verified with ${enhancedData.confidenceLevel} confidence!`,
         };
       } else {
-        console.error('❌ Backend: No JSON found in response part:', jsonPart);
         return {
           response: informationPart,
           materialAdded: false,
@@ -158,7 +144,6 @@ async function processResponseWithVerification(response) {
         };
       }
     } catch (error) {
-      console.error('Backend material processing error:', error);
       return {
         response: response.replace('**[ADD_MATERIAL]**', ''),
         materialAdded: false,
@@ -175,12 +160,10 @@ async function processResponseWithVerification(response) {
 async function enhanceWithChemicalVerification(materialData) {
   // Ensure we have valid input data
   if (!materialData || !materialData.materialName) {
-    console.error('❌ Backend: Invalid material data provided:', materialData);
     return null;
   }
 
   try {
-    console.log('🔍 Backend: PubChem verification starting for:', materialData.materialName);
     
     // Get enhanced chemical data from PubChem (with timeout)
     const enhancedData = await Promise.race([
@@ -191,8 +174,6 @@ async function enhanceWithChemicalVerification(materialData) {
     ]);
     
     if (enhancedData && enhancedData.sources && enhancedData.sources.length > 0) {
-      console.log('✅ Backend: PubChem verification successful:', enhancedData.sources);
-      
       // Merge verified data with AI estimates
       const result = {
         ...materialData,
@@ -213,11 +194,8 @@ async function enhanceWithChemicalVerification(materialData) {
         canonicalSMILES: enhancedData.properties?.canonicalSMILES || null
       };
       
-      console.log('✅ Backend: Enhanced result prepared for:', result.materialName);
       return result;
     } else {
-      console.log('⚠️ Backend: PubChem verification failed, using AI estimates');
-      
       // Fallback to AI estimates with lower confidence
       const result = {
         ...materialData,
@@ -227,12 +205,9 @@ async function enhanceWithChemicalVerification(materialData) {
         lastVerified: new Date().toISOString()
       };
       
-      console.log('⚠️ Backend: Fallback result prepared for:', result.materialName);
       return result;
     }
   } catch (error) {
-    console.error('❌ Backend: Chemical verification error:', error);
-    
     // Fallback to original data with error note
     const result = {
       ...materialData,
@@ -242,7 +217,6 @@ async function enhanceWithChemicalVerification(materialData) {
       lastVerified: new Date().toISOString()
     };
     
-    console.log('❌ Backend: Error fallback result for:', result.materialName);
     return result;
   }
 }
@@ -646,14 +620,6 @@ export default async function handler(req, res) {
     };
 
     // Log usage for monitoring (optional)
-    console.log('Enhanced AI Chat Request:', {
-      timestamp: new Date().toISOString(),
-      tokensUsed: completion.usage.total_tokens,
-      model: completion.model,
-      hasVerification: materialResponse.materialAdded || false,
-      capabilityType: enhancedResponse.capabilityType,
-      // userId: user.id,
-    });
 
     return res.status(200).json({
       ...combinedResponse,
@@ -662,7 +628,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('AI Chat API Error:', error);
 
     // Handle OpenAI API errors
     if (error.code === 'insufficient_quota') {

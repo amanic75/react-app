@@ -26,13 +26,13 @@ export default async function handler(req, res) {
   try {
     // Check environment variables
     if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('Missing Supabase environment variables');
+      // console.error removed
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
     // Route based on URL path and method
     const { id, action } = req.query;
-    console.log('🔍 Request params:', { id, action, method: req.method });
+    // console.log removed
     
     if (id) {
       // Operations on specific company: /api/admin/companies?id=123
@@ -40,10 +40,10 @@ export default async function handler(req, res) {
         case 'GET':
           // Handle specific actions
           if (action === 'get-apps') {
-            console.log('🎯 Routing to getCompanyApps');
+            // console.log removed
             return await getCompanyApps(req, res, id);
           }
-          console.log('🎯 Routing to getCompany');
+          // console.log removed
           return await getCompany(req, res, id);
         case 'PUT':
           return await updateCompany(req, res, id);
@@ -59,16 +59,16 @@ export default async function handler(req, res) {
           return await listCompanies(req, res);
         case 'POST':
           // Handle repair action
-          console.log('🔍 POST action check:', action);
+          // console.log removed
           if (action === 'repair-user-links') {
-            console.log('🎯 Routing to repairUserLinks');
+            // console.log removed
             return await repairUserLinks(req, res);
           }
           if (action === 'fix-user-profile') {
-            console.log('🎯 Routing to fixUserProfile');
+            // console.log removed
             return await fixUserProfile(req, res);
           }
-          console.log('🎯 Routing to createCompany');
+          // console.log removed
           return await createCompany(req, res);
         default:
           return res.status(405).json({ error: 'Method not allowed' });
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('❌ Companies API error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 
@@ -115,7 +115,7 @@ async function createCompany(req, res) {
     }
   }
 
-  console.log('🏢 Creating new company:', companyData.companyName);
+  // console.log removed
 
   // Transform frontend data to database schema
   const dbCompanyData = {
@@ -170,7 +170,7 @@ async function createCompany(req, res) {
     .single();
 
   if (companyError) {
-    console.error('❌ Company creation failed:', companyError);
+    // console.error removed
     
     // Handle unique constraint violations
     if (companyError.code === '23505' && companyError.constraint === 'companies_company_name_unique') {
@@ -186,7 +186,7 @@ async function createCompany(req, res) {
     });
   }
 
-  console.log('✅ Company created successfully:', newCompany.id);
+  // console.log removed
 
   // Create admin user account for the company
   let adminUser = null;
@@ -201,7 +201,7 @@ async function createCompany(req, res) {
       .single();
 
     if (existingUser) {
-      console.log(`👤 Admin user already exists: ${companyData.adminUserEmail}`);
+      // console.log removed
       adminUser = existingUser;
       
       // Update role to Capacity Admin if needed
@@ -215,13 +215,13 @@ async function createCompany(req, res) {
           .eq('id', existingUser.id);
 
         if (roleUpdateError) {
-          console.error(`❌ Failed to update role for ${companyData.adminUserEmail}:`, roleUpdateError);
+          // console.error removed
         } else {
-          console.log(`✅ Updated role to Capacity Admin for ${companyData.adminUserEmail}`);
+          // console.log removed
         }
       }
     } else {
-      console.log(`🆕 Creating new admin user: ${companyData.adminUserEmail}`);
+      // console.log removed
       
       // Create new user account
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -236,7 +236,7 @@ async function createCompany(req, res) {
       });
 
       if (authError) {
-        console.error(`❌ Failed to create auth user for ${companyData.adminUserEmail}:`, authError);
+        // console.error removed
         // Continue without admin user - can be created later via sync
       } else {
         // Create user profile
@@ -255,21 +255,21 @@ async function createCompany(req, res) {
           .single();
 
         if (profileError) {
-          console.error(`❌ Failed to create profile for ${companyData.adminUserEmail}:`, profileError);
+          // console.error removed
           // Don't continue silently - this is critical
           throw new Error(`Profile creation failed: ${profileError.message}`);
         } else {
-          console.log(`✅ Created new admin user: ${companyData.adminUserEmail}`);
+          // console.log removed
           adminUser = profileData;
           adminCreated = true;
-          console.log(`🎯 Admin user set:`, { id: adminUser.id, email: adminUser.email });
+          // console.log removed
         }
       }
     }
 
     // Link admin user to company - THIS IS CRITICAL!
     if (adminUser) {
-      console.log(`🔗 Attempting to link user ${adminUser.id} to company ${newCompany.id}`);
+      // console.log removed
       
       const { error: linkError } = await supabaseAdmin
         .from('company_users')
@@ -285,7 +285,7 @@ async function createCompany(req, res) {
         });
 
       if (linkError) {
-        console.error(`❌ CRITICAL: Failed to link admin user to company ${companyData.companyName}:`, linkError);
+        // console.error removed
         // This should not fail silently - it's a critical error
         return res.status(500).json({
           error: 'Company created but failed to link admin user',
@@ -293,10 +293,10 @@ async function createCompany(req, res) {
           linkError: linkError.message
         });
       } else {
-        console.log(`✅ Successfully linked ${companyData.adminUserEmail} to ${companyData.companyName}`);
+        // console.log removed
       }
     } else {
-      console.error(`❌ CRITICAL: No admin user found to link to company ${companyData.companyName}`);
+      // console.error removed
       // This is also critical - every company needs an admin user
       return res.status(500).json({
         error: 'Company created but no admin user available',
@@ -304,7 +304,7 @@ async function createCompany(req, res) {
       });
     }
   } catch (error) {
-    console.error('❌ Error creating admin user:', error);
+    // console.error removed
     // Continue with company creation even if admin user creation fails
   }
 
@@ -325,9 +325,9 @@ async function createCompany(req, res) {
       .insert(appInserts);
 
     if (appsError) {
-      console.error('⚠️ Failed to create initial apps in company_apps:', appsError);
+      // console.error removed
     } else {
-      console.log('✅ Initial apps created in company_apps for company:', companyData.initialApps);
+      // console.log removed
     }
 
     // Also insert into apps table for the new system
@@ -350,9 +350,9 @@ async function createCompany(req, res) {
       .insert(appDetails);
 
     if (appTableError) {
-      console.error('⚠️ Failed to create apps in apps table:', appTableError);
+      // console.error removed
     } else {
-      console.log('✅ Apps created in apps table for company');
+      // console.log removed
     }
   }
 
@@ -373,7 +373,7 @@ async function createCompany(req, res) {
 
 // GET /api/admin/companies - List all companies
 async function listCompanies(req, res) {
-  console.log('📋 Fetching companies list');
+  // console.log removed
 
   // Get companies with their apps
   const { data: companies, error: companiesError } = await supabaseAdmin
@@ -395,7 +395,7 @@ async function listCompanies(req, res) {
     .order('created_at', { ascending: false });
 
   if (companiesError) {
-    console.error('❌ Failed to fetch companies:', companiesError);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to fetch companies',
       details: companiesError.message 
@@ -459,7 +459,7 @@ async function listCompanies(req, res) {
     };
   });
 
-  console.log(`✅ Found ${transformedCompanies.length} companies`);
+  // console.log removed
 
   return res.status(200).json({
     success: true,
@@ -470,7 +470,7 @@ async function listCompanies(req, res) {
 
 // GET /api/admin/companies?id=123 - Get specific company
 async function getCompany(req, res, companyId) {
-  console.log('🔍 Fetching company:', companyId);
+  // console.log removed
 
   const { data: company, error } = await supabaseAdmin
     .from('companies')
@@ -497,7 +497,7 @@ async function getCompany(req, res, companyId) {
     if (error.code === 'PGRST116') {
       return res.status(404).json({ error: 'Company not found' });
     }
-    console.error('❌ Failed to fetch company:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to fetch company',
       details: error.message 
@@ -554,7 +554,7 @@ async function getCompany(req, res, companyId) {
     companyUsers: company.company_users
   };
 
-  console.log('✅ Company fetched successfully');
+  // console.log removed
 
   return res.status(200).json({
     success: true,
@@ -607,7 +607,7 @@ function getAppColor(appId) {
 
 // GET /api/admin/companies?id=123&action=get-apps - Get company apps
 async function getCompanyApps(req, res, companyId) {
-  console.log('📱 GETCOMPANYAPPS FUNCTION CALLED! Fetching apps for company:', companyId);
+  // console.log removed
 
   const { data: apps, error } = await supabaseAdmin
     .from('company_apps')
@@ -621,7 +621,7 @@ async function getCompanyApps(req, res, companyId) {
     .eq('enabled', true);
 
   if (error) {
-    console.error('❌ Failed to fetch company apps:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Failed to fetch company apps',
       details: error.message 
@@ -643,7 +643,7 @@ async function getCompanyApps(req, res, companyId) {
     configuration: app.configuration
   }));
 
-  console.log('✅ Company apps fetched successfully:', transformedApps.length, 'apps');
+  // console.log removed
 
   return res.status(200).json({
     success: true,
@@ -653,7 +653,7 @@ async function getCompanyApps(req, res, companyId) {
 
 // PUT /api/admin/companies?id=123 - Update company
 async function updateCompany(req, res, companyId) {
-  console.log('📝 Updating company:', companyId);
+  // console.log removed
 
   const updateData = req.body;
 
@@ -737,7 +737,7 @@ async function updateCompany(req, res, companyId) {
     .single();
 
   if (updateError) {
-    console.error('❌ Company update failed:', updateError);
+    // console.error removed
     
     // Handle unique constraint violations
     if (updateError.code === '23505' && updateError.constraint === 'companies_company_name_unique') {
@@ -753,7 +753,7 @@ async function updateCompany(req, res, companyId) {
     });
   }
 
-  console.log('✅ Company updated successfully');
+  // console.log removed
 
   return res.status(200).json({
     success: true,
@@ -764,7 +764,7 @@ async function updateCompany(req, res, companyId) {
 
 // DELETE /api/admin/companies?id=123 - Delete company
 async function deleteCompany(req, res, companyId) {
-  console.log('🗑️ Deleting company:', companyId);
+  // console.log removed
 
   // Validate that company exists first
   const { data: existingCompany, error: fetchError } = await supabaseAdmin
@@ -783,7 +783,7 @@ async function deleteCompany(req, res, companyId) {
     });
   }
 
-  console.log(`🗑️ Deleting company: ${existingCompany.company_name}`);
+  // console.log removed
   let deletedUsers = 0;
 
   try {
@@ -794,9 +794,9 @@ async function deleteCompany(req, res, companyId) {
       .eq('company_id', companyId);
 
     if (usersError) {
-      console.error('❌ Error fetching company users:', usersError);
+      // console.error removed
     } else if (companyUsers && companyUsers.length > 0) {
-      console.log(`🗑️ Found ${companyUsers.length} users to delete`);
+      // console.log removed
       
       // Step 2: Delete auth users (but not NSight admins)
       for (const companyUser of companyUsers) {
@@ -809,12 +809,12 @@ async function deleteCompany(req, res, companyId) {
             .single();
 
           if (!profileError && userProfile && userProfile.role !== 'NSight Admin') {
-            console.log(`🗑️ Deleting auth user: ${userProfile.email}`);
+            // console.log removed
             
             // Delete from auth
             const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(companyUser.user_id);
             if (authError) {
-              console.error(`❌ Failed to delete auth user ${userProfile.email}:`, authError);
+              // console.error removed
             }
             
             // Delete from user_profiles
@@ -824,15 +824,15 @@ async function deleteCompany(req, res, companyId) {
               .eq('id', companyUser.user_id);
             
             if (profileDeleteError) {
-              console.error(`❌ Failed to delete user profile ${userProfile.email}:`, profileDeleteError);
+              // console.error removed
             } else {
               deletedUsers++;
             }
           } else {
-            console.log(`⚠️ Skipping NSight admin user: ${userProfile?.email || 'unknown'}`);
+            // console.log removed
           }
         } catch (error) {
-          console.error(`❌ Error deleting user ${companyUser.user_id}:`, error);
+          // console.error removed
         }
       }
     }
@@ -844,9 +844,9 @@ async function deleteCompany(req, res, companyId) {
       .eq('company_id', companyId);
 
     if (companyUsersError) {
-      console.error('❌ Error deleting company_users:', companyUsersError);
+      // console.error removed
     } else {
-      console.log('✅ Deleted company_users entries');
+      // console.log removed
     }
 
     // Step 4: Delete apps associated with this company
@@ -856,9 +856,9 @@ async function deleteCompany(req, res, companyId) {
       .eq('company_id', companyId);
 
     if (appsError) {
-      console.error('❌ Error deleting apps:', appsError);
+      // console.error removed
     } else {
-      console.log('✅ Deleted company apps');
+      // console.log removed
     }
 
     // Step 5: Delete company_apps entries
@@ -868,9 +868,9 @@ async function deleteCompany(req, res, companyId) {
       .eq('company_id', companyId);
 
     if (companyAppsError) {
-      console.error('❌ Error deleting company_apps:', companyAppsError);
+      // console.error removed
     } else {
-      console.log('✅ Deleted company_apps entries');
+      // console.log removed
     }
 
     // Step 6: Delete tenant configuration if it exists
@@ -880,9 +880,9 @@ async function deleteCompany(req, res, companyId) {
       .eq('company_id', companyId);
 
     if (tenantError) {
-      console.error('❌ Error deleting tenant configuration:', tenantError);
+      // console.error removed
     } else {
-      console.log('✅ Deleted tenant configuration');
+      // console.log removed
     }
 
     // Step 7: Finally, delete the company record
@@ -892,14 +892,14 @@ async function deleteCompany(req, res, companyId) {
       .eq('id', companyId);
 
     if (deleteError) {
-      console.error('❌ Company deletion failed:', deleteError);
+      // console.error removed
       return res.status(500).json({ 
         error: 'Failed to delete company',
         details: deleteError.message 
       });
     }
 
-    console.log(`✅ Successfully deleted company: ${existingCompany.company_name}`);
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -908,7 +908,7 @@ async function deleteCompany(req, res, companyId) {
     });
 
   } catch (error) {
-    console.error('❌ Delete company error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message 
@@ -931,7 +931,7 @@ function getAppName(appId) {
 
 // POST /api/admin/companies?action=repair-user-links - Fix missing company-user links
 async function repairUserLinks(req, res) {
-  console.log('🔧 Repairing missing company-user links...');
+  // console.log removed
   
   try {
     // Get all companies
@@ -957,18 +957,18 @@ async function repairUserLinks(req, res) {
         .single();
       
       if (userError || !userProfile) {
-        console.log(`⚠️ User profile not found for ${company.admin_user_email}, checking auth...`);
+        // console.log removed
         
         // Check if user exists in auth but missing profile
         const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
         if (listError) {
-          console.error('❌ Failed to list auth users:', listError);
+          // console.error removed
           continue;
         }
         
         const authUser = users.find(user => user.email === company.admin_user_email);
         if (authUser) {
-          console.log(`🆕 Creating missing profile for ${company.admin_user_email}`);
+          // console.log removed
           
           // Create missing user profile
           const { data: newProfile, error: createError } = await supabaseAdmin
@@ -986,14 +986,14 @@ async function repairUserLinks(req, res) {
             .single();
           
           if (createError) {
-            console.error(`❌ Failed to create profile for ${company.admin_user_email}:`, createError);
+            // console.error removed
             continue;
           }
           
-          console.log(`✅ Created profile for ${company.admin_user_email}`);
+          // console.log removed
           userProfile = newProfile;
         } else {
-          console.log(`❌ User not found in auth for ${company.admin_user_email}`);
+          // console.log removed
           continue;
         }
       }
@@ -1007,7 +1007,7 @@ async function repairUserLinks(req, res) {
         .single();
       
       if (existingLink) {
-        console.log(`✅ Link already exists for ${company.admin_user_email} -> ${company.company_name}`);
+        // console.log removed
         continue;
       }
       
@@ -1023,9 +1023,9 @@ async function repairUserLinks(req, res) {
         });
       
       if (insertError) {
-        console.error(`❌ Failed to link ${company.admin_user_email} to ${company.company_name}:`, insertError);
+        // console.error removed
       } else {
-        console.log(`✅ Successfully linked ${company.admin_user_email} to ${company.company_name}`);
+        // console.log removed
         repairedCount++;
         repairs.push({
           company: company.company_name,
@@ -1043,7 +1043,7 @@ async function repairUserLinks(req, res) {
     });
     
   } catch (error) {
-    console.error('❌ Error repairing company-user links:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to repair company-user links',
       details: error.message
@@ -1053,7 +1053,7 @@ async function repairUserLinks(req, res) {
 
 // POST /api/admin/companies?action=fix-user-profile - Fix specific user profile by user ID
 async function fixUserProfile(req, res) {
-  console.log('🔧 Fixing specific user profile...');
+  // console.log removed
   
   try {
     const { userId, email } = req.body;
@@ -1064,7 +1064,7 @@ async function fixUserProfile(req, res) {
       });
     }
     
-    console.log('🎯 Fixing user profile for:', { userId, email });
+    // console.log removed
     
     let targetUserId = userId;
     let targetEmail = email;
@@ -1099,7 +1099,7 @@ async function fixUserProfile(req, res) {
       targetEmail = authUser.user.email;
     }
     
-    console.log('🔍 Target user identified:', { id: targetUserId, email: targetEmail });
+    // console.log removed
     
     // Check if user profile already exists
     const { data: existingProfile, error: profileError } = await supabaseAdmin
@@ -1109,7 +1109,7 @@ async function fixUserProfile(req, res) {
       .single();
     
     if (existingProfile) {
-      console.log('✅ User profile already exists:', existingProfile.email);
+      // console.log removed
       return res.status(200).json({
         success: true,
         message: 'User profile already exists',
@@ -1142,7 +1142,7 @@ async function fixUserProfile(req, res) {
       throw new Error(`Failed to create user profile: ${createError.message}`);
     }
     
-    console.log('✅ User profile created successfully:', newProfile.email);
+    // console.log removed
     
     // Try to auto-link to company if this user is a company admin
     try {
@@ -1154,7 +1154,7 @@ async function fixUserProfile(req, res) {
         );
         
         if (matchingCompany) {
-          console.log(`🔗 Auto-linking to company: ${matchingCompany.name}`);
+          // console.log removed
           
           const { error: linkError } = await supabaseAdmin
             .from('company_users')
@@ -1169,12 +1169,12 @@ async function fixUserProfile(req, res) {
             });
           
           if (!linkError) {
-            console.log(`✅ Auto-linked to ${matchingCompany.name}`);
+            // console.log removed
           }
         }
       }
     } catch (linkingError) {
-      console.log('⚠️ Auto-linking failed but profile created successfully');
+      // console.log removed
     }
     
     return res.status(200).json({
@@ -1184,7 +1184,7 @@ async function fixUserProfile(req, res) {
     });
     
   } catch (error) {
-    console.error('❌ Error fixing user profile:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to fix user profile',
       details: error.message

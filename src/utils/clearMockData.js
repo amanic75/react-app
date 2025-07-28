@@ -2,7 +2,7 @@
 // This will remove any conflicting data that might interfere with Supabase authentication
 
 export const clearAllMockData = () => {
-  console.log('🧹 Clearing all mock authentication data...');
+  // console.log removed
   
   // List of all localStorage keys used by the mock system
   const mockDataKeys = [
@@ -19,7 +19,7 @@ export const clearAllMockData = () => {
   mockDataKeys.forEach(key => {
     if (localStorage.getItem(key)) {
       localStorage.removeItem(key);
-      console.log(`✅ Removed: ${key}`);
+      // console.log removed
     }
   });
   
@@ -27,7 +27,7 @@ export const clearAllMockData = () => {
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith('capacity-') || key.includes('mock') || key.includes('demo')) {
       localStorage.removeItem(key);
-      console.log(`✅ Removed additional key: ${key}`);
+      // console.log removed
     }
   });
   
@@ -35,12 +35,12 @@ export const clearAllMockData = () => {
   Object.keys(sessionStorage).forEach(key => {
     if (key.startsWith('capacity-') || key.includes('mock') || key.includes('demo')) {
       sessionStorage.removeItem(key);
-      console.log(`✅ Removed from session storage: ${key}`);
+      // console.log removed
     }
   });
   
-  console.log('🎉 All mock data cleared! Please refresh the page.');
-  console.log('🔐 You can now use your actual Supabase credentials to log in.');
+  // console.log removed
+  // console.log removed
   
   return true;
 };

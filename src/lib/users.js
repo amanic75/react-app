@@ -24,7 +24,7 @@ export const getAllUsers = async () => {
       credentials: user.credentials
     })), error: null };
   } catch (error) {
-    console.error('Error fetching users:', error);
+    // console.error removed
     return { data: [], error };
   }
 };
@@ -54,7 +54,7 @@ export const getUserById = async (id) => {
       credentials: data.credentials
     }, error: null };
   } catch (error) {
-    console.error('Error fetching user by ID:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -94,7 +94,7 @@ export const addUser = async (userData) => {
       credentials: data.credentials
     }, error: null };
   } catch (error) {
-    console.error('Error adding user:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -137,7 +137,7 @@ export const updateUser = async (userId, updatedData) => {
       credentials: data.credentials
     }, error: null };
   } catch (error) {
-    console.error('Error updating user:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -156,7 +156,7 @@ export const deleteUser = async (userId) => {
     if (error) throw error;
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting user:', error);
+    // console.error removed
     return { data: false, error };
   }
 }; 

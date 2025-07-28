@@ -57,13 +57,13 @@ const AdminDashboard = ({ userData }) => {
           .single();
 
         if (error) {
-          console.error('Error fetching company ID:', error);
+          // console.error removed
           return;
         }
 
         setCurrentCompanyId(data.company_id);
       } catch (error) {
-        console.error('Error in getCompanyId:', error);
+        // console.error removed
       }
     };
 
@@ -89,7 +89,7 @@ const AdminDashboard = ({ userData }) => {
         }
         
         if (error) {
-          console.error('Error loading users:', error);
+          // console.error removed
           return;
         }
 
@@ -110,7 +110,7 @@ const AdminDashboard = ({ userData }) => {
         
         setUsers(transformedUsers);
       } catch (error) {
-        console.error('Error in loadUsers:', error);
+        // console.error removed
       }
     };
     

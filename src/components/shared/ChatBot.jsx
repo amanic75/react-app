@@ -117,7 +117,7 @@ const ChatBot = ({ onMaterialAdded }) => {
         onMaterialAdded(botResponse.materialData);
       }
     } catch (error) {
-      console.error('AI Response Error:', error);
+      // console.error removed
       const errorResponse = {
         id: messages.length + 2,
         text: 'I apologize, but I encountered an error processing your request. Please try again. If the issue persists, please contact technical support.',

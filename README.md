@@ -91,3 +91,13 @@ src/
 - **Professional UX**: Hover effects, loading states, and smooth transitions
 
 This demo showcases modern React development practices with a focus on clean code, component reusability, and professional UI/UX design. 
+
+## Documentation
+
+- [AI Setup & Testing](docs/AI_SETUP.md)
+- [Deployment & API Guide](docs/DEPLOYMENT_AND_API_GUIDE.md)
+- [Multi-Tenant Guide](docs/MULTI_TENANT_GUIDE.md)
+- [Feature Fixes & Implementation Notes](docs/FEATURE_FIXES.md)
+- [Verification Guide](docs/VERIFICATION_GUIDE.md)
+- [Company Sync Solution](docs/COMPANY_SYNC_SOLUTION.md)
+- [Test Data Consistency](docs/test_data_consistency.md) 

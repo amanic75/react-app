@@ -46,7 +46,7 @@ class ChemicalDatabaseService {
       
       return null;
     } catch (error) {
-      console.error('PubChem lookup error:', error);
+      // console.error removed
       return null;
     }
   }
@@ -62,7 +62,7 @@ class ChemicalDatabaseService {
       const data = await response.json();
       return data.PropertyTable?.Properties?.[0] || null;
     } catch (error) {
-      console.error('PubChem properties error:', error);
+      // console.error removed
       return null;
     }
   }
@@ -91,7 +91,7 @@ class ChemicalDatabaseService {
       
       return null;
     } catch (error) {
-      console.error('PubChem safety data error:', error);
+      // console.error removed
       return null;
     }
   }

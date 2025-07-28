@@ -236,7 +236,7 @@ const FormulaDetailPage = () => {
       setAiResponse('');
       // Keep deleted documents after save - they are permanently removed
     } catch (err) {
-      console.error('Error saving formula:', err);
+      // console.error removed
       // You might want to show an error message to the user here
     }
   };
@@ -277,7 +277,7 @@ const FormulaDetailPage = () => {
       const { data } = await getAllMaterials();
       setRawMaterials(data || []);
     } catch (error) {
-      console.error('Error loading raw materials:', error);
+      // console.error removed
     }
   };
 
@@ -343,7 +343,7 @@ const FormulaDetailPage = () => {
         }, 5000);
       }
     } catch (error) {
-      console.error('Error adding material with AI:', error);
+      // console.error removed
       setAiResponse('❌ Failed to add material with AI. Please try again.');
       setTimeout(() => {
         setIsAddingWithAI(false);
@@ -381,11 +381,11 @@ const FormulaDetailPage = () => {
         // Navigate back to formulas list after successful deletion
         navigate('/formulas');
       } else {
-        console.error('Failed to delete formula');
+        // console.error removed
         // You might want to show an error message to the user here
       }
     } catch (err) {
-      console.error('Error deleting formula:', err);
+      // console.error removed
       // You might want to show an error message to the user here
     }
     setShowDeleteConfirm(false);

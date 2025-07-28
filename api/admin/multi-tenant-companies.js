@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('❌ Multi-tenant companies API error:', error);
+    // console.error removed
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 async function createCompanyWithTenant(req, res) {
   const companyData = req.body;
 
-  console.log('🏗️ Creating multi-tenant company:', companyData.companyName);
+  // console.log removed
 
   try {
     // Validate required fields
@@ -69,14 +69,14 @@ async function createCompanyWithTenant(req, res) {
 
     // Step 1: Create company record in master database
     const newCompany = await createCompanyRecord(companyData);
-    console.log('✅ Company record created:', newCompany.id);
+    // console.log removed
 
     // Step 2: Create isolated tenant database
     const tenantConfig = await multiTenantDB.createTenantDatabase(
       newCompany.id,
       companyData.companyName
     );
-    console.log('✅ Tenant database created:', tenantConfig.schemaName);
+    // console.log removed
 
     // Step 3: Create company admin account
     const adminAccount = await multiTenantDB.createCompanyAdmin(
@@ -85,12 +85,12 @@ async function createCompanyWithTenant(req, res) {
       companyData.adminUserName,
       companyData.companyName
     );
-    console.log('✅ Admin account created:', adminAccount.email);
+    // console.log removed
 
     // Step 4: Deploy initial apps to tenant database
     const initialApps = companyData.initialApps || ['formulas', 'suppliers', 'raw-materials'];
     await multiTenantDB.deployInitialApps(newCompany.id, initialApps);
-    console.log('✅ Initial apps deployed:', initialApps);
+    // console.log removed
 
     // Step 5: Return success response
     return res.status(201).json({
@@ -117,7 +117,7 @@ async function createCompanyWithTenant(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to create multi-tenant company:', error);
+    // console.error removed
     
     // TODO: Implement cleanup logic here
     // - Remove company record if tenant creation fails
@@ -186,7 +186,7 @@ async function createCompanyRecord(companyData) {
 
 // List all companies with tenant information
 async function listCompanies(req, res) {
-  console.log('📋 Fetching multi-tenant companies list');
+  // console.log removed
 
   try {
     const { data: companies, error } = await multiTenantDB.masterDb
@@ -222,7 +222,7 @@ async function listCompanies(req, res) {
           apps = tenantApps || [];
           
         } catch (tenantError) {
-          console.error(`⚠️ Failed to fetch tenant data for ${company.company_name}:`, tenantError);
+          // console.error removed
           userCount = 0;
           apps = [];
         }
@@ -246,7 +246,7 @@ async function listCompanies(req, res) {
            apps = sharedApps || [];
            
          } catch (sharedError) {
-           console.error(`⚠️ Failed to fetch shared data for ${company.company_name}:`, sharedError);
+           // console.error removed
            userCount = 0;
            apps = [];
          }
@@ -274,7 +274,7 @@ async function listCompanies(req, res) {
       };
     }));
 
-    console.log(`✅ Found ${transformedCompanies.length} multi-tenant companies`);
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -282,7 +282,7 @@ async function listCompanies(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to fetch companies:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to fetch companies',
       details: error.message
@@ -292,7 +292,7 @@ async function listCompanies(req, res) {
 
 // Get specific company with tenant details
 async function getCompany(req, res, companyId) {
-  console.log('🔍 Fetching multi-tenant company:', companyId);
+  // console.log removed
 
   try {
     // Get company and tenant info
@@ -335,7 +335,7 @@ async function getCompany(req, res, companyId) {
         };
 
       } catch (tenantError) {
-        console.error('⚠️ Failed to fetch tenant data:', tenantError);
+        // console.error removed
         tenantData = {
           apps: [],
           userCount: 0,
@@ -367,7 +367,7 @@ async function getCompany(req, res, companyId) {
         };
 
       } catch (sharedError) {
-        console.error('⚠️ Failed to fetch shared data:', sharedError);
+        // console.error removed
         tenantData = {
           apps: [],
           userCount: 0,
@@ -399,7 +399,7 @@ async function getCompany(req, res, companyId) {
       tenantHealthy: tenantData ? !tenantData.hasError : false
     };
 
-    console.log('✅ Company fetched successfully');
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -407,7 +407,7 @@ async function getCompany(req, res, companyId) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to fetch company:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to fetch company',
       details: error.message
@@ -417,7 +417,7 @@ async function getCompany(req, res, companyId) {
 
 // Update company (master database only)
 async function updateCompany(req, res, companyId) {
-  console.log('📝 Updating multi-tenant company:', companyId);
+  // console.log removed
 
   try {
     const updateData = req.body;
@@ -471,7 +471,7 @@ async function updateCompany(req, res, companyId) {
       throw new Error(`Failed to update company: ${updateError.message}`);
     }
 
-    console.log('✅ Company updated successfully');
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -480,7 +480,7 @@ async function updateCompany(req, res, companyId) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to update company:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to update company',
       details: error.message
@@ -490,7 +490,7 @@ async function updateCompany(req, res, companyId) {
 
 // Delete company and its tenant database
 async function deleteCompany(req, res, companyId) {
-  console.log('🗑️ Deleting multi-tenant company:', companyId);
+  // console.log removed
 
   try {
     // Get tenant info first
@@ -508,7 +508,7 @@ async function deleteCompany(req, res, companyId) {
         .delete()
         .eq('company_id', companyId);
         
-      console.log('✅ Tenant database deleted');
+      // console.log removed
     }
 
     // Delete company record
@@ -521,7 +521,7 @@ async function deleteCompany(req, res, companyId) {
       throw new Error(`Failed to delete company: ${error.message}`);
     }
 
-    console.log('✅ Company deleted successfully');
+    // console.log removed
 
     return res.status(200).json({
       success: true,
@@ -529,7 +529,7 @@ async function deleteCompany(req, res, companyId) {
     });
 
   } catch (error) {
-    console.error('❌ Failed to delete company:', error);
+    // console.error removed
     return res.status(500).json({
       error: 'Failed to delete company',
       details: error.message

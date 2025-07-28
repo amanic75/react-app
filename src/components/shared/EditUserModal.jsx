@@ -133,7 +133,7 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
         alert(`Error: ${result?.error || 'Unknown error occurred'}`);
       }
     } catch (error) {
-      console.error('Password change error:', error);
+      // console.error removed
       alert(`Error: Failed to change password. Please try again.`);
     }
   };

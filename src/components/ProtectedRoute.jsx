@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children }) => {
 
   // Show loading spinner while checking authentication
   if (loading) {
-    console.log('🔄 ProtectedRoute - Still loading auth state...');
+    // console.log removed
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">

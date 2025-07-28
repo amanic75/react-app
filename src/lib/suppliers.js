@@ -28,7 +28,7 @@ export const getAllSuppliers = async () => {
       assignedToUser: supplier.assigned_to_profile ? `${supplier.assigned_to_profile.first_name} ${supplier.assigned_to_profile.last_name}` : null
     })), error: null };
   } catch (error) {
-    console.error('Error fetching suppliers:', error);
+    // console.error removed
     return { data: [], error };
   }
 };
@@ -62,7 +62,7 @@ export const getSupplierById = async (id) => {
       assignedToUser: data.assigned_to_profile ? `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     }, error: null };
   } catch (error) {
-    console.error('Error fetching supplier by ID:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -106,7 +106,7 @@ export const addSupplier = async (supplierData) => {
       assignedToUser: data.assigned_to_profile ? `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     }, error: null };
   } catch (error) {
-    console.error('Error adding supplier:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -152,7 +152,7 @@ export const updateSupplier = async (supplierId, updatedData) => {
       assignedToUser: data.assigned_to_profile ? `${data.assigned_to_profile.first_name} ${data.assigned_to_profile.last_name}` : null
     }, error: null };
   } catch (error) {
-    console.error('Error updating supplier:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -171,7 +171,7 @@ export const deleteSupplier = async (supplierId) => {
     if (error) throw error;
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting supplier:', error);
+    // console.error removed
     return { data: false, error };
   }
 }; 

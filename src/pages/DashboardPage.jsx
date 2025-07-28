@@ -107,7 +107,7 @@ const DashboardPage = () => {
           return <EmployeeDashboard />;
       }
     } catch (error) {
-      console.error('Error rendering dashboard:', error);
+      // console.error removed
       setError(error.message);
       return (
         <div className="text-center py-8">

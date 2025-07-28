@@ -38,7 +38,7 @@ const UserManagementPage = () => {
   useEffect(() => {
     if (!loading && userProfile) {
       if (userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
-        console.log(`🚫 Access denied to user management for role: ${userProfile.role}, redirecting to dashboard`);
+        // console.log removed
         const dashboardRoute = getDashboardRoute();
         navigate(dashboardRoute, { replace: true });
       }
@@ -62,14 +62,14 @@ const UserManagementPage = () => {
           .single();
 
         if (error) {
-          console.error('Error fetching company ID:', error);
+          // console.error removed
           return;
         }
 
         setCurrentCompanyId(data.company_id);
-        console.log('Found company ID for user:', data.company_id);
+        // console.log removed
       } catch (error) {
-        console.error('Error in getCompanyId:', error);
+        // console.error removed
       }
     };
 
@@ -126,7 +126,7 @@ const UserManagementPage = () => {
       }
       
       if (error) {
-        console.error('Error loading users:', error);
+        // console.error removed
         return;
       }
       
@@ -164,7 +164,7 @@ const UserManagementPage = () => {
       
       setUsers(transformedUsers);
     } catch (error) {
-      console.error('Error in loadUsers:', error);
+      // console.error removed
     } finally {
       setIsLoading(false);
     }
@@ -361,7 +361,7 @@ const UserManagementPage = () => {
       
       const { error } = await updateUserProfile(updatedUser.id, updates);
       if (error) {
-        console.error('Error updating user:', error);
+        // console.error removed
         alert('Failed to update user. Please try again.');
         return;
       }
@@ -387,11 +387,11 @@ const UserManagementPage = () => {
             .eq('user_id', updatedUser.id);
 
           if (companyUpdateError) {
-            console.error('Error updating company role:', companyUpdateError);
+            // console.error removed
             alert('User updated but failed to update company role. Please try again.');
           }
         } catch (companyError) {
-          console.error('Error updating company role:', companyError);
+          // console.error removed
         }
       }
       
@@ -401,14 +401,14 @@ const UserManagementPage = () => {
       setIsEditModalOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error('Error in handleSaveUser:', error);
+      // console.error removed
       alert('Failed to update user. Please try again.');
     }
   };
 
   const handleDeleteUser = async (userId) => {
     try {
-      console.log('🔄 UserManagementPage: Deleting user with ID:', userId);
+      // console.log removed
       
       // Check if trying to delete the currently authenticated user
       if (user && user.id === userId) {
@@ -429,17 +429,17 @@ const UserManagementPage = () => {
         return;
       }
       
-      console.log('🔄 UserManagementPage: Deleting user:', userToDelete.email);
+      // console.log removed
       
       const { data, error } = await deleteUserProfile(userId);
       
       if (error) {
-        console.error('❌ UserManagementPage: Delete failed:', error);
+        // console.error removed
         alert(`Failed to delete user: ${error.message || error}`);
         return;
       }
 
-      console.log('✅ UserManagementPage: Delete successful, refreshing user list...');
+      // console.log removed
       
       // Wait a moment before refreshing to allow any auth state changes to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -447,18 +447,18 @@ const UserManagementPage = () => {
       // Only refresh the users list if delete actually succeeded
       try {
         await loadUsers();
-        console.log(`📝 UserManagementPage: Refreshed user list after deletion`);
+        // console.log removed
         
         // Check if the user was actually removed
         const userStillExists = users.some(u => u.id === userId);
         if (userStillExists) {
-          console.warn('⚠️ UserManagementPage: User still exists after deletion - likely auto-recreated');
+          // console.warn removed
           alert('User profile was deleted but may have been automatically recreated. This can happen if the user is currently authenticated in another session.');
         } else {
           alert('User deleted successfully!');
         }
       } catch (refreshError) {
-        console.error('❌ UserManagementPage: Error refreshing users:', refreshError);
+        // console.error removed
         alert('User deleted but failed to refresh list. Please reload the page.');
         return;
       }
@@ -466,7 +466,7 @@ const UserManagementPage = () => {
       setIsEditModalOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error('❌ UserManagementPage: Unexpected error in handleDeleteUser:', error);
+      // console.error removed
       alert(`Unexpected error: ${error.message}`);
     }
   };
@@ -482,7 +482,7 @@ const UserManagementPage = () => {
 
   const handleSaveNewUser = async (newUser) => {
     try {
-      console.log('🔧 Admin creating new user:', newUser.email);
+      // console.log removed
       
       // Use the adminCreateUser function to create user without affecting current session
       const { data, error } = await adminCreateUser(newUser.email, newUser.password, {
@@ -494,12 +494,12 @@ const UserManagementPage = () => {
       });
 
       if (error) {
-        console.error('❌ Error creating user:', error);
+        // console.error removed
         alert(`Failed to create user: ${error.message || error}`);
         return;
       }
 
-      console.log('✅ User created successfully:', data);
+      // console.log removed
       
       // If current user is a Capacity Admin, associate the new user with their company
       if (userProfile?.role === 'Capacity Admin' && currentCompanyId && data?.id) {
@@ -524,13 +524,13 @@ const UserManagementPage = () => {
             });
 
           if (linkError) {
-            console.error('❌ Error linking user to company:', linkError);
+            // console.error removed
             alert(`User created but failed to link to company: ${linkError.message}`);
           } else {
-            console.log('✅ User linked to company successfully');
+            // console.log removed
           }
         } catch (linkError) {
-          console.error('❌ Error in company association:', linkError);
+          // console.error removed
         }
       }
       
@@ -541,7 +541,7 @@ const UserManagementPage = () => {
       
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('❌ Error in handleSaveNewUser:', error);
+      // console.error removed
       alert(`Unexpected error: ${error.message}`);
     }
   };
@@ -617,7 +617,7 @@ const UserManagementPage = () => {
   const handleChangePassword = async (passwordData) => {
     // Validate input
     if (!passwordData || !passwordData.email || !passwordData.newPassword) {
-      console.error('Invalid password data:', passwordData);
+      // console.error removed
       return { 
         success: false, 
         error: 'Invalid password data provided' 
@@ -626,41 +626,41 @@ const UserManagementPage = () => {
 
     // Check if current user has Capacity Admin role
     if (userProfile?.role !== 'Capacity Admin') {
-      console.error('Insufficient permissions for password change');
+      // console.error removed
       return { success: false, error: 'Insufficient permissions' };
     }
 
     try {
-      console.log('Password change requested for:', passwordData.email);
-      console.log('Admin user:', userProfile?.email);
+      // console.log removed
+      // console.log removed
       
       if (passwordData.email === user?.email) {
         // If admin is changing their own password
-        console.log('Admin changing own password');
+        // console.log removed
         const { error } = await changePassword(passwordData.newPassword);
         
         if (error) {
-          console.error('Password change error:', error);
+          // console.error removed
           return { 
             success: false, 
             error: error.message || 'Failed to change password' 
           };
         }
         
-        console.log('Password change successful for own account');
+        // console.log removed
         return { 
           success: true, 
           message: `Password successfully changed for ${passwordData.email}` 
         };
       } else {
         // For other users - call secure backend API
-        console.log('Admin changing another user\'s password');
+        // console.log removed
         
         // Get current user's session token for API authentication
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          console.error('No active session found');
+          // console.error removed
           return { 
             success: false, 
             error: 'No active session found. Please log in again.' 
@@ -681,16 +681,16 @@ const UserManagementPage = () => {
         });
 
         if (!response.ok) {
-          console.error('API request failed with status:', response.status);
+          // console.error removed
           try {
             const errorResult = await response.json();
-            console.error('API Error:', errorResult.error);
+            // console.error removed
             return { 
               success: false, 
               error: errorResult.error || 'Failed to change password' 
             };
           } catch (parseError) {
-            console.error('Failed to parse error response:', parseError);
+            // console.error removed
             return { 
               success: false, 
               error: 'Failed to change password. Server error.' 
@@ -699,7 +699,7 @@ const UserManagementPage = () => {
         }
 
         const result = await response.json();
-        console.log('Password change API response:', result);
+        // console.log removed
 
         return { 
           success: true, 
@@ -708,7 +708,7 @@ const UserManagementPage = () => {
       }
       
     } catch (error) {
-      console.error('Password change error:', error);
+      // console.error removed
       return { 
         success: false, 
         error: error.message || 'Failed to change password. Please try again.' 

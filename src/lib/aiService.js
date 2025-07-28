@@ -294,7 +294,7 @@ class AIService {
         return await this.processResponse(aiResponse);
       }
     } catch (error) {
-      console.error('AI Service Error:', error);
+      // console.error removed
       throw new Error('Failed to generate AI response. Please try again.');
     }
   }
@@ -339,7 +339,7 @@ class AIService {
           }
         }
       } catch (error) {
-        console.error('Error processing material addition:', error);
+        // console.error removed
         return {
           response: response.replace('**[ADD_MATERIAL]**', ''),
           materialAdded: false,
@@ -505,7 +505,7 @@ class AIService {
 
   async enhanceWithChemicalVerification(materialData) {
     try {
-      console.log('🔍 Verifying chemical data with PubChem for:', materialData.materialName);
+      // console.log removed
       
       // Get enhanced chemical data from PubChem
       const enhancedData = await this.chemicalDB.getEnhancedChemicalData(
@@ -514,7 +514,7 @@ class AIService {
       );
       
       if (enhancedData && enhancedData.sources.length > 0) {
-        console.log('✅ PubChem verification successful:', enhancedData.sources);
+        // console.log removed
         
         // Merge verified data with AI estimates
         return {
@@ -536,7 +536,7 @@ class AIService {
           canonicalSMILES: enhancedData.properties.canonicalSMILES
         };
       } else {
-        console.log('⚠️ PubChem verification failed, using AI estimates');
+        // console.log removed
         
         // Fallback to AI estimates with lower confidence
         return {
@@ -548,7 +548,7 @@ class AIService {
         };
       }
     } catch (error) {
-      console.error('Chemical verification error:', error);
+      // console.error removed
       
       // Fallback to original data with error note
       return {
@@ -633,11 +633,11 @@ class AIService {
     
     // Handle Level 2 backend response format
     if (data.materialAdded) {
-      console.log('📦 Frontend: Received backend verification response:', data);
+      // console.log removed
       
       // Check if backend provided material data
       if (!data.materialData) {
-        console.error('❌ Frontend: Backend returned materialAdded=true but no materialData');
+        // console.error removed
         return {
           response: data.response,
           materialAdded: false,
@@ -648,7 +648,7 @@ class AIService {
       try {
         // Backend already processed the material with verification
         const validatedData = this.validateMaterialData(data.materialData);
-        console.log('✅ Frontend: Material validated, saving to database:', validatedData.materialName);
+        // console.log removed
         
         const savedMaterial = await addMaterial(validatedData);
         
@@ -667,7 +667,7 @@ class AIService {
           };
         }
       } catch (error) {
-        console.error('❌ Frontend: Error processing backend material data:', error);
+        // console.error removed
         return {
           response: data.response,
           materialAdded: false,
@@ -690,7 +690,7 @@ class AIService {
       const { chemical_name, cas_number, quantity, purity } = functionArgs;
       return await this.chemicalDB.getSupplierPricing(chemical_name, cas_number, quantity, purity);
     } else {
-      console.warn(`Unknown function called: ${functionName}`);
+      // console.warn removed
       return { error: `Unknown function called: ${functionName}` };
     }
   }
@@ -727,7 +727,7 @@ class AIService {
           }
         }
       } catch (error) {
-        console.error('Error processing material addition:', error);
+        // console.error removed
         return {
           response: response.replace('**[ADD_MATERIAL]**', ''),
           materialAdded: false,
@@ -808,7 +808,7 @@ class AIService {
         }
       }
     } catch (error) {
-      console.error('AI Streaming Error:', error);
+      // console.error removed
       throw new Error('Failed to generate streaming response.');
     }
   }

@@ -7,7 +7,7 @@ const generateAuthCredentials = () => {
   const users = getUsers();
   const credentials = {};
   
-  console.log('Generating auth credentials for', users.length, 'users');
+  // console.log removed
   
   // Convert role to auth role format
   const roleMapping = {
@@ -33,9 +33,9 @@ const generateAuthCredentials = () => {
   const demoEmails = ['capacity@capacity.com', 'nsight@nsight-inc.com', 'employee@domain.com'];
   demoEmails.forEach(email => {
     if (credentials[email]) {
-      console.log(`Demo account found: ${email} -> ${credentials[email].role}`);
+      // console.log removed
     } else {
-      console.log(`Demo account MISSING: ${email}`);
+      // console.log removed
     }
   });
   
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedAuth = loadAuthState();
     if (savedAuth) {
-      console.log('Restoring auth state from storage:', savedAuth.user);
+      // console.log removed
       setUser(savedAuth.user);
       setRole(savedAuth.role);
       setUserData(savedAuth.userData);
@@ -121,15 +121,15 @@ export const AuthProvider = ({ children }) => {
     // Refresh credentials to get latest user data
     refreshCredentials();
     
-    console.log('Login attempt:', email);
-    console.log('Available credentials:', Object.keys(MOCK_CREDENTIALS).length);
+    // console.log removed
+    // console.log removed
     
     const credential = MOCK_CREDENTIALS[email];
     
     if (credential) {
-      console.log('Found credential for:', email, 'role:', credential.role);
+      // console.log removed
       if (credential.password === password) {
-        console.log('Password match, logging in');
+        // console.log removed
         setUser(email);
         setRole(credential.role);
         setUserData(credential.userData);
@@ -140,11 +140,11 @@ export const AuthProvider = ({ children }) => {
         
         return { success: true };
       } else {
-        console.log('Password mismatch');
+        // console.log removed
         return { success: false, error: 'Invalid credentials' };
       }
     } else {
-      console.log('No credential found for:', email);
+      // console.log removed
       return { success: false, error: 'Invalid credentials' };
     }
   };
@@ -200,7 +200,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const changePassword = ({ email, oldPassword, newPassword, isAdminReset = false }) => {
-    console.log('Change password attempt for:', email, isAdminReset ? '(admin reset)' : '');
+    // console.log removed
     
     // Refresh credentials to get latest data
     refreshCredentials();
@@ -225,7 +225,7 @@ export const AuthProvider = ({ children }) => {
     // Update the in-memory credentials
     MOCK_CREDENTIALS[email].password = newPassword;
     
-    console.log('Password changed successfully for:', email);
+    // console.log removed
     return { success: true };
   };
 

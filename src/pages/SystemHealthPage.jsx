@@ -185,7 +185,7 @@ const SystemHealthPage = () => {
   useEffect(() => {
     if (!loading && userProfile) {
       if (userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
-        console.log(`🚫 Access denied to system health for role: ${userProfile.role}, redirecting to dashboard`);
+        // console.log removed
         const dashboardRoute = getDashboardRoute();
         navigate(dashboardRoute, { replace: true });
       }
@@ -234,7 +234,7 @@ const SystemHealthPage = () => {
   // Transform historical data from API response to chart format
   const transformHistoricalData = (apiData) => {
     if (!apiData || !apiData.data) {
-      console.warn('⚠️ No historical data received from API');
+      // console.warn removed
       return getEmptyHistoricalData();
     }
 
@@ -490,7 +490,7 @@ const SystemHealthPage = () => {
           }
         }));
       } catch (networkError) {
-        console.error('❌ Failed to fetch network metrics:', networkError);
+        // console.error removed
         setInfrastructureMetrics(prev => ({
           ...prev,
           network: { latency: 'unavailable', status: 'error' }
@@ -502,7 +502,7 @@ const SystemHealthPage = () => {
         const analyticsRes = await fetch(`${baseUrl}/monitoring?type=usage-analytics`);
         const analyticsData = await analyticsRes.json();
         
-        console.log('📊 Received usage analytics data:', analyticsData);
+        // console.log removed
 
         // Transform API data to match frontend expectations
         setUsageAnalytics({
@@ -533,7 +533,7 @@ const SystemHealthPage = () => {
           status: 'healthy'
         });
       } catch (analyticsError) {
-        console.error('❌ Failed to fetch usage analytics:', analyticsError);
+        // console.error removed
         setUsageAnalytics(prev => ({
           ...prev,
           status: 'error'
@@ -573,7 +573,7 @@ const SystemHealthPage = () => {
           status: 'healthy'
         });
       } catch (errorMonitoringError) {
-        console.error('❌ Failed to fetch error monitoring data:', errorMonitoringError);
+        // console.error removed
         setErrorMonitoring(prev => ({
           ...prev,
           status: 'error'
@@ -608,7 +608,7 @@ const SystemHealthPage = () => {
           status: 'healthy'
         });
       } catch (supabaseError) {
-        console.error('❌ Failed to fetch Supabase metrics:', supabaseError);
+        // console.error removed
         setSupabaseMetrics(prev => ({
           ...prev,
           status: 'error'
@@ -620,13 +620,13 @@ const SystemHealthPage = () => {
         const historicalRes = await fetch(`${baseUrl}/monitoring?type=historical-data`);
         const historicalApiData = await historicalRes.json();
         
-        console.log('📈 Received historical data:', historicalApiData);
+        // console.log removed
 
         // Transform API data to match frontend chart expectations
         const transformedHistoricalData = transformHistoricalData(historicalApiData);
         setHistoricalData(transformedHistoricalData);
       } catch (historicalError) {
-        console.error('❌ Failed to fetch historical data:', historicalError);
+        // console.error removed
         // Fallback to basic data if API fails
         setHistoricalData({
           userGrowth: {
@@ -663,7 +663,7 @@ const SystemHealthPage = () => {
       
       setRefreshTime(new Date());
     } catch (error) {
-      console.error('❌ Failed to fetch system metrics:', error);
+      // console.error removed
       // Set error status for server and database only (network handles its own fallback)
       setInfrastructureMetrics(prev => ({
         serverStatus: { ...prev.serverStatus, status: 'error' },
@@ -733,11 +733,11 @@ const SystemHealthPage = () => {
     const baseUrl = getApiBaseUrl();
     
     try {
-      console.log('🔍 Fetching diagnostics for section:', section);
+      // console.log removed
       const response = await fetch(`${baseUrl}/monitoring?type=supabase-metrics&diagnostics=true`);
       const data = await response.json();
       
-      console.log('📊 Diagnostics data received:', data.diagnostics);
+      // console.log removed
       
       if (data.diagnostics) {
         setSupabaseMetrics(prev => ({
@@ -755,12 +755,12 @@ const SystemHealthPage = () => {
             diagnostics: data.diagnostics.rowLevelSecurity
           }
         }));
-        console.log('✅ Diagnostics updated successfully');
+        // console.log removed
       } else {
-        console.warn('⚠️ No diagnostics data in response');
+        // console.warn removed
       }
     } catch (error) {
-      console.error('❌ Failed to fetch diagnostics:', error);
+      // console.error removed
     }
   };
 

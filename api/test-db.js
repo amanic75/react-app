@@ -1,12 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-console.log('🔍 Environment check:');
-console.log('VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL);
-console.log('VITE_SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
-console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
-
 const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-console.log('Using API key:', apiKey ? `${apiKey.substring(0, 20)}...` : 'NOT SET');
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -28,26 +22,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('🔍 Testing database connection...');
-    
     // Test 1: Simple count query
     const { data: countData, error: countError, count } = await supabase
       .from('user_profiles')
       .select('*', { count: 'exact', head: true });
-    
-    console.log('Count query result:', { countData, countError, count });
 
     // Test 2: Select query
     const { data: selectData, error: selectError } = await supabase
       .from('user_profiles')
       .select('*')
       .limit(5);
-    
-    console.log('Select query result:', { 
-      selectData, 
-      selectError, 
-      selectDataLength: selectData?.length 
-    });
 
     // Test 3: Check table existence
     const { data: tableData, error: tableError } = await supabase
@@ -68,16 +52,10 @@ export default async function handler(req, res) {
       .select('*')
       .limit(10);
     
-    console.log('Table existence check:', { tableData, tableError });
-    console.log('Company ID distribution:', { companyData, companyError });
-    console.log('Company Users table:', { companyUsersData, companyUsersError });
-    
     // Test 6: Check if company_users table exists by trying to select its schema
     const { data: companyUsersSchema, error: companyUsersSchemaError } = await supabase
       .from('company_users')
       .select('*', { count: 'exact', head: true });
-
-    console.log('Company Users schema check:', { companyUsersSchema, companyUsersSchemaError });
 
     // Test 7: Try to insert a test record into company_users table
     const testUserId = '8d3a8ac9-14fd-4761-b273-44191e9bab5c'; // admintest@capacity.com
@@ -94,7 +72,7 @@ export default async function handler(req, res) {
       }])
       .select();
 
-    console.log('Company Users insert test:', { insertTest, insertError });
+    // console.log removed
 
     // Test 8: Check if the insert worked
     const { data: verifyInsert, error: verifyError } = await supabase
@@ -103,7 +81,7 @@ export default async function handler(req, res) {
       .eq('company_id', testCompanyId)
       .eq('user_id', testUserId);
 
-    console.log('Company Users verify insert:', { verifyInsert, verifyError });
+
 
     // Test 9: Try to create company_users table if it doesn't exist
     const createTableSQL = `
@@ -127,8 +105,6 @@ export default async function handler(req, res) {
       .rpc('exec_sql', { sql: createTableSQL })
       .catch(() => ({ data: null, error: { message: 'RPC exec_sql not available' } }));
 
-    console.log('Company Users table creation:', { createTableResult, createTableError });
-
     // Test 10: Try insert again after table creation
     const { data: insertTest2, error: insertError2 } = await supabase
       .from('company_users')
@@ -141,14 +117,10 @@ export default async function handler(req, res) {
       }])
       .select();
 
-    console.log('Company Users insert test 2:', { insertTest2, insertError2 });
-
     // Test 11: Check if company_users table exists in information schema
     const { data: tableExists, error: tableExistsError } = await supabase
       .rpc('exec_sql', { sql: "SELECT table_name FROM information_schema.tables WHERE table_name = 'company_users';" })
       .catch(() => ({ data: null, error: { message: 'Cannot check table existence' } }));
-
-    console.log('Company Users table exists check:', { tableExists, tableExistsError });
 
     // Test 12: Try a simple upsert without constraints
     const { data: simpleUpsert, error: simpleUpsertError } = await supabase
@@ -162,8 +134,6 @@ export default async function handler(req, res) {
         onConflict: 'company_id,user_id' 
       })
       .select();
-
-    console.log('Simple upsert test:', { simpleUpsert, simpleUpsertError });
 
     return res.status(200).json({
       message: 'Database connection test',
@@ -230,7 +200,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Database test error:', error);
     return res.status(500).json({ 
       error: 'Database test failed', 
       details: error.message 

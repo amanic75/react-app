@@ -34,9 +34,9 @@ const CreateAppModal = ({ isOpen, onClose, onSave, selectedCompany = null, compa
   const dragCounter = useRef(0);
 
   // Debug logging (remove in production)
-  // console.log('🔍 CreateAppModal - selectedCompany:', selectedCompany);
-  // console.log('🔍 CreateAppModal - selectedCompany.id:', selectedCompany?.id);
-  // console.log('🔍 CreateAppModal - companies:', companies);
+  // // console.log removed
+  // // console.log removed
+  // // console.log removed
 
   const [formData, setFormData] = useState({
     // Step 1: Basic App Information

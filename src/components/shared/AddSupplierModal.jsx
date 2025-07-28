@@ -16,7 +16,7 @@ const AddSupplierModal = ({ isOpen, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission
-    console.log('New supplier data:', formData);
+    // console.log removed
     // Reset form after successful submission
     resetForm();
     onClose();

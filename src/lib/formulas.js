@@ -28,7 +28,7 @@ export const getAllFormulas = async () => {
       assignedToUser: null
     })), error: null };
   } catch (error) {
-    console.error('Error fetching formulas:', error);
+    // console.error removed
     return { data: [], error };
   }
 };
@@ -61,7 +61,7 @@ export const getFormulaById = async (id) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    console.error('Error fetching formula:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -104,7 +104,7 @@ export const addFormula = async (formulaData) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    console.error('Error adding formula:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -148,7 +148,7 @@ export const updateFormula = async (formulaId, updatedData) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    console.error('Error updating formula:', error);
+    // console.error removed
     return { data: null, error };
   }
 };
@@ -167,7 +167,7 @@ export const deleteFormula = async (formulaId) => {
     if (error) throw error;
     return { data: true, error: null };
   } catch (error) {
-    console.error('Error deleting formula:', error);
+    // console.error removed
     return { data: false, error };
   }
 }; 

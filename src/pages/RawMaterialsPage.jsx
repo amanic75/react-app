@@ -71,7 +71,7 @@ const RawMaterialsPage = () => {
       setRawMaterials(data || []);
       setError(null);
     } catch (err) {
-      console.error('Error loading materials:', err);
+      // console.error removed
       setError('Failed to load raw materials');
     } finally {
       setLoading(false);
@@ -84,7 +84,7 @@ const RawMaterialsPage = () => {
 
   // Callback to refresh materials when added via chat
   const handleMaterialAdded = (materialData) => {
-    console.log('Material added via chat:', materialData);
+    // console.log removed
     // Refresh the materials list
     loadMaterials();
   };
@@ -288,7 +288,7 @@ const RawMaterialsPage = () => {
 
   // Handle confirming material creation
   const handleConfirmCreate = () => {
-    console.log('Creating new material:', newMaterial);
+    // console.log removed
     // Here you would typically send the data to your backend
     
     // Reset form and close modals

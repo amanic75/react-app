@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       .select();
 
     if (upsertError) {
-      console.error('❌ Activity upsert error:', upsertError);
+      // console.error removed
       // Fallback: try insert instead
       const { data: insertData, error: insertError } = await supabase
         .from('user_activity')
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         .select();
       
       if (insertError) {
-        console.error('❌ Activity insert error:', insertError);
+        // console.error removed
       }
     }
 
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       .lt('last_seen', twoMinutesAgo);
 
     if (cleanupError) {
-      console.error('❌ Activity cleanup error:', cleanupError);
+      // console.error removed
     }
 
     // Get current active user count
@@ -96,25 +96,14 @@ export default async function handler(req, res) {
           .select();
           
         if (error) {
-          console.error('❌ Database update error:', error);
+          // Database update error
         } else {
           dbUpdateSuccess = true;
-          console.log('✅ Database updated for user:', userEmail);
         }
       } catch (dbError) {
-        console.error('❌ Database update failed:', dbError.message);
+        // Database update failed
       }
     }
-
-    console.log(`👤 Activity tracked for ${userName || trackingId} (${userRole}) on page ${page}:`, {
-      trackingId,
-      userEmail,
-      userName,
-      userRole,
-      activeUsers: activeUserCount,
-      dbUpdateSuccess,
-      timestamp: new Date().toISOString()
-    });
 
     res.status(200).json({ 
       success: true,
@@ -123,7 +112,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Activity tracking error:', error);
     res.status(500).json({ 
       error: 'Failed to track activity',
       details: error.message
@@ -142,19 +130,17 @@ async function ensureActivityTableExists() {
 
     // If table doesn't exist, this will return a specific error
     if (error && error.message.includes('relation "user_activity" does not exist')) {
-      console.log('📋 Creating user_activity table...');
-      
       // Create the table using SQL
       const { error: createError } = await supabase.rpc('create_user_activity_table', {});
       
       if (createError) {
-        console.error('❌ Failed to create user_activity table:', createError);
+        // Failed to create user_activity table
       } else {
-        console.log('✅ user_activity table created successfully');
+        // user_activity table created successfully
       }
     }
   } catch (err) {
-    console.log('⚠️ Could not verify/create user_activity table:', err.message);
+    // Could not verify/create user_activity table
   }
 }
 
@@ -176,13 +162,11 @@ export const getActiveUsers = async () => {
       .gte('last_seen', twoMinutesAgo);
 
     if (error) {
-      console.error('❌ Error getting active users:', error);
       return 0;
     }
 
     return activeUsers?.length || 0;
   } catch (err) {
-    console.error('❌ getActiveUsers error:', err);
     return 0;
   }
 }; 

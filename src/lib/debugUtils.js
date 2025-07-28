@@ -2,7 +2,7 @@
 import { supabase } from './supabase';
 
 export const debugAssignedToFields = async () => {
-  console.log('🔍 Debug: Checking assigned_to field structure in database...');
+  // console.log removed
   
   try {
     // Check raw_materials table
@@ -23,83 +23,63 @@ export const debugAssignedToFields = async () => {
       .select('id, supplier_name, assigned_to')
       .limit(5);
     
-    console.log('📊 Raw Materials assigned_to field analysis:');
+    // console.log removed
     if (materials && materials.length > 0) {
       materials.forEach(material => {
-        console.log(`  - ${material.material_name}: assigned_to =`, {
-          value: material.assigned_to,
-          type: typeof material.assigned_to,
-          isArray: Array.isArray(material.assigned_to),
-          length: material.assigned_to ? material.assigned_to.length : 'N/A'
-        });
+        // Material assigned_to debug info
       });
     } else {
-      console.log('  - No materials found or error:', materialsError);
+      // console.log removed
     }
     
-    console.log('📊 Formulas assigned_to field analysis:');
+    // console.log removed
     if (formulas && formulas.length > 0) {
       formulas.forEach(formula => {
-        console.log(`  - ${formula.name}: assigned_to =`, {
-          value: formula.assigned_to,
-          type: typeof formula.assigned_to,
-          isArray: Array.isArray(formula.assigned_to),
-          length: formula.assigned_to ? formula.assigned_to.length : 'N/A'
-        });
+        // Formula assigned_to debug info
       });
     } else {
-      console.log('  - No formulas found or error:', formulasError);
+      // console.log removed
     }
     
-    console.log('📊 Suppliers assigned_to field analysis:');
+    // console.log removed
     if (suppliers && suppliers.length > 0) {
       suppliers.forEach(supplier => {
-        console.log(`  - ${supplier.supplier_name}: assigned_to =`, {
-          value: supplier.assigned_to,
-          type: typeof supplier.assigned_to,
-          isArray: Array.isArray(supplier.assigned_to),
-          length: supplier.assigned_to ? supplier.assigned_to.length : 'N/A'
-        });
+        // Supplier assigned_to debug info
       });
     } else {
-      console.log('  - No suppliers found or error:', suppliersError);
+      // console.log removed
     }
     
   } catch (error) {
-    console.error('❌ Error debugging assigned_to fields:', error);
+    // console.error removed
   }
 };
 
 export const debugCurrentUser = async () => {
-  console.log('🔍 Debug: Checking current user information...');
+  // console.log removed
   
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
-      console.error('❌ Error getting current user:', error);
+      // console.error removed
       return null;
     }
     
-    console.log('👤 Current user debug info:', {
-      id: user?.id,
-      email: user?.email,
-      id_type: typeof user?.id,
-      id_length: user?.id ? user.id.length : 'N/A'
-    });
+    // Current user debug info
     
     return user;
   } catch (error) {
-    console.error('❌ Error debugging current user:', error);
+    // console.error removed
     return null;
   }
 };
 
 export const debugFilteringLogic = async (user) => {
-  console.log('🔍 Debug: Testing filtering logic with current user...');
+  // console.log removed
   
   if (!user) {
-    console.log('⚠️ No user provided for filtering test');
+    // console.log removed
     return;
   }
   
@@ -111,23 +91,18 @@ export const debugFilteringLogic = async (user) => {
       .limit(3);
     
     if (error) {
-      console.error('❌ Error fetching materials for filtering test:', error);
+      // console.error removed
       return;
     }
     
-    console.log('🧪 Filtering test results:');
+    // console.log removed
     materials.forEach(material => {
       const isAssigned = checkAssignment(material.assigned_to, user.id);
-      console.log(`  - ${material.material_name}:`, {
-        assigned_to: material.assigned_to,
-        user_id: user.id,
-        isAssigned: isAssigned,
-        reason: getAssignmentReason(material.assigned_to, user.id)
-      });
+      // Material filtering debug info
     });
     
   } catch (error) {
-    console.error('❌ Error testing filtering logic:', error);
+    // console.error removed
   }
 };
 
@@ -169,19 +144,19 @@ const getAssignmentReason = (assignedTo, userId) => {
 
 // Run comprehensive debug
 export const runComprehensiveDebug = async () => {
-  console.log('🚀 Starting comprehensive assigned_to debugging...');
-  console.log('='.repeat(60));
+  // console.log removed
+  // console.log removed
   
   await debugAssignedToFields();
-  console.log('='.repeat(60));
+  // console.log removed
   
   const user = await debugCurrentUser();
-  console.log('='.repeat(60));
+  // console.log removed
   
   if (user) {
     await debugFilteringLogic(user);
   }
   
-  console.log('='.repeat(60));
-  console.log('✅ Debug complete! Check console output above for details.');
+  // console.log removed
+  // console.log removed
 }; 

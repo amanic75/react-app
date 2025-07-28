@@ -60,12 +60,12 @@ const MultiTenantNsightDashboard = ({ userData }) => {
       
       if (data.success) {
         setCompanies(data.companies);
-        console.log('✅ Loaded multi-tenant companies:', data.companies.length);
+        // console.log removed
       } else {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to load companies:', error);
+      // console.error removed
       setError(error.message);
       setCompanies([]);
     } finally {
@@ -81,7 +81,7 @@ const MultiTenantNsightDashboard = ({ userData }) => {
       setIsCreating(true);
       setError(null);
       
-      console.log('🏗️ Creating multi-tenant company:', newCompanyData.companyName);
+      // console.log removed
       
       const response = await fetch('/api/admin/multi-tenant-companies', {
         method: 'POST',
@@ -98,7 +98,7 @@ const MultiTenantNsightDashboard = ({ userData }) => {
       }
       
       if (data.success) {
-        console.log('✅ Multi-tenant company created successfully:', data.company.name);
+        // console.log removed
         
         // Show success alert with admin credentials
         alert(`
@@ -131,7 +131,7 @@ Please save these credentials and change the password immediately after first lo
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to create multi-tenant company:', error);
+      // console.error removed
       setError(error.message);
     } finally {
       setIsCreating(false);
@@ -151,12 +151,12 @@ Please save these credentials and change the password immediately after first lo
       if (data.success) {
         setSelectedCompany(data.company);
         setShowCompanyDetails(true);
-        console.log('✅ Company details loaded:', data.company.name);
+        // console.log removed
       } else {
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to load company details:', error);
+      // console.error removed
       alert(`Failed to load company details: ${error.message}`);
     }
   };
@@ -179,7 +179,7 @@ Please save these credentials and change the password immediately after first lo
       }
       
       if (data.success) {
-        console.log('✅ Company deleted successfully:', companyName);
+        // console.log removed
         alert(`Company "${companyName}" and its isolated database deleted successfully`);
         
         // Reload companies list
@@ -188,7 +188,7 @@ Please save these credentials and change the password immediately after first lo
         throw new Error('Invalid API response');
       }
     } catch (error) {
-      console.error('❌ Failed to delete company:', error);
+      // console.error removed
       alert(`Failed to delete company: ${error.message}`);
     }
   };

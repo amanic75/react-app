@@ -29,7 +29,7 @@ const EditSupplierModal = ({ isOpen, onClose, supplier }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission
-    console.log('Updated supplier data:', formData);
+    // console.log removed
     onClose();
   };
 

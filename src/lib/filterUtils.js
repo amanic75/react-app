@@ -28,17 +28,37 @@ export const isUserAssigned = (assignedTo, userId) => {
  * @param {Array} items - Array of items to filter
  * @param {string} activeTab - The active tab ('all', 'assigned', 'created')
  * @param {Object} user - The current user object
+ * @param {Object} userProfile - The user profile object (optional)
  * @returns {Array} - Filtered array of items
  */
-export const filterByTab = (items, activeTab, user) => {
+export const filterByTab = (items, activeTab, user, userProfile = null) => {
   if (!items || items.length === 0) return [];
+  
+  // Debug logging
+  console.log('filterByTab called with:', {
+    itemsCount: items.length,
+    activeTab,
+    userId: user?.id,
+    userEmail: user?.email,
+    userRole: userProfile?.role
+  });
   
   return items.filter(item => {
     // Tab filter
     if (activeTab === 'assigned' && user) {
-      return isUserAssigned(item.assigned_to, user.id);
+      // Capacity Admins see all formulas, so skip assignment filtering for them
+      if (userProfile?.role === 'Capacity Admin') {
+        console.log(`Capacity Admin - showing all formulas in assigned tab`);
+        return true;
+      }
+      
+      const isAssigned = isUserAssigned(item.assigned_to, user.id);
+      console.log(`Item ${item.id} (${item.name}): assigned_to=${item.assigned_to}, isAssigned=${isAssigned}`);
+      return isAssigned;
     } else if (activeTab === 'created' && user) {
-      return item.created_by === user.id;
+      const isCreated = item.created_by === user.id;
+      console.log(`Item ${item.id} (${item.name}): created_by=${item.created_by}, isCreated=${isCreated}`);
+      return isCreated;
     }
     // 'all' tab or no specific filter
     return true;

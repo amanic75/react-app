@@ -13,9 +13,15 @@ export const getAllFormulas = async () => {
       .select('*')
       .order('id', { ascending: true });
     if (error) throw error;
+    
+    // Debug: Log the first formula to see actual database structure
+    if (data && data.length > 0) {
+      console.log('First formula from database:', data[0]);
+    }
+    
     return { data: data.map(formula => ({
       id: formula.id,
-      name: formula.name,
+      name: formula.name || formula.formula_name, // Handle both schemas
       totalCost: formula.total_cost,
       finalSalePriceDrum: formula.final_sale_price_drum,
       finalSalePriceTote: formula.final_sale_price_tote,
@@ -28,7 +34,7 @@ export const getAllFormulas = async () => {
       assignedToUser: null
     })), error: null };
   } catch (error) {
-    // console.error removed
+    console.error('Error fetching formulas:', error);
     return { data: [], error };
   }
 };
@@ -48,7 +54,7 @@ export const getFormulaById = async (id) => {
     if (error) throw error;
     return { data: {
       id: data.id,
-      name: data.name,
+      name: data.name || data.formula_name, // Handle both schemas
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
@@ -61,7 +67,7 @@ export const getFormulaById = async (id) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    // console.error removed
+    console.error('Error fetching formula by ID:', error);
     return { data: null, error };
   }
 };
@@ -75,23 +81,29 @@ export const addFormula = async (formulaData) => {
   try {
     const dbData = {
       id: formulaData.id || generateSlug(formulaData.name),
-      name: formulaData.name,
+      name: formulaData.name, // Use 'name' field for new schema
       total_cost: formulaData.totalCost,
       final_sale_price_drum: formulaData.finalSalePriceDrum,
       final_sale_price_tote: formulaData.finalSalePriceTote,
       ingredients: formulaData.ingredients || [],
       created_by: formulaData.created_by,
-      assigned_to: formulaData.assigned_to
+      assigned_to: formulaData.assigned_to || []
     };
+    
+    console.log('Adding formula with data:', dbData);
+    
     const { data, error } = await supabase
       .from('formulas')
       .insert([dbData])
       .select('*')
       .single();
     if (error) throw error;
+    
+    console.log('Formula added successfully:', data);
+    
     return { data: {
       id: data.id,
-      name: data.name,
+      name: data.name || data.formula_name, // Handle both schemas
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
@@ -104,7 +116,7 @@ export const addFormula = async (formulaData) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    // console.error removed
+    console.error('Error adding formula:', error);
     return { data: null, error };
   }
 };
@@ -124,8 +136,11 @@ export const updateFormula = async (formulaId, updatedData) => {
       final_sale_price_tote: updatedData.finalSalePriceTote,
       ingredients: updatedData.ingredients,
       updated_at: new Date().toISOString(),
-      assigned_to: updatedData.assigned_to
+      assigned_to: updatedData.assigned_to || []
     };
+    
+    console.log('Updating formula with data:', dbData);
+    
     const { data, error } = await supabase
       .from('formulas')
       .update(dbData)
@@ -133,9 +148,12 @@ export const updateFormula = async (formulaId, updatedData) => {
       .select('*')
       .single();
     if (error) throw error;
+    
+    console.log('Formula updated successfully:', data);
+    
     return { data: {
       id: data.id,
-      name: data.name,
+      name: data.name || data.formula_name, // Handle both schemas
       totalCost: data.total_cost,
       finalSalePriceDrum: data.final_sale_price_drum,
       finalSalePriceTote: data.final_sale_price_tote,
@@ -148,7 +166,7 @@ export const updateFormula = async (formulaId, updatedData) => {
       assignedToUser: null
     }, error: null };
   } catch (error) {
-    // console.error removed
+    console.error('Error updating formula:', error);
     return { data: null, error };
   }
 };

@@ -30,7 +30,6 @@ const EmployeeAssignmentSelector = ({
       
       // Get the current user's company ID from company_users table
       if (!userProfile?.id) {
-        // console.warn removed
         setEmployees([]);
         return;
       }
@@ -43,24 +42,30 @@ const EmployeeAssignmentSelector = ({
         .single();
 
       if (companyError || !companyUserData?.company_id) {
-        // console.warn removed
         setEmployees([]);
         return;
       }
 
       const companyId = companyUserData.company_id;
-      // console.log removed
       
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
       
-      // Filter to only show employees (not admins) unless they're already assigned
-      const filteredUsers = users.filter(user => 
-        user.role === 'Employee' || currentAssignments.includes(user.id)
-      );
+      // Filter to show only employees who have access to formulas app
+      // or are already assigned to this formula
+      const filteredUsers = users.filter(user => {
+        // Check if user has access to formulas app
+        const hasFormulasAccess = user.app_access && 
+          (user.app_access.includes('formulas') || 
+           user.app_access.includes('all'));
+        
+        // Include if they have formulas access or are already assigned
+        // Only show employees, not admins
+        return (hasFormulasAccess || currentAssignments.includes(user.id)) && user.role === 'Employee';
+      });
+      
       setEmployees(filteredUsers);
     } catch (error) {
-      // console.error removed
       setEmployees([]);
     } finally {
       setLoading(false);

@@ -20,7 +20,7 @@ const ChemformationLogo = ({ className = "w-6 h-6" }) => (
 
 const FormulasPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -70,16 +70,19 @@ const FormulasPage = () => {
   // Handle adding new formula
   const handleAddFormula = async (formulaData) => {
     try {
-      // console.log removed
-      const newFormula = await addFormula(formulaData);
+      // Add the current user's ID as created_by
+      const formulaWithUser = {
+        ...formulaData,
+        created_by: user?.id
+      };
+      
+      const newFormula = await addFormula(formulaWithUser);
       if (newFormula) {
         // Refresh the formulas list
         const updatedFormulas = await getAllFormulas();
         setFormulas(updatedFormulas);
-        // console.log removed
       }
     } catch (error) {
-      // console.error removed
       setError('Failed to add formula. Please try again.');
     }
   };
@@ -154,7 +157,25 @@ const FormulasPage = () => {
 
   // Filter formulas based on search term, filters, and active tab
   // First apply tab filtering with the new utility
-  const tabFilteredFormulas = filterByTab(formulas, activeTab, user);
+  const tabFilteredFormulas = filterByTab(formulas, activeTab, user, userProfile);
+  
+  // Define tabs based on user role
+  const tabs = [
+    { id: 'all', label: 'All Formulas' },
+    // Only show "Assigned to me" tab for employees (not Capacity Admins)
+    ...(userProfile?.role === 'Employee' ? [{ id: 'assigned', label: 'Assigned to me' }] : []),
+    { id: 'created', label: 'Created by Me' }
+  ];
+  
+  // Debug: Log user and filtering info
+  console.log('FormulasPage filtering:', {
+    totalFormulas: formulas.length,
+    activeTab,
+    user: user ? { id: user.id, email: user.email } : null,
+    userRole: userProfile?.role,
+    availableTabs: tabs.map(t => t.id),
+    tabFilteredCount: tabFilteredFormulas.length
+  });
   
   // Then apply additional filters (search, cost range, sale price range, ingredient count)
   const filteredFormulas = tabFilteredFormulas.filter(formula => {
@@ -248,11 +269,13 @@ const FormulasPage = () => {
     setMousePosition({ x, y });
   };
 
-  const tabs = [
-    { id: 'all', label: 'All Formulas' },
-    { id: 'assigned', label: 'Assigned to me' },
-    { id: 'created', label: 'Created by Me' }
-  ];
+  // Reset active tab if current tab is not available for user's role
+  useEffect(() => {
+    const availableTabIds = tabs.map(tab => tab.id);
+    if (!availableTabIds.includes(activeTab)) {
+      setActiveTab('all');
+    }
+  }, [userProfile?.role, activeTab, tabs]);
 
   // Show loading state
   if (loading) {

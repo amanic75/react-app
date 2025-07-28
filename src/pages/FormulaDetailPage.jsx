@@ -43,19 +43,21 @@ const FormulaDetailPage = () => {
         const foundFormula = await getFormulaById(formulaId);
     const { data } = foundFormula;
     if (data) {
+      console.log('Loaded formula data:', data);
       setFormula(data);
       setEditableFormula({
-        name: data.name,
-        totalCost: data.totalCost,
-        finalSalePriceDrum: data.finalSalePriceDrum,
-        finalSalePriceTote: data.finalSalePriceTote,
-        ingredients: [...data.ingredients],
+        name: data.name || '',
+        totalCost: data.totalCost || 0,
+        finalSalePriceDrum: data.finalSalePriceDrum || 0,
+        finalSalePriceTote: data.finalSalePriceTote || 0,
+        ingredients: Array.isArray(data.ingredients) ? [...data.ingredients] : [],
         assigned_to: data.assigned_to || []
       });
     } else {
       setError('Formula not found');
     }
       } catch (err) {
+        console.error('Error loading formula:', err);
         setError('Failed to load formula');
       } finally {
         setLoading(false);
@@ -206,15 +208,20 @@ const FormulaDetailPage = () => {
   };
 
   const handleEditToggle = () => {
+    console.log('handleEditToggle called with formula:', formula);
+    
     // Reset to current values when starting edit
-    setEditableFormula({
-      name: formula.name,
-      totalCost: formula.totalCost,
-      finalSalePriceDrum: formula.finalSalePriceDrum,
-      finalSalePriceTote: formula.finalSalePriceTote,
-      ingredients: [...formula.ingredients],
+    const initialData = {
+      name: formula.name || '',
+      totalCost: formula.totalCost || 0,
+      finalSalePriceDrum: formula.finalSalePriceDrum || 0,
+      finalSalePriceTote: formula.finalSalePriceTote || 0,
+      ingredients: Array.isArray(formula.ingredients) ? [...formula.ingredients] : [],
       assigned_to: formula.assigned_to || []
-    });
+    };
+    
+    console.log('Setting editableFormula with:', initialData);
+    setEditableFormula(initialData);
     setIsEditing(true);
     // Load raw materials for search functionality
     loadRawMaterials();
@@ -222,11 +229,28 @@ const FormulaDetailPage = () => {
 
   const handleSave = async () => {
     try {
+      console.log('handleSave called with editableFormula:', editableFormula);
+      
       // Save changes to Supabase
       if (editableFormula) {
-        const updatedFormula = await updateFormula(formula.id, editableFormula);
-        if (updatedFormula) {
-          setFormula(updatedFormula);
+        const result = await updateFormula(formula.id, editableFormula);
+        console.log('updateFormula returned:', result);
+        
+        if (result.data) {
+          console.log('Setting formula state to:', result.data);
+          setFormula(result.data);
+          
+          // Also update editableFormula to match the saved data
+          setEditableFormula({
+            name: result.data.name || '',
+            totalCost: result.data.totalCost || 0,
+            finalSalePriceDrum: result.data.finalSalePriceDrum || 0,
+            finalSalePriceTote: result.data.finalSalePriceTote || 0,
+            ingredients: Array.isArray(result.data.ingredients) ? [...result.data.ingredients] : [],
+            assigned_to: result.data.assigned_to || []
+          });
+        } else {
+          console.error('Failed to update formula:', result.error);
         }
       }
       setIsEditing(false);
@@ -236,21 +260,26 @@ const FormulaDetailPage = () => {
       setAiResponse('');
       // Keep deleted documents after save - they are permanently removed
     } catch (err) {
-      // console.error removed
+      console.error('Error in handleSave:', err);
       // You might want to show an error message to the user here
     }
   };
 
   const handleCancel = () => {
+    console.log('handleCancel called with formula:', formula);
+    
     // Revert all changes back to original formula
-    setEditableFormula({
-      name: formula.name,
-      totalCost: formula.totalCost,
-      finalSalePriceDrum: formula.finalSalePriceDrum,
-      finalSalePriceTote: formula.finalSalePriceTote,
-      ingredients: [...formula.ingredients],
+    const resetData = {
+      name: formula.name || '',
+      totalCost: formula.totalCost || 0,
+      finalSalePriceDrum: formula.finalSalePriceDrum || 0,
+      finalSalePriceTote: formula.finalSalePriceTote || 0,
+      ingredients: Array.isArray(formula.ingredients) ? [...formula.ingredients] : [],
       assigned_to: formula.assigned_to || []
-    });
+    };
+    
+    console.log('Resetting editableFormula with:', resetData);
+    setEditableFormula(resetData);
     setIsEditing(false);
     setShowMaterialSearch(false);
     setMaterialSearchTerm('');
@@ -504,7 +533,7 @@ const FormulaDetailPage = () => {
                   className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <div className="text-slate-200 font-medium">${(editableFormula?.totalCost || formula.totalCost).toFixed(2)}</div>
+                <div className="text-slate-200 font-medium">${((editableFormula?.totalCost || formula.totalCost) || 0).toFixed(2)}</div>
               )}
             </div>
             <div>
@@ -518,7 +547,7 @@ const FormulaDetailPage = () => {
                   className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <div className="text-slate-200 font-medium">${(editableFormula?.finalSalePriceDrum || formula.finalSalePriceDrum).toFixed(2)}</div>
+                <div className="text-slate-200 font-medium">${((editableFormula?.finalSalePriceDrum || formula.finalSalePriceDrum) || 0).toFixed(2)}</div>
               )}
             </div>
             <div>
@@ -532,7 +561,7 @@ const FormulaDetailPage = () => {
                   className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <div className="text-slate-200 font-medium">${(editableFormula?.finalSalePriceTote || formula.finalSalePriceTote).toFixed(2)}</div>
+                <div className="text-slate-200 font-medium">${((editableFormula?.finalSalePriceTote || formula.finalSalePriceTote) || 0).toFixed(2)}</div>
               )}
             </div>
           </div>
@@ -653,7 +682,7 @@ const FormulaDetailPage = () => {
             )}
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
               <div className="flex space-x-4 pb-2 min-w-max">
-                {(editableFormula?.ingredients || formula.ingredients).map((ingredient, index) => (
+                {(editableFormula?.ingredients || (Array.isArray(formula.ingredients) ? formula.ingredients : [])).map((ingredient, index) => (
                   <div key={index} className="flex-shrink-0 bg-slate-700 rounded-lg border border-slate-600 p-4 w-64 relative">
                     {/* Delete Button - Only show when editing */}
                     {isEditing && editableFormula && (
@@ -719,7 +748,7 @@ const FormulaDetailPage = () => {
                               />
                             </div>
                           ) : (
-                            <div className="text-slate-300 font-medium text-sm">${ingredient.cost.toFixed(2)}</div>
+                            <div className="text-slate-300 font-medium text-sm">${(ingredient.cost || 0).toFixed(2)}</div>
                           )}
                         </div>
                       </div>

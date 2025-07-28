@@ -278,15 +278,7 @@ const RawMaterialsPage = () => {
     }
   }, [userProfile?.role, activeTab, tabs]);
 
-  // Debug: Log user and filtering info
-  console.log('RawMaterialsPage filtering:', {
-    totalMaterials: rawMaterials.length,
-    activeTab,
-    user: user ? { id: user.id, email: user.email } : null,
-    userRole: userProfile?.role,
-    availableTabs: tabs.map(t => t.id),
-    tabFilteredCount: tabFilteredMaterials.length
-  });
+
 
   // Handle form input changes
   const handleInputChange = (field, value) => {

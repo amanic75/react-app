@@ -52,26 +52,7 @@ const EmployeeAssignmentSelector = ({
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
       
-      console.log('EmployeeAssignmentSelector debug:', {
-        companyId,
-        totalUsers: users.length,
-        appType,
-        currentAssignments,
-        userProfile: userProfile ? { id: userProfile.id, role: userProfile.role } : null
-      });
-      
-      // Log each user's details separately for better visibility
-      users.forEach((user, index) => {
-        console.log(`User ${index + 1}:`, {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          app_access: user.app_access,
-          app_access_values: user.app_access ? user.app_access.join(', ') : 'none',
-          hasRawMaterialsAccess: user.app_access ? user.app_access.includes('raw_materials') : false,
-          hasAllAccess: user.app_access ? user.app_access.includes('all') : false
-        });
-      });
+
       
       // Filter to show only employees who have access to the specified app
       // or are already assigned to this item
@@ -88,20 +69,12 @@ const EmployeeAssignmentSelector = ({
         // Must be employee AND have app access (or be already assigned)
         const shouldInclude = isEmployee && (hasAppAccess || isAssigned);
         
-        console.log(`User ${user.id} (${user.name}):`, {
-          role: user.role,
-          app_access: user.app_access,
-          app_access_values: user.app_access ? user.app_access.join(', ') : 'none',
-          hasAppAccess,
-          isEmployee,
-          isAssigned,
-          shouldInclude
-        });
+
         
         return shouldInclude;
       });
       
-      console.log('Filtered users:', filteredUsers.length);
+
       setEmployees(filteredUsers);
     } catch (error) {
       setEmployees([]);

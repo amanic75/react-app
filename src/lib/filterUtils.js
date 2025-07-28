@@ -34,34 +34,20 @@ export const isUserAssigned = (assignedTo, userId) => {
 export const filterByTab = (items, activeTab, user, userProfile = null) => {
   if (!items || items.length === 0) return [];
   
-  // Debug logging
-  console.log('filterByTab called with:', {
-    itemsCount: items.length,
-    activeTab,
-    userId: user?.id,
-    userEmail: user?.email,
-    userRole: userProfile?.role
-  });
+
   
   return items.filter(item => {
     // Tab filter
     if (activeTab === 'assigned' && user) {
       // Capacity Admins see all formulas, so skip assignment filtering for them
       if (userProfile?.role === 'Capacity Admin') {
-        console.log(`Capacity Admin - showing all formulas in assigned tab`);
         return true;
       }
       
       const isAssigned = isUserAssigned(item.assigned_to, user.id);
-      // Handle both formula name and material name fields
-      const itemName = item.name || item.materialName || item.id;
-      console.log(`Item ${item.id} (${itemName}): assigned_to=${item.assigned_to}, isAssigned=${isAssigned}`);
       return isAssigned;
     } else if (activeTab === 'created' && user) {
       const isCreated = item.created_by === user.id;
-      // Handle both formula name and material name fields
-      const itemName = item.name || item.materialName || item.id;
-      console.log(`Item ${item.id} (${itemName}): created_by=${item.created_by}, isCreated=${isCreated}`);
       return isCreated;
     }
     // 'all' tab or no specific filter

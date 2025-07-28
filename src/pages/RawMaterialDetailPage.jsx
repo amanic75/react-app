@@ -90,7 +90,6 @@ const RawMaterialDetailPage = () => {
 
   const handleSaveAssignments = async (assignments) => {
     try {
-      console.log('Saving assignments:', assignments);
       const updatedMaterial = await updateMaterial(material.id, {
         assigned_to: assignments
       });
@@ -99,7 +98,6 @@ const RawMaterialDetailPage = () => {
       }
       setIsAssignmentModalOpen(false);
     } catch (err) {
-      console.error('Error saving assignments:', err);
       // You might want to show an error message to the user here
     }
   };

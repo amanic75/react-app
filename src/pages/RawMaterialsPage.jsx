@@ -340,7 +340,7 @@ const RawMaterialsPage = () => {
             </button>
             <div className="flex items-center space-x-3">
               <FlaskConical className="h-8 w-8 text-blue-500" />
-              <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Raw Materials</h1>
             </div>
           </div>
           <div className="flex items-center justify-center h-64">
@@ -365,7 +365,7 @@ const RawMaterialsPage = () => {
             </button>
             <div className="flex items-center space-x-3">
               <FlaskConical className="h-8 w-8 text-blue-500" />
-              <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Raw Materials</h1>
             </div>
           </div>
           <div className="flex items-center justify-center h-64">
@@ -389,7 +389,7 @@ const RawMaterialsPage = () => {
             </button>
             <div className="flex items-center space-x-3">
               <FlaskConical className="h-8 w-8 text-blue-500" />
-              <h1 className="text-3xl font-bold text-slate-100">Raw Materials</h1>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Raw Materials</h1>
             </div>
           </div>
 
@@ -855,7 +855,7 @@ const RawMaterialsPage = () => {
                   <div className="w-10 h-10 bg-blue-600 bg-opacity-20 rounded-full flex items-center justify-center">
                     <Info className="h-6 w-6 text-blue-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-100">RAW MATERIALS</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">RAW MATERIALS</h3>
                 </div>
                 
                 <p className="text-slate-300 mb-6">

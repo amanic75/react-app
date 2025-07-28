@@ -8,7 +8,8 @@ const EmployeeAssignmentSelector = ({
   onClose, 
   onSave, 
   currentAssignments = [], 
-  title = "Assign to Employees" 
+  title = "Assign to Employees",
+  appType = "formulas" // Default to formulas, can be "raw_materials"
 }) => {
   const { getCompanyUsers, userProfile } = useAuth();
   const [employees, setEmployees] = useState([]);
@@ -51,19 +52,56 @@ const EmployeeAssignmentSelector = ({
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
       
-      // Filter to show only employees who have access to formulas app
-      // or are already assigned to this formula
-      const filteredUsers = users.filter(user => {
-        // Check if user has access to formulas app
-        const hasFormulasAccess = user.app_access && 
-          (user.app_access.includes('formulas') || 
-           user.app_access.includes('all'));
-        
-        // Include if they have formulas access or are already assigned
-        // Only show employees, not admins
-        return (hasFormulasAccess || currentAssignments.includes(user.id)) && user.role === 'Employee';
+      console.log('EmployeeAssignmentSelector debug:', {
+        companyId,
+        totalUsers: users.length,
+        appType,
+        currentAssignments,
+        userProfile: userProfile ? { id: userProfile.id, role: userProfile.role } : null
       });
       
+      // Log each user's details separately for better visibility
+      users.forEach((user, index) => {
+        console.log(`User ${index + 1}:`, {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          app_access: user.app_access,
+          app_access_values: user.app_access ? user.app_access.join(', ') : 'none',
+          hasRawMaterialsAccess: user.app_access ? user.app_access.includes('raw_materials') : false,
+          hasAllAccess: user.app_access ? user.app_access.includes('all') : false
+        });
+      });
+      
+      // Filter to show only employees who have access to the specified app
+      // or are already assigned to this item
+      const filteredUsers = users.filter(user => {
+        // Check if user has access to the specified app
+        const hasAppAccess = user.app_access && 
+          (user.app_access.includes(appType) || 
+           user.app_access.includes('all'));
+        
+        // Only show employees, not admins
+        const isEmployee = user.role === 'Employee';
+        const isAssigned = currentAssignments.includes(user.id);
+        
+        // Must be employee AND have app access (or be already assigned)
+        const shouldInclude = isEmployee && (hasAppAccess || isAssigned);
+        
+        console.log(`User ${user.id} (${user.name}):`, {
+          role: user.role,
+          app_access: user.app_access,
+          app_access_values: user.app_access ? user.app_access.join(', ') : 'none',
+          hasAppAccess,
+          isEmployee,
+          isAssigned,
+          shouldInclude
+        });
+        
+        return shouldInclude;
+      });
+      
+      console.log('Filtered users:', filteredUsers.length);
       setEmployees(filteredUsers);
     } catch (error) {
       setEmployees([]);

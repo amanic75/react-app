@@ -73,14 +73,12 @@ const EditUserModal = ({ isOpen, onClose, user, onSave, onDelete, currentUserRol
   useEffect(() => {
     if (formData.role && user) {
       const newCredentials = getDefaultCredentials(formData.role);
-      const newAppAccess = getAppAccessByRole(formData.role);
       
-      // Only update if they're actually different to prevent infinite loops
-      if (formData.credentials !== newCredentials || JSON.stringify(formData.appAccess) !== JSON.stringify(newAppAccess)) {
+      // Only update credentials when role changes, not app access
+      if (formData.credentials !== newCredentials) {
         setFormData(prev => ({
           ...prev,
-          credentials: newCredentials,
-          appAccess: newAppAccess
+          credentials: newCredentials
         }));
       }
     }

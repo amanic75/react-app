@@ -53,11 +53,15 @@ export const filterByTab = (items, activeTab, user, userProfile = null) => {
       }
       
       const isAssigned = isUserAssigned(item.assigned_to, user.id);
-      console.log(`Item ${item.id} (${item.name}): assigned_to=${item.assigned_to}, isAssigned=${isAssigned}`);
+      // Handle both formula name and material name fields
+      const itemName = item.name || item.materialName || item.id;
+      console.log(`Item ${item.id} (${itemName}): assigned_to=${item.assigned_to}, isAssigned=${isAssigned}`);
       return isAssigned;
     } else if (activeTab === 'created' && user) {
       const isCreated = item.created_by === user.id;
-      console.log(`Item ${item.id} (${item.name}): created_by=${item.created_by}, isCreated=${isCreated}`);
+      // Handle both formula name and material name fields
+      const itemName = item.name || item.materialName || item.id;
+      console.log(`Item ${item.id} (${itemName}): created_by=${item.created_by}, isCreated=${isCreated}`);
       return isCreated;
     }
     // 'all' tab or no specific filter

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Edit } from 'lucide-react';
+import { ArrowLeft, Edit, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditRawMaterialModal from '../components/shared/EditRawMaterialModal';
+import EmployeeAssignmentSelector from '../components/shared/EmployeeAssignmentSelector';
 import { getMaterialById, updateMaterial, getAllMaterials, deleteMaterial } from '../lib/materials';
 import { useTheme } from '../contexts/ThemeContext';
 import { generateSlug } from '../lib/utils';
@@ -12,6 +13,7 @@ const RawMaterialDetailPage = () => {
   const navigate = useNavigate();
   const { materialId } = useParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [material, setMaterial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -78,6 +80,30 @@ const RawMaterialDetailPage = () => {
     setIsEditModalOpen(false);
   };
 
+  const handleOpenAssignmentModal = () => {
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleCloseAssignmentModal = () => {
+    setIsAssignmentModalOpen(false);
+  };
+
+  const handleSaveAssignments = async (assignments) => {
+    try {
+      console.log('Saving assignments:', assignments);
+      const updatedMaterial = await updateMaterial(material.id, {
+        assigned_to: assignments
+      });
+      if (updatedMaterial) {
+        setMaterial(updatedMaterial);
+      }
+      setIsAssignmentModalOpen(false);
+    } catch (err) {
+      console.error('Error saving assignments:', err);
+      // You might want to show an error message to the user here
+    }
+  };
+
   const handleSaveMaterial = async (updatedData) => {
     try {
       // Update the material in Supabase
@@ -125,13 +151,22 @@ const RawMaterialDetailPage = () => {
             </Button>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Raw Material Details</h1>
           </div>
-          <Button
-            onClick={handleEditMaterial}
-            className="flex items-center space-x-2"
-          >
-            <Edit className="h-4 w-4" />
-            <span>Edit Material</span>
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={handleOpenAssignmentModal}
+              className="flex items-center space-x-2"
+            >
+              <Users className="h-4 w-4" />
+              <span>Manage Assignments</span>
+            </Button>
+            <Button
+              onClick={handleEditMaterial}
+              className="flex items-center space-x-2"
+            >
+              <Edit className="h-4 w-4" />
+              <span>Edit Material</span>
+            </Button>
+          </div>
         </div>
 
         {/* Material Details */}
@@ -153,7 +188,7 @@ const RawMaterialDetailPage = () => {
               <div className="text-right">
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Supplier Cost</p>
                 <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  ${material.supplierCost ? material.supplierCost.toFixed(2) : '0.00'}
+                  ${(material.supplierCost || 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -258,6 +293,16 @@ const RawMaterialDetailPage = () => {
           onSave={handleSaveMaterial}
           onDelete={handleDeleteMaterial}
           material={material}
+        />
+
+        {/* Assignment Modal */}
+        <EmployeeAssignmentSelector
+          isOpen={isAssignmentModalOpen}
+          onClose={handleCloseAssignmentModal}
+          onSave={handleSaveAssignments}
+          currentAssignments={material?.assigned_to || []}
+          title="Assign Raw Material to Employees"
+          appType="raw_materials"
         />
       </div>
     </DashboardLayout>

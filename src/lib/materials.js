@@ -199,37 +199,40 @@ export const addMaterial = async (materialData) => {
  */
 export const updateMaterial = async (materialId, updatedData) => {
   try {
+    // Only include fields that are actually provided in updatedData
     const dbData = {
-      material_name: updatedData.materialName,
-      supplier_name: updatedData.supplierName,
-      manufacture: updatedData.manufacture,
-      trade_name: updatedData.tradeName,
-      supplier_cost: updatedData.supplierCost,
-      cas_number: updatedData.casNumber,
-      weight_volume: updatedData.weightVolume,
-      activity_percentage: updatedData.activityPercentage,
-      density: updatedData.density,
-      viscosity: updatedData.viscosity,
-      cost: updatedData.cost,
-      country: updatedData.country,
-      description: updatedData.description,
-      physical_form: updatedData.physicalForm,
-      purity: updatedData.purity,
-      storage_conditions: updatedData.storageConditions,
-      hazard_class: updatedData.hazardClass,
-      shelf_life: updatedData.shelfLife,
-      updated_at: new Date().toISOString(),
-      assigned_to: updatedData.assigned_to,
-      data_source_notes: updatedData.dataSourceNotes,
-      confidence_level: updatedData.confidenceLevel,
-      verification_sources: updatedData.verificationSources,
-      last_verified: updatedData.lastVerified,
-      molecular_formula: updatedData.molecularFormula,
-      molecular_weight: updatedData.molecularWeight,
-      iupac_name: updatedData.iupacName,
-      pubchem_cid: updatedData.pubchemCID,
-      canonical_smiles: updatedData.canonicalSMILES
+      updated_at: new Date().toISOString()
     };
+    
+    // Add fields only if they exist in updatedData
+    if (updatedData.materialName !== undefined) dbData.material_name = updatedData.materialName;
+    if (updatedData.supplierName !== undefined) dbData.supplier_name = updatedData.supplierName;
+    if (updatedData.manufacture !== undefined) dbData.manufacture = updatedData.manufacture;
+    if (updatedData.tradeName !== undefined) dbData.trade_name = updatedData.tradeName;
+    if (updatedData.supplierCost !== undefined) dbData.supplier_cost = updatedData.supplierCost;
+    if (updatedData.casNumber !== undefined) dbData.cas_number = updatedData.casNumber;
+    if (updatedData.weightVolume !== undefined) dbData.weight_volume = updatedData.weightVolume;
+    if (updatedData.activityPercentage !== undefined) dbData.activity_percentage = updatedData.activityPercentage;
+    if (updatedData.density !== undefined) dbData.density = updatedData.density;
+    if (updatedData.viscosity !== undefined) dbData.viscosity = updatedData.viscosity;
+    if (updatedData.cost !== undefined) dbData.cost = updatedData.cost;
+    if (updatedData.country !== undefined) dbData.country = updatedData.country;
+    if (updatedData.description !== undefined) dbData.description = updatedData.description;
+    if (updatedData.physicalForm !== undefined) dbData.physical_form = updatedData.physicalForm;
+    if (updatedData.purity !== undefined) dbData.purity = updatedData.purity;
+    if (updatedData.storageConditions !== undefined) dbData.storage_conditions = updatedData.storageConditions;
+    if (updatedData.hazardClass !== undefined) dbData.hazard_class = updatedData.hazardClass;
+    if (updatedData.shelfLife !== undefined) dbData.shelf_life = updatedData.shelfLife;
+    if (updatedData.assigned_to !== undefined) dbData.assigned_to = updatedData.assigned_to;
+    if (updatedData.dataSourceNotes !== undefined) dbData.data_source_notes = updatedData.dataSourceNotes;
+    if (updatedData.confidenceLevel !== undefined) dbData.confidence_level = updatedData.confidenceLevel;
+    if (updatedData.verificationSources !== undefined) dbData.verification_sources = updatedData.verificationSources;
+    if (updatedData.lastVerified !== undefined) dbData.last_verified = updatedData.lastVerified;
+    if (updatedData.molecularFormula !== undefined) dbData.molecular_formula = updatedData.molecularFormula;
+    if (updatedData.molecularWeight !== undefined) dbData.molecular_weight = updatedData.molecularWeight;
+    if (updatedData.iupacName !== undefined) dbData.iupac_name = updatedData.iupacName;
+    if (updatedData.pubchemCID !== undefined) dbData.pubchem_cid = updatedData.pubchemCID;
+    if (updatedData.canonicalSMILES !== undefined) dbData.canonical_smiles = updatedData.canonicalSMILES;
     const { data, error } = await supabase
       .from('raw_materials')
       .update(dbData)

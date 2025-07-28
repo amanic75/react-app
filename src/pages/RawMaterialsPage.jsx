@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DropboxUploadModal from '../components/shared/DropboxUploadModal';
-import { getAllMaterials } from '../lib/materials';
+import { getAllMaterials, addMaterial } from '../lib/materials';
 import { useAuth } from '../contexts/AuthContext';
 import { filterByTab } from '../lib/filterUtils';
 
@@ -19,7 +19,7 @@ const ChemformationLogo = ({ className = "w-6 h-6" }) => (
 
 const RawMaterialsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -170,7 +170,7 @@ const RawMaterialsPage = () => {
 
   // Filter materials based on search term, filters, and active tab
   // First apply tab filtering with the new utility
-  const tabFilteredMaterials = filterByTab(rawMaterials, activeTab, user);
+  const tabFilteredMaterials = filterByTab(rawMaterials, activeTab, user, userProfile);
   
   // Then apply additional filters (search, supplier, form, hazard, country)
   const filteredMaterials = tabFilteredMaterials.filter(material => {
@@ -262,11 +262,31 @@ const RawMaterialsPage = () => {
     setMousePosition({ x, y });
   };
 
+  // Define tabs based on user role
   const tabs = [
     { id: 'all', label: 'All Raw Materials' },
-    { id: 'assigned', label: 'Assigned to me' },
+    // Only show "Assigned to me" tab for employees (not Capacity Admins)
+    ...(userProfile?.role === 'Employee' ? [{ id: 'assigned', label: 'Assigned to me' }] : []),
     { id: 'created', label: 'Created by Me' }
   ];
+
+  // Reset active tab if current tab is not available for user's role
+  useEffect(() => {
+    const availableTabIds = tabs.map(tab => tab.id);
+    if (!availableTabIds.includes(activeTab)) {
+      setActiveTab('all');
+    }
+  }, [userProfile?.role, activeTab, tabs]);
+
+  // Debug: Log user and filtering info
+  console.log('RawMaterialsPage filtering:', {
+    totalMaterials: rawMaterials.length,
+    activeTab,
+    user: user ? { id: user.id, email: user.email } : null,
+    userRole: userProfile?.role,
+    availableTabs: tabs.map(t => t.id),
+    tabFilteredCount: tabFilteredMaterials.length
+  });
 
   // Handle form input changes
   const handleInputChange = (field, value) => {
@@ -287,9 +307,22 @@ const RawMaterialsPage = () => {
   };
 
   // Handle confirming material creation
-  const handleConfirmCreate = () => {
-    // console.log removed
-    // Here you would typically send the data to your backend
+  const handleConfirmCreate = async () => {
+    try {
+      // Add the current user's ID as created_by
+      const materialWithUser = {
+        ...newMaterial,
+        created_by: user?.id
+      };
+      
+      const newMaterialResult = await addMaterial(materialWithUser);
+      if (newMaterialResult) {
+        // Refresh the materials list
+        loadMaterials();
+      }
+    } catch (error) {
+      setError('Failed to add material. Please try again.');
+    }
     
     // Reset form and close modals
     setNewMaterial({
@@ -647,7 +680,7 @@ const RawMaterialsPage = () => {
                     <td className="px-6 py-4 text-sm text-slate-300">{material.casNumber}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.manufacture}</td>
                     <td className="px-6 py-4 text-sm text-slate-300">{material.country}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300">${material.supplierCost ? material.supplierCost.toFixed(2) : '0.00'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-300">${(material.supplierCost || 0).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>

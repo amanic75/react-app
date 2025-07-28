@@ -39,6 +39,7 @@ const UserManagementTable = () => {
       case 'formulas':
         return React.createElement(FolderOpen, { className: "w-4 h-4 text-blue-500" });
       case 'raw-materials':
+      case 'raw_materials':
         return React.createElement(FlaskConical, { className: "w-4 h-4 text-blue-500" });
       case 'suppliers':
         return React.createElement(Users, { className: "w-4 h-4 text-blue-500" });

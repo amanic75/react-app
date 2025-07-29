@@ -93,18 +93,29 @@ const DashboardPage = () => {
   // Render appropriate dashboard based on user role
   const renderDashboard = () => {
     try {
+      console.log('DashboardPage - userProfile:', userProfile);
+      console.log('DashboardPage - userProfile.role:', userProfile?.role);
+      console.log('DashboardPage - userProfile.app_access:', userProfile?.app_access);
+      
       // Normalize the role value (trim whitespace and handle case)
       const role = userProfile?.role?.trim() || 'Employee';
+      console.log('DashboardPage - normalized role:', role);
+      
+
       
       switch (role) {
         case 'Capacity Admin':
-          return <AdminDashboard />;
+          console.log('DashboardPage - rendering AdminDashboard with userData:', userProfile);
+          return <AdminDashboard userData={userProfile} />;
         case 'NSight Admin':
-          return <NsightAdminDashboard />;
+          console.log('DashboardPage - rendering NsightAdminDashboard with userData:', userProfile);
+          return <NsightAdminDashboard userData={userProfile} />;
         case 'Employee':
-          return <EmployeeDashboard />;
+          console.log('DashboardPage - rendering EmployeeDashboard with userData:', userProfile);
+          return <EmployeeDashboard userData={userProfile} />;
         default:
-          return <EmployeeDashboard />;
+          console.log('DashboardPage - rendering EmployeeDashboard (default) with userData:', userProfile);
+          return <EmployeeDashboard userData={userProfile} />;
       }
     } catch (error) {
       // console.error removed
@@ -123,6 +134,20 @@ const DashboardPage = () => {
       );
     }
   };
+
+  // Only render dashboard when we have a valid userProfile
+  if (!userProfile) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-slate-300">Loading user profile...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

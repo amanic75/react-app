@@ -22,8 +22,9 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Redirect to auth page if not authenticated
+  // Don't pass location state to prevent navigation memory
   if (!isAuthenticated) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   // Render protected content if authenticated

@@ -26,21 +26,18 @@ export const AuthProvider = ({ children }) => {
     const emailName = email.split('@')[0];
     const domain = email.split('@')[1];
     
-    // Determine role based on email domain
-    let role = 'Employee';
-    if (domain === 'capacity.com' || email.includes('admin')) {
-      role = 'Capacity Admin';
-    } else if (domain === 'nsight-inc.com') {
-      role = 'NSight Admin';
-    }
+    // Always default to Employee role - ignore session metadata role
+    // This prevents the brief Admin Dashboard flash for @capacity.com users
+    const role = 'Employee';
     
     return {
       id: authUser.id,
       email: email,
       first_name: authUser.user_metadata?.first_name || emailName,
       last_name: authUser.user_metadata?.last_name || '',
-      role: authUser.user_metadata?.role || role,
+      role: role, // Always use Employee role, never fall back to session metadata
       department: authUser.user_metadata?.department || '',
+      app_access: authUser.user_metadata?.app_access || [],
       created_at: authUser.created_at,
       updated_at: authUser.updated_at || new Date().toISOString()
     };
@@ -67,9 +64,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Add timeout to prevent hanging - reduced to 1 second for fastest fallback
+      // Add timeout to prevent hanging - increased to 3 seconds to allow database to respond
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 1000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       );
       
       const fetchPromise = supabase
@@ -79,6 +76,9 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+      console.log('getUserProfile - Database response for userId:', userId, 'data:', data, 'error:', error);
+      console.log('getUserProfile - Returning data:', data);
 
       if (error) {
         // console.error removed
@@ -249,14 +249,8 @@ export const AuthProvider = ({ children }) => {
       const firstName = user.user_metadata?.first_name || emailName;
       const lastName = user.user_metadata?.last_name || '';
       
-      // Determine role based on email domain
-      let role = 'Employee';
-      const domain = email.split('@')[1];
-      if (domain === 'capacity.com' || email.includes('admin')) {
-        role = 'Capacity Admin';
-      } else if (domain === 'nsight-inc.com') {
-        role = 'NSight Admin';
-      }
+      // Default to Employee role - let database determine actual role
+      const role = 'Employee';
       
       // Prioritize role from user_metadata (set during admin creation) over domain-based detection
       const finalRole = user.user_metadata?.role || role;
@@ -349,6 +343,7 @@ export const AuthProvider = ({ children }) => {
           try {
             const profile = await getUserProfile(session.user.id, session.user);
             if (mounted) {
+
               setUserProfile(profile);
             }
           } catch (profileError) {
@@ -423,14 +418,19 @@ export const AuthProvider = ({ children }) => {
             }
             
             try {
+              console.log('AuthStateChange - session.user:', session.user);
+              console.log('AuthStateChange - session.user.user_metadata:', session.user.user_metadata);
               const profile = await getUserProfile(session.user.id, session.user);
+              console.log('AuthStateChange - profile from database:', profile);
               if (mounted) {
+
                 setUserProfile(profile);
               }
             } catch (profileError) {
-              // console.error removed
+              console.error('AuthStateChange - profile fetch failed:', profileError);
               if (mounted) {
                 const fallbackProfile = createProfileFromAuth(session.user);
+                console.log('AuthStateChange - fallback profile:', fallbackProfile);
                 setUserProfile(fallbackProfile);
               }
             }
@@ -557,6 +557,8 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         throw error;
       }
+
+
 
       // Check if this account was recently deleted
       if (data.user) {
@@ -692,6 +694,12 @@ export const AuthProvider = ({ children }) => {
       // console.log removed
       setUser(null);
       setUserProfile(null);
+      
+      // Always redirect to auth page after logout
+      // This ensures users are properly redirected regardless of current page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth';
+      }
     }
   };
 

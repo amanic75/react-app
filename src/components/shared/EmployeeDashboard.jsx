@@ -1,14 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, FolderOpen, FlaskConical, Users } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { FolderOpen, FlaskConical, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../ui/Card';
-import { getAllUsers } from '../../lib/users';
 
 const EmployeeDashboard = ({ userData }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [hoveredCard, setHoveredCard] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [users, setUsers] = useState([]);
   const cardRefs = useRef({});
   const navigate = useNavigate();
 
@@ -22,22 +19,7 @@ const EmployeeDashboard = ({ userData }) => {
     setMousePosition({ x, y });
   };
 
-  // Load users for app access display
-  useEffect(() => {
-    const loadUsers = async () => {
-      const usersFromBackend = await getAllUsers();
-      setUsers(usersFromBackend);
-    };
-    loadUsers();
-    // Optionally, set up polling or remove interval for production
-    // const interval = setInterval(loadUsers, 2000);
-    // return () => clearInterval(interval);
-  }, []);
 
-  // Get users who have access to a specific app
-  const getUsersWithAccess = (appKey) => {
-    return users.filter(user => user.appAccess && user.appAccess.includes(appKey));
-  };
 
   const allApplications = [
     {
@@ -73,9 +55,9 @@ const EmployeeDashboard = ({ userData }) => {
   ];
 
   // Filter applications based on user's access
-  const applications = userData && userData.appAccess 
-    ? allApplications.filter(app => userData.appAccess.includes(app.appKey))
-    : allApplications;
+  const applications = userData && userData.app_access && userData.app_access.length > 0
+    ? allApplications.filter(app => userData.app_access.includes(app.appKey))
+    : [];
 
   // Get dynamic grid classes based on number of accessible apps
   const getGridClasses = (appCount) => {
@@ -102,35 +84,15 @@ const EmployeeDashboard = ({ userData }) => {
             <h1 className="text-3xl font-bold text-slate-100">Dashboard</h1>
             {userData && (
               <p className="text-slate-400 text-sm mt-1">
-                Welcome back, {userData.name.split(' ')[0]}!
+                Welcome back, {userData.first_name || userData.email?.split('@')[0] || 'User'}!
               </p>
             )}
           </div>
         </div>
-        {userData && (
-          <div className="text-right">
-            <p className="text-slate-300 font-medium">{userData.name}</p>
-            <p className="text-slate-400 text-sm">{userData.email}</p>
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600 mt-1">
-              {userData.role}
-            </span>
-          </div>
-        )}
+
       </div>
 
-      {/* Search and Controls */}
-      <div className="flex justify-center">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Search by Name"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-600 rounded-md bg-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-      </div>
+
 
       {/* Applications Grid */}
       <div className={getGridClasses(applications.length)}>
@@ -164,7 +126,7 @@ const EmployeeDashboard = ({ userData }) => {
                 }
               }}
             >
-              <Card className={`p-8 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent ${app.borderColor}`}>
+              <Card className={`p-12 hover:shadow-lg transition-all duration-300 h-full relative overflow-hidden border-2 border-transparent ${app.borderColor}`}>
                 {hoveredCard === app.id && (
                   <div 
                     className="absolute inset-0 opacity-20 -z-0"
@@ -173,54 +135,20 @@ const EmployeeDashboard = ({ userData }) => {
                     }}
                   />
                 )}
-                <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                <div className="flex flex-col items-center text-center space-y-8 relative z-10">
                   {/* Icon Circle */}
-                  <div className="w-24 h-24 bg-slate-700 rounded-full flex items-center justify-center transition-all duration-300"
+                  <div className="w-32 h-32 bg-slate-700 rounded-full flex items-center justify-center transition-all duration-300"
                        style={{
                          transform: hoveredCard === app.id ? 'scale(1.1)' : 'scale(1)',
                          transition: hoveredCard === app.id ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
                        }}>
-                    <div className={`w-16 h-16 ${app.iconBgColor} rounded-full flex items-center justify-center`}>
-                      <IconComponent className={`w-8 h-8 ${app.iconColor}`} />
+                    <div className={`w-20 h-20 ${app.iconBgColor} rounded-full flex items-center justify-center`}>
+                      <IconComponent className={`w-10 h-10 ${app.iconColor}`} />
                     </div>
                   </div>
                   
                   {/* Title */}
                   <h3 className="text-xl font-medium text-slate-100">{app.title}</h3>
-                  
-                  {/* Request Access */}
-                  <div className="space-y-3">
-                    <p className="text-sm text-slate-300">Request Access</p>
-                    <div className="flex flex-col items-center space-y-2">
-                      {getUsersWithAccess(app.appKey).slice(0, 3).map((user, index) => (
-                        <div
-                          key={user.id}
-                          className="flex items-center space-x-2 text-xs text-slate-400 transition-transform duration-300"
-                          style={{
-                            transform: hoveredCard === app.id ? 'scale(1.05)' : 'scale(1)',
-                            transition: hoveredCard === app.id ? 'transform 0.2s ease-out' : 'transform 0.6s ease-out'
-                          }}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${
-                            app.appKey === 'formulas' ? 'bg-blue-500' :
-                            app.appKey === 'raw-materials' ? 'bg-orange-500' :
-                            'bg-fuchsia-500'
-                          }`}></div>
-                          <span>{user.name}</span>
-                        </div>
-                      ))}
-                      {getUsersWithAccess(app.appKey).length > 3 && (
-                        <div className="text-xs text-slate-500">
-                          +{getUsersWithAccess(app.appKey).length - 3} more
-                        </div>
-                      )}
-                      {getUsersWithAccess(app.appKey).length === 0 && (
-                        <div className="text-xs text-slate-500">
-                          No users assigned
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </Card>
             </div>

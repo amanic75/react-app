@@ -43,7 +43,7 @@ const FormulaDetailPage = () => {
         const foundFormula = await getFormulaById(formulaId);
     const { data } = foundFormula;
     if (data) {
-      console.log('Loaded formula data:', data);
+      
       setFormula(data);
       setEditableFormula({
         name: data.name || '',
@@ -208,7 +208,7 @@ const FormulaDetailPage = () => {
   };
 
   const handleEditToggle = () => {
-    console.log('handleEditToggle called with formula:', formula);
+
     
     // Reset to current values when starting edit
     const initialData = {
@@ -220,7 +220,7 @@ const FormulaDetailPage = () => {
       assigned_to: formula.assigned_to || []
     };
     
-    console.log('Setting editableFormula with:', initialData);
+    
     setEditableFormula(initialData);
     setIsEditing(true);
     // Load raw materials for search functionality
@@ -229,15 +229,15 @@ const FormulaDetailPage = () => {
 
   const handleSave = async () => {
     try {
-      console.log('handleSave called with editableFormula:', editableFormula);
+  
       
       // Save changes to Supabase
       if (editableFormula) {
         const result = await updateFormula(formula.id, editableFormula);
-        console.log('updateFormula returned:', result);
+
         
         if (result.data) {
-          console.log('Setting formula state to:', result.data);
+          
           setFormula(result.data);
           
           // Also update editableFormula to match the saved data
@@ -266,7 +266,7 @@ const FormulaDetailPage = () => {
   };
 
   const handleCancel = () => {
-    console.log('handleCancel called with formula:', formula);
+
     
     // Revert all changes back to original formula
     const resetData = {
@@ -278,7 +278,7 @@ const FormulaDetailPage = () => {
       assigned_to: formula.assigned_to || []
     };
     
-    console.log('Resetting editableFormula with:', resetData);
+    
     setEditableFormula(resetData);
     setIsEditing(false);
     setShowMaterialSearch(false);

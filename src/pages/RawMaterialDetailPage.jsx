@@ -90,15 +90,43 @@ const RawMaterialDetailPage = () => {
 
   const handleSaveAssignments = async (assignments) => {
     try {
-      const updatedMaterial = await updateMaterial(material.id, {
-        assigned_to: assignments
+      console.log('Saving assignments:', assignments);
+      console.log('Material ID:', material.id);
+      console.log('Current material:', material);
+      
+      // Flatten the assignments array to ensure it's a simple array of user IDs
+      const flattenedAssignments = assignments.flat(Infinity);
+      console.log('Flattened assignments:', flattenedAssignments);
+      console.log('Original assignments structure:', JSON.stringify(assignments, null, 2));
+      
+      const result = await updateMaterial(material.id, {
+        assigned_to: flattenedAssignments
       });
-      if (updatedMaterial) {
-        setMaterial(updatedMaterial);
+      
+      console.log('Update result:', result);
+      
+      if (result.data) {
+        setMaterial(result.data);
+      } else if (result.error) {
+        console.error('Error updating material:', result.error);
+        // Reload the material data to ensure we have the latest state
+        const { data: reloadedData } = await getMaterialById(material.id);
+        if (reloadedData) {
+          setMaterial(reloadedData);
+        }
       }
       setIsAssignmentModalOpen(false);
     } catch (err) {
-      // You might want to show an error message to the user here
+      console.error('Error saving assignments:', err);
+      // Reload the material data to ensure we have the latest state
+      try {
+        const { data: reloadedData } = await getMaterialById(material.id);
+        if (reloadedData) {
+          setMaterial(reloadedData);
+        }
+      } catch (reloadErr) {
+        console.error('Error reloading material:', reloadErr);
+      }
     }
   };
 
@@ -298,9 +326,9 @@ const RawMaterialDetailPage = () => {
           isOpen={isAssignmentModalOpen}
           onClose={handleCloseAssignmentModal}
           onSave={handleSaveAssignments}
-          currentAssignments={material?.assigned_to || []}
+          currentAssignments={Array.isArray(material?.assigned_to) ? material.assigned_to.flat(Infinity) : []}
           title="Assign Raw Material to Employees"
-          appType="raw_materials"
+          appType="raw-materials"
         />
       </div>
     </DashboardLayout>

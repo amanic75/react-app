@@ -199,6 +199,8 @@ export const addMaterial = async (materialData) => {
  */
 export const updateMaterial = async (materialId, updatedData) => {
   try {
+    console.log('updateMaterial called with:', { materialId, updatedData });
+    
     // Only include fields that are actually provided in updatedData
     const dbData = {
       updated_at: new Date().toISOString()
@@ -233,6 +235,9 @@ export const updateMaterial = async (materialId, updatedData) => {
     if (updatedData.iupacName !== undefined) dbData.iupac_name = updatedData.iupacName;
     if (updatedData.pubchemCID !== undefined) dbData.pubchem_cid = updatedData.pubchemCID;
     if (updatedData.canonicalSMILES !== undefined) dbData.canonical_smiles = updatedData.canonicalSMILES;
+    
+    console.log('Sending to database:', dbData);
+    
     const { data, error } = await supabase
       .from('raw_materials')
       .update(dbData)

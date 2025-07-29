@@ -133,7 +133,7 @@ const AdminDashboard = ({ userData }) => {
     return users.filter(user => user.appAccess && user.appAccess.includes(appKey));
   };
 
-  const applications = [
+  const allApplications = [
     {
       id: 1,
       title: 'Formulas',
@@ -141,7 +141,8 @@ const AdminDashboard = ({ userData }) => {
       glowColor: 'rgba(59, 130, 246, 0.3)', // Blue
       iconBgColor: 'bg-blue-900',
       iconColor: 'text-blue-400',
-      borderColor: 'hover:border-blue-500'
+      borderColor: 'hover:border-blue-500',
+      appKey: 'formulas'
     },
     {
       id: 2,
@@ -150,7 +151,8 @@ const AdminDashboard = ({ userData }) => {
       glowColor: 'rgba(249, 115, 22, 0.3)', // Orange
       iconBgColor: 'bg-orange-900',
       iconColor: 'text-orange-400',
-      borderColor: 'hover:border-orange-500'
+      borderColor: 'hover:border-orange-500',
+      appKey: 'raw-materials'
     },
     {
       id: 3,
@@ -159,9 +161,15 @@ const AdminDashboard = ({ userData }) => {
       glowColor: 'rgba(217, 70, 239, 0.3)', // Magenta
       iconBgColor: 'bg-fuchsia-900',
       iconColor: 'text-fuchsia-400',
-      borderColor: 'hover:border-fuchsia-500'
+      borderColor: 'hover:border-fuchsia-500',
+      appKey: 'suppliers'
     }
   ];
+
+  // Filter applications based on user's access
+  const applications = userData && userData.app_access && userData.app_access.length > 0
+    ? allApplications.filter(app => userData.app_access.includes(app.appKey))
+    : allApplications; // Show all apps for admins if no specific access is set
 
   return (
     <div className="space-y-8">

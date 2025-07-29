@@ -21,7 +21,7 @@ const EmployeeAssignmentSelector = ({
   useEffect(() => {
     if (isOpen) {
       loadEmployees();
-      setSelectedEmployees(new Set(currentAssignments));
+      // Don't set selected employees here - we'll do it after filtering
     }
   }, [isOpen, currentAssignments]);
 
@@ -52,7 +52,13 @@ const EmployeeAssignmentSelector = ({
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
       
-
+      console.log('EmployeeAssignmentSelector - Debug:', {
+        companyId,
+        totalUsers: users.length,
+        appType,
+        currentAssignments,
+        userProfile: userProfile ? { id: userProfile.id, role: userProfile.role } : null
+      });
       
       // Filter to show only employees who have access to the specified app
       // or are already assigned to this item
@@ -76,8 +82,15 @@ const EmployeeAssignmentSelector = ({
       
 
       setEmployees(filteredUsers);
+      
+      // Only include assigned employees that are actually visible in the filtered list
+      const visibleAssignedEmployees = currentAssignments.filter(assignmentId => 
+        filteredUsers.some(user => user.id === assignmentId)
+      );
+      setSelectedEmployees(new Set(visibleAssignedEmployees));
     } catch (error) {
       setEmployees([]);
+      setSelectedEmployees(new Set());
     } finally {
       setLoading(false);
     }

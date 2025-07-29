@@ -17,8 +17,8 @@ const AuthPage = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // Get redirect path from state or default to dashboard
-  const from = location.state?.from?.pathname || '/dashboard';
+  // Always redirect to dashboard after login, regardless of previous location
+  const from = '/dashboard';
 
   const validateForm = () => {
     const newErrors = {};

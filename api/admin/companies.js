@@ -1131,7 +1131,7 @@ async function fixUserProfile(req, res) {
         email: targetEmail,
         first_name: authUser.user.user_metadata?.first_name || targetEmail.split('@')[0],
         last_name: authUser.user.user_metadata?.last_name || '',
-        role: authUser.user.user_metadata?.role || 'Capacity Admin',
+        role: authUser.user.user_metadata?.role || 'Employee',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

@@ -37,7 +37,7 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
 
   const adminLinks = [
     ...employeeLinks,
-    { icon: Atom, label: 'Chemformation', action: () => console.log('Chemformation - No dedicated page yet') },
+    { icon: Atom, label: 'Chemformation', action: () => {} },
     { icon: Users, label: 'User Management', action: () => handleNavigation('/user-management') },
     { icon: Activity, label: 'System Health', action: () => handleNavigation('/system-health') }
   ];

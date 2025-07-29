@@ -77,9 +77,6 @@ export const AuthProvider = ({ children }) => {
 
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
-      console.log('getUserProfile - Database response for userId:', userId, 'data:', data, 'error:', error);
-      console.log('getUserProfile - Returning data:', data);
-
       if (error) {
         // console.error removed
         
@@ -418,19 +415,13 @@ export const AuthProvider = ({ children }) => {
             }
             
             try {
-              console.log('AuthStateChange - session.user:', session.user);
-              console.log('AuthStateChange - session.user.user_metadata:', session.user.user_metadata);
               const profile = await getUserProfile(session.user.id, session.user);
-              console.log('AuthStateChange - profile from database:', profile);
               if (mounted) {
-
                 setUserProfile(profile);
               }
             } catch (profileError) {
-              console.error('AuthStateChange - profile fetch failed:', profileError);
               if (mounted) {
                 const fallbackProfile = createProfileFromAuth(session.user);
-                console.log('AuthStateChange - fallback profile:', fallbackProfile);
                 setUserProfile(fallbackProfile);
               }
             }

@@ -16,7 +16,7 @@ export const getAllFormulas = async () => {
     
     // Debug: Log the first formula to see actual database structure
     if (data && data.length > 0) {
-      console.log('First formula from database:', data[0]);
+
     }
     
     return { data: data.map(formula => ({
@@ -90,7 +90,7 @@ export const addFormula = async (formulaData) => {
       assigned_to: formulaData.assigned_to || []
     };
     
-    console.log('Adding formula with data:', dbData);
+    
     
     const { data, error } = await supabase
       .from('formulas')
@@ -99,7 +99,7 @@ export const addFormula = async (formulaData) => {
       .single();
     if (error) throw error;
     
-    console.log('Formula added successfully:', data);
+    
     
     return { data: {
       id: data.id,
@@ -139,7 +139,7 @@ export const updateFormula = async (formulaId, updatedData) => {
       assigned_to: updatedData.assigned_to || []
     };
     
-    console.log('Updating formula with data:', dbData);
+    
     
     const { data, error } = await supabase
       .from('formulas')
@@ -149,7 +149,7 @@ export const updateFormula = async (formulaId, updatedData) => {
       .single();
     if (error) throw error;
     
-    console.log('Formula updated successfully:', data);
+    
     
     return { data: {
       id: data.id,

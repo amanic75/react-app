@@ -167,15 +167,7 @@ const FormulasPage = () => {
     { id: 'created', label: 'Created by Me' }
   ];
   
-  // Debug: Log user and filtering info
-  console.log('FormulasPage filtering:', {
-    totalFormulas: formulas.length,
-    activeTab,
-    user: user ? { id: user.id, email: user.email } : null,
-    userRole: userProfile?.role,
-    availableTabs: tabs.map(t => t.id),
-    tabFilteredCount: tabFilteredFormulas.length
-  });
+
   
   // Then apply additional filters (search, cost range, sale price range, ingredient count)
   const filteredFormulas = tabFilteredFormulas.filter(formula => {

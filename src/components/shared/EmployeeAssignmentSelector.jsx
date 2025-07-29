@@ -52,14 +52,6 @@ const EmployeeAssignmentSelector = ({
       const response = await getCompanyUsers(companyId);
       const users = response.data || [];
       
-      console.log('EmployeeAssignmentSelector - Debug:', {
-        companyId,
-        totalUsers: users.length,
-        appType,
-        currentAssignments,
-        userProfile: userProfile ? { id: userProfile.id, role: userProfile.role } : null
-      });
-      
       // Filter to show only employees who have access to the specified app
       // or are already assigned to this item
       const filteredUsers = users.filter(user => {
@@ -74,8 +66,6 @@ const EmployeeAssignmentSelector = ({
         
         // Must be employee AND have app access (or be already assigned)
         const shouldInclude = isEmployee && (hasAppAccess || isAssigned);
-        
-
         
         return shouldInclude;
       });

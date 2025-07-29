@@ -90,31 +90,20 @@ const DashboardPage = () => {
 
 
 
-  // Render appropriate dashboard based on user role
+    // Render appropriate dashboard based on user role
   const renderDashboard = () => {
     try {
-      console.log('DashboardPage - userProfile:', userProfile);
-      console.log('DashboardPage - userProfile.role:', userProfile?.role);
-      console.log('DashboardPage - userProfile.app_access:', userProfile?.app_access);
-      
       // Normalize the role value (trim whitespace and handle case)
       const role = userProfile?.role?.trim() || 'Employee';
-      console.log('DashboardPage - normalized role:', role);
-      
-
       
       switch (role) {
         case 'Capacity Admin':
-          console.log('DashboardPage - rendering AdminDashboard with userData:', userProfile);
           return <AdminDashboard userData={userProfile} />;
         case 'NSight Admin':
-          console.log('DashboardPage - rendering NsightAdminDashboard with userData:', userProfile);
           return <NsightAdminDashboard userData={userProfile} />;
         case 'Employee':
-          console.log('DashboardPage - rendering EmployeeDashboard with userData:', userProfile);
           return <EmployeeDashboard userData={userProfile} />;
         default:
-          console.log('DashboardPage - rendering EmployeeDashboard (default) with userData:', userProfile);
           return <EmployeeDashboard userData={userProfile} />;
       }
     } catch (error) {

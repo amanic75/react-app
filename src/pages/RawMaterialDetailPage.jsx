@@ -90,20 +90,12 @@ const RawMaterialDetailPage = () => {
 
   const handleSaveAssignments = async (assignments) => {
     try {
-      console.log('Saving assignments:', assignments);
-      console.log('Material ID:', material.id);
-      console.log('Current material:', material);
-      
       // Flatten the assignments array to ensure it's a simple array of user IDs
       const flattenedAssignments = assignments.flat(Infinity);
-      console.log('Flattened assignments:', flattenedAssignments);
-      console.log('Original assignments structure:', JSON.stringify(assignments, null, 2));
       
       const result = await updateMaterial(material.id, {
         assigned_to: flattenedAssignments
       });
-      
-      console.log('Update result:', result);
       
       if (result.data) {
         setMaterial(result.data);

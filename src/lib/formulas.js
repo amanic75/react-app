@@ -282,6 +282,18 @@ export const exportFormulaData = async (formulaId, format = 'json') => {
           error: null 
         };
 
+      case 'xlsx':
+        // Convert to XLSX format
+        const xlsxContent = await convertToXLSX(exportData);
+        return { 
+          data: {
+            content: xlsxContent,
+            filename: `${formula.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.xlsx`,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          }, 
+          error: null 
+        };
+
       case 'pdf':
         // For now, return JSON data that can be converted to PDF on frontend
         return { 
@@ -440,4 +452,59 @@ const convertToCSV = (exportData) => {
   ].join('\n');
 
   return csvContent;
+};
+
+/**
+ * Helper function to convert formula data to XLSX format.
+ * @param {Object} exportData - Formula export data
+ * @returns {Promise<Blob>} XLSX blob
+ */
+const convertToXLSX = async (exportData) => {
+  const { formula } = exportData;
+  
+  // Dynamically import xlsx library
+  const XLSX = await import('xlsx');
+  
+  // Create workbook and worksheet
+  const workbook = XLSX.utils.book_new();
+  
+  // Formula data
+  const formulaData = [
+    ['Formula ID', formula.id],
+    ['Formula Name', formula.name],
+    ['Total Cost', formula.totalCost || 0],
+    ['Drum Price', formula.finalSalePriceDrum || 0],
+    ['Tote Price', formula.finalSalePriceTote || 0],
+    ['Ingredients Count', formula.ingredients?.length || 0],
+    ['Assigned To', (formula.assigned_to || []).join(', ')],
+    ['Created At', formula.created_at],
+    ['Updated At', formula.updated_at]
+  ];
+  
+  const formulaWorksheet = XLSX.utils.aoa_to_sheet(formulaData);
+  XLSX.utils.book_append_sheet(workbook, formulaWorksheet, 'Formula Details');
+  
+  // Ingredients data
+  if (formula.ingredients && formula.ingredients.length > 0) {
+    const ingredientsHeaders = ['Name', 'Quantity', 'Cost', 'Percentage'];
+    const ingredientsData = [ingredientsHeaders];
+    
+    const totalCost = formula.totalCost || 0;
+    formula.ingredients.forEach(ingredient => {
+      const percentage = totalCost > 0 ? ((ingredient.cost || 0) / totalCost * 100).toFixed(2) : 0;
+      ingredientsData.push([
+        ingredient.name || '',
+        ingredient.quantity || '',
+        ingredient.cost || 0,
+        percentage
+      ]);
+    });
+    
+    const ingredientsWorksheet = XLSX.utils.aoa_to_sheet(ingredientsData);
+    XLSX.utils.book_append_sheet(workbook, ingredientsWorksheet, 'Ingredients');
+  }
+  
+  // Generate XLSX blob
+  const xlsxBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([xlsxBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }; 

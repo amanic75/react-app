@@ -43,6 +43,10 @@ const FormulaDetailPage = () => {
   // Report format selection
   const [showReportFormatModal, setShowReportFormatModal] = useState(false);
   const [selectedReportFormat, setSelectedReportFormat] = useState('html');
+  
+  // Export format selection
+  const [showExportFormatModal, setShowExportFormatModal] = useState(false);
+  const [selectedExportFormat, setSelectedExportFormat] = useState('');
 
   // Get formula from Supabase
   useEffect(() => {
@@ -431,10 +435,17 @@ const FormulaDetailPage = () => {
   };
 
   // New handler functions for the action buttons
-  const handleExportData = async () => {
+  const handleExportData = () => {
+    // Show format selection modal instead of directly exporting
+    setShowExportFormatModal(true);
+  };
+
+  const handleExportDataWithFormat = async (format) => {
     setIsExporting(true);
+    setShowExportFormatModal(false);
+    
     try {
-      const { data: exportResult, error } = await exportFormulaData(formulaId, 'json');
+      const { data: exportResult, error } = await exportFormulaData(formulaId, format);
       if (error) {
         showErrorNotification('Failed to export formula data');
         return;
@@ -445,7 +456,7 @@ const FormulaDetailPage = () => {
         exportResult.filename,
         exportResult.mimeType
       );
-      showSuccessNotification('Formula data exported as JSON successfully');
+      showSuccessNotification(`Formula data exported as ${format.toUpperCase()} successfully`);
     } catch (err) {
       showErrorNotification('Error exporting formula data');
     } finally {
@@ -857,7 +868,7 @@ const FormulaDetailPage = () => {
             disabled={isExporting}
             className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isExporting ? 'Exporting...' : 'Export JSON'}
+            {isExporting ? 'Exporting...' : 'Export Data'}
           </Button>
           <Button 
             onClick={handleGenerateReport}
@@ -1043,75 +1054,145 @@ const FormulaDetailPage = () => {
         )}
       </div>
 
-      {/* Report Format Selection Modal */}
-      {showReportFormatModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
-            <div className="flex items-center mb-4">
-              <div className="bg-green-100 rounded-full p-2 mr-3">
-                <File className="h-6 w-6 text-green-600" />
+                {/* Report Format Selection Modal */}
+          {showReportFormatModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
+                <div className="flex items-center mb-4">
+                  <div className="bg-green-100 rounded-full p-2 mr-3">
+                    <File className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-100">Select Report Format</h3>
+                </div>
+                <p className="text-slate-300 mb-6">
+                  Choose your preferred format for the formula report:
+                </p>
+
+                <div className="space-y-3 mb-6">
+                  <button
+                    onClick={() => handleGenerateReportWithFormat('html')}
+                    disabled={isGeneratingReport}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">HTML Report</div>
+                        <div className="text-sm text-slate-400">Professional web page with styling</div>
+                      </div>
+                      <div className="text-slate-400">🌐</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleGenerateReportWithFormat('word')}
+                    disabled={isGeneratingReport}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">Word Document</div>
+                        <div className="text-sm text-slate-400">True DOCX format with tables and formatting</div>
+                      </div>
+                      <div className="text-slate-400">📄</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleGenerateReportWithFormat('pdf')}
+                    disabled={isGeneratingReport}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">PDF Report</div>
+                        <div className="text-sm text-slate-400">True PDF file generated directly</div>
+                      </div>
+                      <div className="text-slate-400">📊</div>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowReportFormatModal(false)}
+                    className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-100">Select Report Format</h3>
             </div>
-            <p className="text-slate-300 mb-6">
-              Choose your preferred format for the formula report:
-            </p>
-            
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => handleGenerateReportWithFormat('html')}
-                disabled={isGeneratingReport}
-                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-slate-200">HTML Report</div>
-                    <div className="text-sm text-slate-400">Professional web page with styling</div>
+          )}
+
+          {/* Export Format Selection Modal */}
+          {showExportFormatModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
+                <div className="flex items-center mb-4">
+                  <div className="bg-blue-100 rounded-full p-2 mr-3">
+                    <Download className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="text-slate-400">🌐</div>
+                  <h3 className="text-lg font-semibold text-slate-100">Select Export Format</h3>
                 </div>
-              </button>
-              
-              <button
-                onClick={() => handleGenerateReportWithFormat('word')}
-                disabled={isGeneratingReport}
-                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-slate-200">Word Document</div>
-                    <div className="text-sm text-slate-400">True DOCX format with tables and formatting</div>
-                  </div>
-                  <div className="text-slate-400">📄</div>
+                <p className="text-slate-300 mb-6">
+                  Choose your preferred format for exporting formula data:
+                </p>
+
+                <div className="space-y-3 mb-6">
+                  <button
+                    onClick={() => handleExportDataWithFormat('json')}
+                    disabled={isExporting}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">JSON Export</div>
+                        <div className="text-sm text-slate-400">Raw data in JSON format for developers</div>
+                      </div>
+                      <div className="text-slate-400">📄</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleExportDataWithFormat('csv')}
+                    disabled={isExporting}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">CSV Export</div>
+                        <div className="text-sm text-slate-400">Spreadsheet format for Excel/Google Sheets</div>
+                      </div>
+                      <div className="text-slate-400">📊</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleExportDataWithFormat('xlsx')}
+                    disabled={isExporting}
+                    className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-200">Excel Export</div>
+                        <div className="text-sm text-slate-400">Native Excel format with formatting</div>
+                      </div>
+                      <div className="text-slate-400">📈</div>
+                    </div>
+                  </button>
                 </div>
-              </button>
-              
-              <button
-                onClick={() => handleGenerateReportWithFormat('pdf')}
-                disabled={isGeneratingReport}
-                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-slate-200">PDF Report</div>
-                    <div className="text-sm text-slate-400">True PDF file generated directly</div>
-                  </div>
-                  <div className="text-slate-400">📊</div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowExportFormatModal(false)}
+                    className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </button>
+              </div>
             </div>
-            
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowReportFormatModal(false)}
-                className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
       {/* Employee Assignment Modal */}
       <EmployeeAssignmentSelector

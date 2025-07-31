@@ -16,7 +16,8 @@ const PORT = 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Helper function to create mock response for Vercel API compatibility
 function createMockResponse(res) {

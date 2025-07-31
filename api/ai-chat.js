@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 
 // Initialize OpenAI with server-side API key
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Server-side environment variable
+  apiKey: process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY, // Check both variable names
 });
 
 // Level 2 Chemical Database Integration
@@ -236,6 +236,17 @@ CORE EXPERTISE AREAS:
 - Quality control and troubleshooting
 - Cost optimization and profitability analysis
 
+IMAGE ANALYSIS CAPABILITIES:
+When users upload images, you can analyze:
+- Chemical structures and molecular diagrams
+- Laboratory equipment and setup
+- Safety data sheets and chemical labels
+- Process flow diagrams and schematics
+- Quality control charts and test results
+- Chemical formulas and equations
+- Safety symbols and hazard warnings
+- Equipment specifications and labels
+
 SPECIALIZED AI CAPABILITIES:
 
 🔬 FORMULA OPTIMIZATION ASSISTANT
@@ -315,6 +326,15 @@ Diagnostic Steps: [systematic approach to identify root cause]
 Corrective Actions: [immediate fixes]
 Preventive Measures: [long-term solutions]
 
+For Image Analysis requests, use this structure:
+**IMAGE ANALYSIS REPORT**
+Image Type: [chemical structure/laboratory setup/safety data/etc.]
+Key Elements Identified: [describe what you see in the image]
+Chemical Analysis: [analyze any chemical formulas, structures, or data]
+Safety Assessment: [identify any safety concerns or warnings]
+Recommendations: [provide actionable advice based on the image]
+Technical Details: [extract and explain any technical specifications]
+
 MATERIAL ADDITION - MAXIMUM REALISM REQUIRED:
 When users ask to add chemicals/materials, you MUST provide the most realistic, accurate data possible using your extensive chemical knowledge. Every field must be chemically accurate and industry-appropriate.
 
@@ -376,6 +396,8 @@ IMPORTANT GUIDELINES:
 - Suggest verification steps for critical recommendations
 - Stay focused on chemistry, chemical engineering, and manufacturing topics
 - For non-chemistry questions, politely redirect
+- When analyzing images, be thorough and identify all relevant chemical information
+- Extract and explain any chemical formulas, structures, or safety information visible in images
 
 Remember: You're an expert consultant helping chemical manufacturers optimize their operations, ensure safety, and improve profitability.`;
 
@@ -588,11 +610,35 @@ export default async function handler(req, res) {
       { role: 'user', content: buildUserMessage(message, files) }
     ];
 
+    // Check if we have image files for vision analysis
+    const hasImageFiles = files && files.length > 0 && files.some(f => f.type && f.type.startsWith('image/'));
+    
+    // Prepare messages for vision API if needed
+    let apiMessages = messages;
+    if (hasImageFiles) {
+      const visionContent = processFilesForVision(files);
+      
+      if (visionContent) {
+        apiMessages = messages.map(msg => {
+          if (msg.role === 'user') {
+            return {
+              ...msg,
+              content: [
+                { type: 'text', text: msg.content },
+                ...visionContent
+              ]
+            };
+          }
+          return msg;
+        });
+      }
+    }
+
     // Call OpenAI API with timeout
     const completion = await Promise.race([
       openai.chat.completions.create({
         model: 'gpt-4o', // Use faster model
-        messages: messages,
+        messages: apiMessages,
         max_tokens: 1000,
         temperature: 0.7,
         user: 'user-123', // Replace with actual user ID for monitoring
@@ -619,8 +665,6 @@ export default async function handler(req, res) {
       errorMessage: materialResponse.errorMessage
     };
 
-    // Log usage for monitoring (optional)
-
     return res.status(200).json({
       ...combinedResponse,
       tokensUsed: completion.usage.total_tokens,
@@ -628,7 +672,6 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-
     // Handle OpenAI API errors
     if (error.code === 'insufficient_quota') {
       return res.status(429).json({ 
@@ -673,6 +716,22 @@ function buildUserMessage(text, files) {
   }
   
   return message;
+}
+
+// Helper function to process files for vision API
+function processFilesForVision(files) {
+  if (!files || files.length === 0) return null;
+  
+  const imageFiles = files.filter(f => f.type && f.type.startsWith('image/'));
+  if (imageFiles.length === 0) return null;
+  
+  return imageFiles.map(file => ({
+    type: 'image_url',
+    image_url: {
+      url: file.data ? `data:${file.type};base64,${file.data}` : file.url,
+      detail: 'high'
+    }
+  }));
 }
 
 function formatFileSize(bytes) {

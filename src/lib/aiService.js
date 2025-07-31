@@ -238,64 +238,16 @@ class AIService {
   }
 
   async generateResponse(userMessage, files = null, conversationHistory = [], options = { mode: 'basic' }) {
-    const mode = options.mode || 'basic';
-    const systemPrompt = mode === 'enhanced' ? ENHANCED_SYSTEM_PROMPT : BASIC_SYSTEM_PROMPT;
-    const useFunctionCalling = mode === 'enhanced';
     try {
-      if (!this.isDevelopment) {
-        return await this.generateResponseFromAPI(userMessage, files, conversationHistory, mode);
-      }
-      if (!this.openai) {
-        throw new Error('OpenAI client not initialized. Check your API key.');
-      }
-      const messages = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory,
-        { role: 'user', content: this.buildUserMessage(userMessage, files) }
-      ];
-      if (useFunctionCalling) {
-        // Enhanced mode: function calling
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-4-1106-preview',
-          messages: messages,
-          functions: this.functions,
-          function_call: 'auto',
-          max_tokens: 1000,
-          temperature: 0.7
-        });
-        const aiResponse = response.choices[0].message;
-        if (aiResponse.function_call) {
-          const functionResult = await this.handleFunctionCall(aiResponse.function_call);
-          messages.push(aiResponse);
-          messages.push({
-            role: 'function',
-            name: aiResponse.function_call.name,
-            content: JSON.stringify(functionResult)
-          });
-          const finalResponse = await this.openai.chat.completions.create({
-            model: 'gpt-4-1106-preview',
-            messages: messages,
-            max_tokens: 1000,
-            temperature: 0.7
-          });
-          return await this.processEnhancedResponse(finalResponse.choices[0].message.content, functionResult);
-        }
-        return await this.processEnhancedResponse(aiResponse.content);
-      } else {
-        // Basic mode: regular chat
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages: messages,
-          max_tokens: 1000,
-          temperature: 0.7,
-          stream: false
-        });
-        const aiResponse = response.choices[0].message.content;
-        return await this.processResponse(aiResponse);
-      }
+      // Use backend API for enhanced processing
+      const response = await this.generateResponseFromAPI(userMessage, files, conversationHistory, options.mode);
+      
+      // Process the response for material addition and enhanced capabilities
+      const processedResponse = await this.processResponse(response);
+      
+      return processedResponse;
     } catch (error) {
-      // console.error removed
-      throw new Error('Failed to generate AI response. Please try again.');
+      throw error;
     }
   }
 
@@ -610,73 +562,81 @@ class AIService {
   }
 
   async generateResponseFromAPI(userMessage, files, conversationHistory, mode) {
-    const response = await fetch(this.apiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add authentication header if needed
-        // 'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: JSON.stringify({
-        message: userMessage,
-        files: files,
-        conversationHistory: conversationHistory,
-        mode: mode // Pass the mode to the backend
-      })
-    });
+    try {
+      const response = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication header if needed
+          // 'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          files: files,
+          conversationHistory: conversationHistory,
+          mode: mode // Pass the mode to the backend
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Handle Level 2 backend response format
-    if (data.materialAdded) {
-      // console.log removed
-      
-      // Check if backend provided material data
-      if (!data.materialData) {
-        // console.error removed
-        return {
-          response: data.response,
-          materialAdded: false,
-          errorMessage: data.errorMessage || "❌ Backend verification failed. Please try again."
-        };
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 DEBUG: API error response:', errorText);
+        throw new Error(`API request failed: ${response.status}`);
       }
+
+      const data = await response.json();
+      console.log('🔍 DEBUG: API response data:', data);
       
-      try {
-        // Backend already processed the material with verification
-        const validatedData = this.validateMaterialData(data.materialData);
-        // console.log removed
+      // Handle Level 2 backend response format
+      if (data.materialAdded) {
+        console.log('🔍 DEBUG: Material addition detected');
         
-        const savedMaterial = await addMaterial(validatedData);
-        
-        if (savedMaterial) {
-          return {
-            response: data.response,
-            materialAdded: true,
-            materialData: savedMaterial,
-            successMessage: data.successMessage || `✅ Successfully added "${validatedData.materialName}" with backend verification!`
-          };
-        } else {
+        // Check if backend provided material data
+        if (!data.materialData) {
+          console.error('🔍 DEBUG: No material data in response');
           return {
             response: data.response,
             materialAdded: false,
-            errorMessage: "❌ Failed to save the verified material to the database. Please try again."
+            errorMessage: data.errorMessage || "❌ Backend verification failed. Please try again."
           };
         }
-      } catch (error) {
-        // console.error removed
-        return {
-          response: data.response,
-          materialAdded: false,
-          errorMessage: "❌ Error processing verified material data. Please try again."
-        };
+        
+        try {
+          // Backend already processed the material with verification
+          const validatedData = this.validateMaterialData(data.materialData);
+          console.log('🔍 DEBUG: Validated material data:', validatedData);
+          
+          const savedMaterial = await addMaterial(validatedData);
+          
+          if (savedMaterial) {
+            return {
+              response: data.response,
+              materialAdded: true,
+              materialData: savedMaterial,
+              successMessage: data.successMessage || `✅ Successfully added "${validatedData.materialName}" with backend verification!`
+            };
+          } else {
+            return {
+              response: data.response,
+              materialAdded: false,
+              errorMessage: "❌ Failed to save the verified material to the database. Please try again."
+            };
+          }
+        } catch (error) {
+          console.error('🔍 DEBUG: Error processing verified material:', error);
+          return {
+            response: data.response,
+            materialAdded: false,
+            errorMessage: "❌ Error processing verified material data. Please try again."
+          };
+        }
       }
+      
+      return data.response;
+    } catch (error) {
+      console.error('🔍 DEBUG: Error in generateResponseFromAPI:', error);
+      throw error;
     }
-    
-    return data.response;
   }
 
   async handleFunctionCall(functionCall) {

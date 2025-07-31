@@ -62,10 +62,10 @@ const ChatBot = ({ onMaterialAdded }) => {
 
     const newMessage = {
       id: messages.length + 1,
-      text: inputText || (attachedFiles.length > 0 ? 'Uploaded files:' : ''),
+      text: inputText,
       sender: 'user',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      files: attachedFiles.length > 0 ? [...attachedFiles] : null
+      files: attachedFiles
     };
 
     setMessages(prev => [...prev, newMessage]);
@@ -76,6 +76,28 @@ const ChatBot = ({ onMaterialAdded }) => {
     setIsTyping(true);
 
     try {
+      // Convert files to base64 for backend processing
+      const processedFiles = await Promise.all(
+        userFiles.map(async (fileObj) => {
+          const file = fileObj.file;
+          
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64Data = reader.result.split(',')[1]; // Remove data URL prefix
+              resolve({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: base64Data,
+                url: fileObj.url // Keep original URL for display
+              });
+            };
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
       // Build conversation history for AI context
       const conversationHistory = messages.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
@@ -83,7 +105,7 @@ const ChatBot = ({ onMaterialAdded }) => {
       }));
 
       // Generate AI response with enhanced capabilities
-      const aiResponse = await aiService.generateResponse(userInput, userFiles, conversationHistory);
+      const aiResponse = await aiService.generateResponse(userInput, processedFiles, conversationHistory);
       
       // Handle enhanced response types
       const botResponse = {
@@ -117,7 +139,6 @@ const ChatBot = ({ onMaterialAdded }) => {
         onMaterialAdded(botResponse.materialData);
       }
     } catch (error) {
-      // console.error removed
       const errorResponse = {
         id: messages.length + 2,
         text: 'I apologize, but I encountered an error processing your request. Please try again. If the issue persists, please contact technical support.',

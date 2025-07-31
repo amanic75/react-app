@@ -9,6 +9,7 @@ import aiService from '../lib/aiService';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeAssignmentSelector from '../components/shared/EmployeeAssignmentSelector';
 import { downloadFile, showSuccessNotification, showErrorNotification, exportAsPDF, exportAsHTML, exportAsWord } from '../lib/utils';
+import { uploadFormulaFile, getFormulaDocuments, deleteFormulaDocument, downloadFormulaFile } from '../lib/fileUpload';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const FormulaDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const [editableFormula, setEditableFormula] = useState(null);
   const [formula, setFormula] = useState(null);
@@ -67,6 +69,12 @@ const FormulaDetailPage = () => {
         ingredients: Array.isArray(data.ingredients) ? [...data.ingredients] : [],
         assigned_to: data.assigned_to || []
       });
+
+      // Load formula documents
+      const { data: documents, error: docsError } = await getFormulaDocuments(formulaId);
+      if (!docsError && documents) {
+        setUploadedFiles(documents);
+      }
     } else {
       setError('Formula not found');
     }
@@ -164,17 +172,30 @@ const FormulaDetailPage = () => {
   const filteredExistingDocuments = existingDocuments.filter(doc => !deletedDocuments.includes(doc.id));
 
   // File upload handlers
-  const handleFileUpload = (files) => {
-    const newFiles = Array.from(files).map(file => ({
-      id: Date.now() + Math.random(),
-      file: file,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploadDate: new Date(),
-      formulaId: formulaId
-    }));
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+  const handleFileUpload = async (files) => {
+    setIsUploading(true);
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const { data, error } = await uploadFormulaFile(file, formulaId, userProfile?.company_id);
+        if (error) {
+          showErrorNotification(`Failed to upload ${file.name}: ${error.message}`);
+          return null;
+        }
+        return data;
+      });
+
+      const uploadedFiles = await Promise.all(uploadPromises);
+      const successfulUploads = uploadedFiles.filter(file => file !== null);
+
+      if (successfulUploads.length > 0) {
+        setUploadedFiles(prev => [...successfulUploads, ...prev]);
+        showSuccessNotification(`Successfully uploaded ${successfulUploads.length} file(s)`);
+      }
+    } catch (error) {
+      showErrorNotification('Error uploading files');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDragOver = (e) => {
@@ -187,23 +208,34 @@ const FormulaDetailPage = () => {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragOver(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handleFileUpload(files);
+      await handleFileUpload(files);
     }
   };
 
-  const handleFileInputChange = (e) => {
+  const handleFileInputChange = async (e) => {
     if (e.target.files.length > 0) {
-      handleFileUpload(e.target.files);
+      await handleFileUpload(e.target.files);
     }
   };
 
-  const removeFile = (fileId) => {
-    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+  const removeFile = async (fileId) => {
+    try {
+      const { error } = await deleteFormulaDocument(fileId);
+      if (error) {
+        showErrorNotification('Failed to delete file');
+        return;
+      }
+      
+      setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+      showSuccessNotification('File deleted successfully');
+    } catch (error) {
+      showErrorNotification('Error deleting file');
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -951,10 +983,12 @@ const FormulaDetailPage = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
-              isDragOver 
-                ? 'border-blue-400 bg-blue-400/10' 
-                : 'border-slate-600 hover:border-slate-500 hover:bg-slate-700/50'
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
+              isUploading
+                ? 'border-slate-500 bg-slate-700/50 cursor-not-allowed'
+                : isDragOver 
+                  ? 'border-blue-400 bg-blue-400/10 cursor-pointer' 
+                  : 'border-slate-700 hover:border-slate-500 hover:bg-slate-700/50 cursor-pointer'
             }`}
           >
             <input
@@ -962,15 +996,16 @@ const FormulaDetailPage = () => {
               ref={fileInputRef}
               onChange={handleFileInputChange}
               multiple
+              disabled={isUploading}
               accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.gif"
               className="hidden"
             />
             <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h4 className="text-lg font-medium text-slate-200 mb-2">
-              {isDragOver ? 'Drop files here' : 'Drag & drop files here'}
+              {isUploading ? 'Uploading files...' : isDragOver ? 'Drop files here' : 'Drag & drop files here'}
             </h4>
             <p className="text-slate-400 mb-4">
-              or click to browse files
+              {isUploading ? 'Please wait...' : 'or click to browse files'}
             </p>
             <p className="text-sm text-slate-500">
               Supports: PDF, DOC, DOCX, TXT, CSV, XLSX, XLS, PNG, JPG, JPEG, GIF
@@ -985,24 +1020,25 @@ const FormulaDetailPage = () => {
                 {uploadedFiles.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg border border-slate-600">
                     <div className="flex items-center space-x-3">
-                      {getFileIcon(file.type)}
+                      {getFileIcon(file.file_type)}
                       <div>
-                        <div className="text-sm font-medium text-slate-200">{file.name}</div>
+                        <div className="text-sm font-medium text-slate-200">{file.file_name}</div>
                         <div className="text-xs text-slate-400">
-                          {formatFileSize(file.size)} • Uploaded {file.uploadDate.toLocaleDateString()}
+                          {formatFileSize(file.file_size)} • Uploaded {new Date(file.uploaded_at).toLocaleDateString()}
+                          {file.uploaded_by_user && ` • ${file.uploaded_by_user.email}`}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
+                      <a
+                        href={file.public_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
                         title="Download"
                       >
                         <Download className="h-4 w-4" />
-                      </button>
+                      </a>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

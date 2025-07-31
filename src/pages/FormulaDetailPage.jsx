@@ -3,11 +3,12 @@ import { ArrowLeft, FolderOpen, Edit3, Upload, File, Image, X, Download, Trash2,
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
-import { getFormulaById, updateFormula, getAllFormulas, deleteFormula } from '../lib/formulas';
+import { getFormulaById, updateFormula, getAllFormulas, deleteFormula, duplicateFormula, exportFormulaData, generateFormulaReport } from '../lib/formulas';
 import { getAllMaterials } from '../lib/materials';
 import aiService from '../lib/aiService';
 import { useAuth } from '../contexts/AuthContext';
 import EmployeeAssignmentSelector from '../components/shared/EmployeeAssignmentSelector';
+import { downloadFile, showSuccessNotification, showErrorNotification, exportAsPDF, exportAsHTML, exportAsWord } from '../lib/utils';
 
 const FormulaDetailPage = () => {
   const navigate = useNavigate();
@@ -33,6 +34,15 @@ const FormulaDetailPage = () => {
   // AI material addition state
   const [isAddingWithAI, setIsAddingWithAI] = useState(false);
   const [aiResponse, setAiResponse] = useState('');
+
+  // Action button loading states
+  const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
+  // Report format selection
+  const [showReportFormatModal, setShowReportFormatModal] = useState(false);
+  const [selectedReportFormat, setSelectedReportFormat] = useState('html');
 
   // Get formula from Supabase
   useEffect(() => {
@@ -420,6 +430,96 @@ const FormulaDetailPage = () => {
     setShowDeleteConfirm(false);
   };
 
+  // New handler functions for the action buttons
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const { data: exportResult, error } = await exportFormulaData(formulaId, 'json');
+      if (error) {
+        showErrorNotification('Failed to export formula data');
+        return;
+      }
+
+      downloadFile(
+        exportResult.content,
+        exportResult.filename,
+        exportResult.mimeType
+      );
+      showSuccessNotification('Formula data exported as JSON successfully');
+    } catch (err) {
+      showErrorNotification('Error exporting formula data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleGenerateReport = () => {
+    // Show format selection modal instead of directly generating
+    setShowReportFormatModal(true);
+  };
+
+  const handleGenerateReportWithFormat = async (format) => {
+    setIsGeneratingReport(true);
+    setShowReportFormatModal(false);
+    
+    try {
+      const { data: reportData, error } = await generateFormulaReport(formulaId);
+      if (error) {
+        showErrorNotification('Failed to generate formula report');
+        return;
+      }
+
+      if (!reportData) {
+        showErrorNotification('No report data available');
+        return;
+      }
+
+      // Generate report in selected format
+      const formulaName = formula?.name || 'Unknown_Formula';
+      const filename = `${formulaName.replace(/[^a-zA-Z0-9]/g, '_')}_report`;
+      
+      switch (format) {
+        case 'html':
+          exportAsHTML(reportData, filename);
+          showSuccessNotification('HTML report generated successfully');
+          break;
+        case 'word':
+          exportAsWord(reportData, filename);
+          showSuccessNotification('DOCX document generated successfully');
+          break;
+        case 'pdf':
+          exportAsPDF(reportData, filename);
+          showSuccessNotification('PDF report generated successfully');
+          break;
+        default:
+          showErrorNotification('Unsupported format selected');
+      }
+    } catch (err) {
+      showErrorNotification(`Error generating formula report: ${err.message}`);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDuplicateFormula = async () => {
+    setIsDuplicating(true);
+    try {
+      const { data: newFormula, error } = await duplicateFormula(formulaId, userProfile?.id);
+      if (error) {
+        showErrorNotification('Failed to duplicate formula');
+        return;
+      }
+
+      showSuccessNotification('Formula duplicated successfully');
+      // Navigate to the new formula
+      navigate(`/formulas/${newFormula.id}`);
+    } catch (err) {
+      showErrorNotification('Error duplicating formula');
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   return (
     <DashboardLayout key={`formula-${formulaId}`}>
       <div className="space-y-6">
@@ -439,6 +539,16 @@ const FormulaDetailPage = () => {
           </div>
           
           <div className="flex items-center space-x-3">
+            {/* Manage Assignments Button - Only for Capacity Admins */}
+            {isCapacityAdmin && (
+              <Button
+                onClick={() => setShowAssignmentModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
+              >
+                <Users className="h-4 w-4" />
+                <span>Manage Assignments</span>
+              </Button>
+            )}
             {isEditing && (
               <Button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -487,31 +597,6 @@ const FormulaDetailPage = () => {
                 onChange={(e) => handleFieldChange('name', e.target.value)}
                 className="text-2xl font-semibold text-slate-100 mb-6 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              
-              {/* Assignment Section - Only for Capacity Admins */}
-              {isCapacityAdmin && (
-                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-slate-200 mb-1">Employee Assignments</h3>
-                      <p className="text-sm text-slate-400">
-                        {editableFormula.assigned_to?.length > 0 
-                          ? `Assigned to ${editableFormula.assigned_to.length} employee${editableFormula.assigned_to.length !== 1 ? 's' : ''}`
-                          : 'Not assigned to any employees'
-                        }
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => setShowAssignmentModal(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
-                    >
-                      <Users className="h-4 w-4" />
-                      <span>Manage Assignments</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
             </>
           ) : (
             <h2 className="text-2xl font-semibold text-slate-100 mb-6">{editableFormula?.name || formula.name}</h2>
@@ -767,14 +852,31 @@ const FormulaDetailPage = () => {
 
         {/* Action Buttons */}
         <div className="flex space-x-4">
-          <Button className="bg-slate-700 hover:bg-slate-600">
-            Export Data
+          <Button 
+            onClick={handleExportData}
+            disabled={isExporting}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? 'Exporting...' : 'Export JSON'}
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            Generate Report
+          <Button 
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport}
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingReport ? 'Generating...' : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate AI Report
+              </>
+            )}
           </Button>
-          <Button className="bg-orange-600 hover:bg-orange-700">
-            Duplicate Formula
+          <Button 
+            onClick={handleDuplicateFormula}
+            disabled={isDuplicating}
+            className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDuplicating ? 'Duplicating...' : 'Duplicate Formula'}
           </Button>
         </div>
 
@@ -940,6 +1042,76 @@ const FormulaDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Report Format Selection Modal */}
+      {showReportFormatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className="bg-green-100 rounded-full p-2 mr-3">
+                <File className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-100">Select Report Format</h3>
+            </div>
+            <p className="text-slate-300 mb-6">
+              Choose your preferred format for the formula report:
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => handleGenerateReportWithFormat('html')}
+                disabled={isGeneratingReport}
+                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-slate-200">HTML Report</div>
+                    <div className="text-sm text-slate-400">Professional web page with styling</div>
+                  </div>
+                  <div className="text-slate-400">🌐</div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => handleGenerateReportWithFormat('word')}
+                disabled={isGeneratingReport}
+                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-slate-200">Word Document</div>
+                    <div className="text-sm text-slate-400">True DOCX format with tables and formatting</div>
+                  </div>
+                  <div className="text-slate-400">📄</div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => handleGenerateReportWithFormat('pdf')}
+                disabled={isGeneratingReport}
+                className="w-full p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-left transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-slate-200">PDF Report</div>
+                    <div className="text-sm text-slate-400">True PDF file generated directly</div>
+                  </div>
+                  <div className="text-slate-400">📊</div>
+                </div>
+              </button>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowReportFormatModal(false)}
+                className="px-4 py-2 text-slate-300 hover:text-slate-100 hover:bg-slate-700 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Employee Assignment Modal */}
       <EmployeeAssignmentSelector

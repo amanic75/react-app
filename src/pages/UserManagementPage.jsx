@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import DashboardLayout from '../layouts/DashboardLayout';
 import EditUserModal from '../components/shared/EditUserModal';
 import AddUserModal from '../components/shared/AddUserModal';
+import { isAnyAdmin, isCompanyAdmin, isGlobalAdmin, getDefaultAppAccess, getDefaultCredentials } from '../lib/roleUtils';
 
 const UserManagementPage = () => {
   const navigate = useNavigate();
@@ -34,10 +35,10 @@ const UserManagementPage = () => {
   const [tempFilterDomain, setTempFilterDomain] = useState('all');
   const [tempFilterApp, setTempFilterApp] = useState('all');
 
-  // Role-based access control - only Capacity Admin and NSight Admin can access user management
+  // Role-based access control - only any admin can access user management
   useEffect(() => {
     if (!loading && userProfile) {
-      if (userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
+      if (!isAnyAdmin(userProfile.role)) {
         // console.log removed
         const dashboardRoute = getDashboardRoute();
         navigate(dashboardRoute, { replace: true });
@@ -45,63 +46,24 @@ const UserManagementPage = () => {
     }
   }, [userProfile, loading, navigate, getDashboardRoute]);
 
-  // Get company ID for current user if they're a Capacity Admin
+  // Get company ID for current user if they have one
   useEffect(() => {
-    const getCompanyId = async () => {
-      if (!userProfile || userProfile.role !== 'Capacity Admin') {
-        setCurrentCompanyId(null);
-        return;
-      }
-
-      try {
-        // Get the company associated with this user
-        const { data, error } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', userProfile.id)
-          .single();
-
-        if (error) {
-          // console.error removed
-          return;
-        }
-
-        setCurrentCompanyId(data.company_id);
-        // console.log removed
-      } catch (error) {
-        // console.error removed
-      }
-    };
-
-    getCompanyId();
+    // Set company ID from userProfile if they have one
+    if (userProfile?.company_id) {
+      setCurrentCompanyId(userProfile.company_id);
+    } else {
+      setCurrentCompanyId(null);
+    }
   }, [userProfile]);
 
   // Helper function to get app access based on role
   const getAppAccessByRole = (role) => {
-    switch (role) {
-      case 'Capacity Admin':
-        return ['formulas', 'suppliers', 'raw-materials'];
-      case 'NSight Admin':
-        return ['developer-mode', 'existing-company-mode'];
-      case 'Employee':
-        return ['formulas'];
-      default:
-        return ['formulas'];
-    }
+    return getDefaultAppAccess(role);
   };
 
   // Helper function to get credentials display based on role
   const getRoleCredentials = (role) => {
-    switch (role) {
-      case 'Capacity Admin':
-        return 'admin/secure pass';
-      case 'NSight Admin':
-        return 'nsight-admin/enterprise pass';
-      case 'Employee':
-        return 'user/temporary pass';
-      default:
-        return 'user/temporary pass';
-    }
+    return getDefaultCredentials(role);
   };
 
   // Load users from Supabase - moved outside useEffect for reusability
@@ -110,19 +72,50 @@ const UserManagementPage = () => {
     
     try {
       setIsLoading(true);
+      setUsers([]); // Clear existing users to prevent stale data
       
       let data, error;
       
-      // For Capacity Admins, only show users from their company
-      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
-        ({ data, error } = await getCompanyUsers(currentCompanyId));
-      } else if (userProfile?.role === 'NSight Admin') {
-        // NSight Admins see all users
-        ({ data, error } = await getAllUsers());
+      // Different access levels based on company_id and role
+      if (isGlobalAdmin(userProfile?.role)) {
+        // NSight Admins see all users globally regardless of company_id
+        ({ data, error } = await getAllUsers({ applyCompanyFilter: false }));
+      } else if (isCompanyAdmin(userProfile?.role) && (currentCompanyId || userProfile?.company_id)) {
+        // Company Admins see their company's users PLUS all NSight Admins
+        const companyId = currentCompanyId || userProfile.company_id;
+        
+        // Get company users
+        const { data: companyUsers, error: companyError } = await getCompanyUsers(companyId);
+        if (companyError) {
+          throw companyError;
+        }
+        
+        // Get all NSight Admins (they should be visible to all company admins)
+        const { data: allUsers, error: allUsersError } = await getAllUsers({ applyCompanyFilter: false });
+        if (allUsersError) {
+          throw allUsersError;
+        }
+        
+        // Filter NSight Admins from all users
+        const nsightAdmins = allUsers.filter(user => isGlobalAdmin(user.role));
+        
+        // Combine company users with NSight Admins (remove duplicates by id)
+        const combinedUsers = [...companyUsers];
+        nsightAdmins.forEach(admin => {
+          if (!combinedUsers.find(user => user.id === admin.id)) {
+            combinedUsers.push(admin);
+          }
+        });
+        
+        data = combinedUsers;
+        error = null;
+      } else if (currentCompanyId || userProfile?.company_id) {
+        // Non-admin users with company_id see only their company's users
+        const companyId = currentCompanyId || userProfile.company_id;
+        ({ data, error } = await getCompanyUsers(companyId));
       } else {
-        // No access or still loading
-        setUsers([]);
-        return;
+        // Users without company_id (should be rare) see all users
+        ({ data, error } = await getAllUsers({ applyCompanyFilter: false }));
       }
       
       if (error) {
@@ -170,14 +163,24 @@ const UserManagementPage = () => {
     }
   };
 
+  // Force reload when component mounts (to fix navigation cache issues)
   useEffect(() => {
-    // Load users when component mounts or when company ID changes
-    // For Capacity Admins, wait until we have the company ID
-    if (userProfile?.role === 'Capacity Admin' && !currentCompanyId) {
+    // Reset loading state on mount
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // Load users when component mounts or when user profile/company ID changes
+    // For Company Admins, wait until we have the company ID
+    if (isCompanyAdmin(userProfile?.role) && !currentCompanyId) {
       return; // Wait for company ID to be loaded
     }
-    loadUsers();
-  }, [currentCompanyId, userProfile?.role]); // Re-load when company ID is available
+    
+    // For any admin, load immediately when userProfile is available
+    if (userProfile && isAnyAdmin(userProfile.role)) {
+      loadUsers();
+    }
+  }, [currentCompanyId, userProfile?.role, userProfile?.id, location.pathname]);
 
   // Show loading while checking auth and permissions
   if (loading) {
@@ -194,7 +197,7 @@ const UserManagementPage = () => {
   }
 
   // Don't render anything if user doesn't have permission (redirect will happen)
-  if (userProfile && userProfile.role !== 'Capacity Admin' && userProfile.role !== 'NSight Admin') {
+  if (userProfile && !isAnyAdmin(userProfile.role)) {
     return null;
   }
 
@@ -268,8 +271,8 @@ const UserManagementPage = () => {
         bValue = (b.name || '').toLowerCase();
         break;
       case 'role':
-        // Custom role order: Employee, Capacity Admin, NSight Admin
-        const roleOrder = { 'Employee': 1, 'Capacity Admin': 2, 'NSight Admin': 3 };
+            // Custom role order: Employee, Admin, Capacity Admin, NSight Admin
+    const roleOrder = { 'Employee': 1, 'Admin': 2, 'Capacity Admin': 3, 'NSight Admin': 4 };
         aValue = roleOrder[a.role] || 4;
         bValue = roleOrder[b.role] || 4;
         break;
@@ -338,8 +341,8 @@ const UserManagementPage = () => {
   };
 
   const handleEditUser = (user) => {
-    // Prevent Capacity Admins from editing NSight Admins
-    if (userProfile?.role === 'Capacity Admin' && user.role === 'NSight Admin') {
+    // Prevent Company Admins from editing NSight Admins
+    if (isCompanyAdmin(userProfile?.role) && isGlobalAdmin(user.role)) {
       alert('You do not have permission to edit NSight Admin users.');
       return;
     }
@@ -350,11 +353,18 @@ const UserManagementPage = () => {
 
   const handleSaveUser = async (updatedUser) => {
     try {
+      // Permission check: Company Admins cannot edit NSight Admins
+      if (isCompanyAdmin(userProfile?.role) && isGlobalAdmin(updatedUser.role)) {
+        alert('You do not have permission to edit NSight Admin users.');
+        return;
+      }
+      
       const updates = {
         email: updatedUser.email, // Include email for upsert
         first_name: updatedUser.name.split(' ')[0] || '',
         last_name: updatedUser.name.split(' ').slice(1).join(' ') || '',
         role: updatedUser.role,
+        company_id: updatedUser.company_id, // Include company_id for proper updates
         department: updatedUser.department || '',
         app_access: updatedUser.appAccess || []
       };
@@ -366,34 +376,7 @@ const UserManagementPage = () => {
         return;
       }
       
-      // If we're a Capacity Admin, also update the company-specific role
-      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
-        try {
-          // Map frontend role to company_users role
-          let companyRole = 'Employee';
-          if (updatedUser.role === 'Capacity Admin') {
-            companyRole = 'Capacity Admin';
-          } else if (updatedUser.role === 'Employee') {
-            companyRole = 'Employee';
-          }
-          
-          const { error: companyUpdateError } = await supabase
-            .from('company_users')
-            .update({
-              role: companyRole,
-              status: 'Active'
-            })
-            .eq('company_id', currentCompanyId)
-            .eq('user_id', updatedUser.id);
-
-          if (companyUpdateError) {
-            // console.error removed
-            alert('User updated but failed to update company role. Please try again.');
-          }
-        } catch (companyError) {
-          // console.error removed
-        }
-      }
+      // Role is already updated in users_unified table above
       
       // Refresh the users list
       await loadUsers();
@@ -423,8 +406,8 @@ const UserManagementPage = () => {
         return;
       }
       
-      // Prevent Capacity Admins from deleting NSight Admins
-      if (userProfile?.role === 'Capacity Admin' && userToDelete.role === 'NSight Admin') {
+      // Prevent Company Admins from deleting NSight Admins
+      if (isCompanyAdmin(userProfile?.role) && isGlobalAdmin(userToDelete.role)) {
         alert('You do not have permission to delete NSight Admin users.');
         return;
       }
@@ -482,7 +465,11 @@ const UserManagementPage = () => {
 
   const handleSaveNewUser = async (newUser) => {
     try {
-      // console.log removed
+      // Permission check: Company Admins cannot create NSight Admin users
+      if (isCompanyAdmin(userProfile?.role) && isGlobalAdmin(newUser.role)) {
+        alert('You do not have permission to create NSight Admin users.');
+        return;
+      }
       
       // Use the adminCreateUser function to create user without affecting current session
       const { data, error } = await adminCreateUser(newUser.email, newUser.password, {
@@ -501,38 +488,7 @@ const UserManagementPage = () => {
 
       // console.log removed
       
-      // If current user is a Capacity Admin, associate the new user with their company
-      if (userProfile?.role === 'Capacity Admin' && currentCompanyId && data?.id) {
-        try {
-          // Map frontend role to company_users role
-          let companyRole = 'Employee';
-          if (newUser.role === 'Capacity Admin') {
-            companyRole = 'Capacity Admin';
-          } else if (newUser.role === 'Employee') {
-            companyRole = 'Employee';
-          }
-          
-          const { error: linkError } = await supabase
-            .from('company_users')
-            .insert({
-              company_id: currentCompanyId,
-              user_id: data.id,
-              role: companyRole,
-              status: 'Active',
-              added_at: new Date().toISOString(),
-              added_by: userProfile.id
-            });
-
-          if (linkError) {
-            // console.error removed
-            alert(`User created but failed to link to company: ${linkError.message}`);
-          } else {
-            // console.log removed
-          }
-        } catch (linkError) {
-          // console.error removed
-        }
-      }
+      // User is already associated with company through users_unified table
       
       alert(`User created successfully! Email: ${newUser.email}\nPassword: ${newUser.password}\n\nPlease share these credentials with the user and ask them to change their password on first login.`);
       
@@ -915,7 +871,7 @@ const UserManagementPage = () => {
               </button>
 
               {/* Only show Add User button for Capacity Admin */}
-              {userProfile?.role === 'Capacity Admin' && (
+                              {isCompanyAdmin(userProfile?.role) && (
                 <button
                   onClick={handleAddUser}
                   className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
@@ -1034,16 +990,16 @@ const UserManagementPage = () => {
                         <button 
                           onClick={() => handleEditUser(employee)}
                           className={`p-2 rounded-md transition-colors ${
-                            userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'
+                            isCompanyAdmin(userProfile?.role) && isGlobalAdmin(employee.role)
                               ? 'text-slate-600 cursor-not-allowed'
                               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600'
                           }`}
                           title={
-                            userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'
+                            isCompanyAdmin(userProfile?.role) && isGlobalAdmin(employee.role)
                               ? 'Cannot edit NSight Admin users'
                               : 'Edit user'
                           }
-                          disabled={userProfile?.role === 'Capacity Admin' && employee.role === 'NSight Admin'}
+                          disabled={isCompanyAdmin(userProfile?.role) && isGlobalAdmin(employee.role)}
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -1073,6 +1029,7 @@ const UserManagementPage = () => {
         isOpen={isAddModalOpen}
         onClose={handleCloseAddModal}
         onSave={handleSaveNewUser}
+        currentUserRole={userProfile?.role}
       />
     </DashboardLayout>
   );

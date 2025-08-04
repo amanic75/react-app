@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FolderOpen, FlaskConical, Users, ChevronDown, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRoleDisplayName } from '../../lib/roleUtils';
 
 const HeaderControls = () => {
   const [isAppsDropdownOpen, setIsAppsDropdownOpen] = useState(false);
@@ -43,17 +44,8 @@ const HeaderControls = () => {
 
   // Get role display
   const getRoleDisplay = () => {
-    if (!userProfile?.role) return 'Employee';
-    
-    switch (userProfile.role) {
-      case 'Capacity Admin':
-        return 'Capacity Admin';
-      case 'NSight Admin':
-        return 'NSight Admin';
-      case 'Employee':
-      default:
-        return 'Employee';
-    }
+    if (!userProfile?.role) return 'Loading...';
+    return getRoleDisplayName(userProfile.role) || userProfile.role;
   };
 
   // Get initials for avatar

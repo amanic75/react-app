@@ -5,6 +5,7 @@ import Card from '../ui/Card';
 import UserManagementTable from './UserManagementTable';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { isGlobalAdmin, isCompanyAdmin } from '../../lib/roleUtils';
 
 const AdminDashboard = ({ userData }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +13,7 @@ const AdminDashboard = ({ userData }) => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [users, setUsers] = useState([]);
   const [currentCompanyId, setCurrentCompanyId] = useState(null);
+  const [companyApps, setCompanyApps] = useState([]);
   const cardRefs = useRef({});
   const navigate = useNavigate();
   const { getAllUsers, getCompanyUsers, userProfile } = useAuth();
@@ -40,35 +42,57 @@ const AdminDashboard = ({ userData }) => {
     }
   };
 
-  // Get company ID for current user if they're a Capacity Admin
+  // Get company ID for current user if they're a Company Admin
   useEffect(() => {
-    const getCompanyId = async () => {
-      if (!userProfile || userProfile.role !== 'Capacity Admin') {
-        setCurrentCompanyId(null);
+    // Get company ID from userProfile
+    if (!userProfile || !isCompanyAdmin(userProfile.role)) {
+      setCurrentCompanyId(null);
+      return;
+    }
+
+    if (userProfile?.company_id) {
+      setCurrentCompanyId(userProfile.company_id);
+    }
+  }, [userProfile]);
+
+  // Load company apps from company_apps table
+  useEffect(() => {
+    const loadCompanyApps = async () => {
+      if (!currentCompanyId) {
+        setCompanyApps([]);
         return;
       }
 
       try {
-        // Get the company associated with this user
         const { data, error } = await supabase
-          .from('company_users')
-          .select('company_id')
-          .eq('user_id', userProfile.id)
-          .single();
+          .from('company_apps')
+          .select('app_name, enabled')
+          .eq('company_id', currentCompanyId)
+          .eq('enabled', true);
 
         if (error) {
-          // console.error removed
+          console.error('Error loading company apps:', error);
+          setCompanyApps([]);
           return;
         }
 
-        setCurrentCompanyId(data.company_id);
+        // Map app names to our app keys
+        const appNameToKey = {
+          'Formulas Management': 'formulas',
+          'Raw Materials': 'raw-materials',
+          'Suppliers': 'suppliers'
+        };
+
+        const appKeys = data.map(app => appNameToKey[app.app_name]).filter(Boolean);
+        setCompanyApps(appKeys);
       } catch (error) {
-        // console.error removed
+        console.error('Error loading company apps:', error);
+        setCompanyApps([]);
       }
     };
 
-    getCompanyId();
-  }, [userProfile]);
+    loadCompanyApps();
+  }, [currentCompanyId]);
 
   // Load users for app access display
   useEffect(() => {
@@ -76,12 +100,37 @@ const AdminDashboard = ({ userData }) => {
       try {
         let profiles, error;
         
-        // For Capacity Admins, only show users from their company
-        if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
-          ({ data: profiles, error } = await getCompanyUsers(currentCompanyId));
-        } else if (userProfile?.role === 'NSight Admin') {
-          // NSight Admins see all users
-          ({ data: profiles, error } = await getAllUsers());
+        // Different access levels based on company_id and role
+        if (isGlobalAdmin(userProfile?.role)) {
+          // NSight Admins see all users globally
+          ({ data: profiles, error } = await getAllUsers({ applyCompanyFilter: false }));
+        } else if (isCompanyAdmin(userProfile?.role) && currentCompanyId) {
+          // Company Admins see their company's users PLUS all NSight Admins
+          // Get company users
+          const { data: companyUsers, error: companyError } = await getCompanyUsers(currentCompanyId);
+          if (companyError) {
+            throw companyError;
+          }
+          
+          // Get all NSight Admins (they should be visible to all company admins)
+          const { data: allUsers, error: allUsersError } = await getAllUsers({ applyCompanyFilter: false });
+          if (allUsersError) {
+            throw allUsersError;
+          }
+          
+          // Filter NSight Admins from all users
+          const nsightAdmins = allUsers.filter(user => isGlobalAdmin(user.role));
+          
+          // Combine company users with NSight Admins (remove duplicates by id)
+          const combinedUsers = [...companyUsers];
+          nsightAdmins.forEach(admin => {
+            if (!combinedUsers.find(user => user.id === admin.id)) {
+              combinedUsers.push(admin);
+            }
+          });
+          
+          profiles = combinedUsers;
+          error = null;
         } else {
           // No access or still loading
           setUsers([]);
@@ -166,10 +215,21 @@ const AdminDashboard = ({ userData }) => {
     }
   ];
 
-  // Filter applications based on user's access
-  const applications = userData && userData.app_access && userData.app_access.length > 0
-    ? allApplications.filter(app => userData.app_access.includes(app.appKey))
-    : allApplications; // Show all apps for admins if no specific access is set
+  // Filter applications based on user's access and company apps
+  const applications = (() => {
+    // For company admins, PRIORITIZE company_apps table over individual app_access
+    if (isCompanyAdmin(userProfile?.role) && companyApps.length > 0) {
+      return allApplications.filter(app => companyApps.includes(app.appKey));
+    }
+    
+    // If user has specific app_access set, use that (for employees or when company apps not loaded)
+    if (userData && userData.app_access && userData.app_access.length > 0) {
+      return allApplications.filter(app => userData.app_access.includes(app.appKey));
+    }
+    
+    // For global admins or fallback, show all apps
+    return allApplications;
+  })();
 
   return (
     <div className="space-y-8">

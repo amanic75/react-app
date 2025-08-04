@@ -12,6 +12,7 @@ import {
   Atom
 } from 'lucide-react';
 import Logo from '../ui/Logo';
+import { isCompanyAdmin, isGlobalAdmin } from '../../lib/roleUtils';
 
 const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const { signOut, userProfile } = useAuth();
@@ -51,14 +52,14 @@ const Sidebar = ({ isCollapsed, onToggleCollapse }) => {
   const getLinks = () => {
     if (!userProfile) return employeeLinks;
     
-    switch (userProfile.role) {
-      case 'Capacity Admin':
-        return adminLinks;
-      case 'NSight Admin':
-        return nsightAdminLinks;
-      case 'Employee':
-      default:
-        return employeeLinks;
+    const role = userProfile.role;
+    
+    if (isGlobalAdmin(role)) {
+      return nsightAdminLinks;
+    } else if (isCompanyAdmin(role)) {
+      return adminLinks;
+    } else {
+      return employeeLinks;
     }
   };
 

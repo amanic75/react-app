@@ -248,15 +248,17 @@ async function updateUser(req, res) {
   try {
     // Use upsert to create the profile if it doesn't exist, or update if it does
     const { data, error } = await supabaseAdmin
-      .from('user_profiles')
+      .from('users_unified')
       .upsert({
         id: userId,
         email: updates.email,
         first_name: updates.first_name,
         last_name: updates.last_name,
         role: updates.role,
+        company_id: updates.company_id,
         department: updates.department,
         app_access: updates.app_access,
+        status: 'Active',
         updated_at: new Date().toISOString(),
         created_at: new Date().toISOString() // This will be ignored on update
       })

@@ -5,6 +5,7 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { isGlobalAdmin, isCompanyAdmin } from '../../lib/roleUtils';
 // Removed: import { getActivity, getActivitySummary, formatTimestamp, getActivityColor, ACTIVITY_TYPES } from '../../lib/loginActivity';
 
 const UserManagementTable = () => {
@@ -52,33 +53,14 @@ const UserManagementTable = () => {
     }
   };
 
-  // Get company ID for current user if they're a Capacity Admin
+  // Get company ID for current user if they have one
   useEffect(() => {
-    const getCompanyId = async () => {
-      if (!userProfile || userProfile.role !== 'Capacity Admin') {
-        setCurrentCompanyId(null);
-        return;
-      }
-
-      try {
-        // Get the company associated with this user
-        const { data, error } = await supabase.from('company_users')
-          .select('company_id')
-          .eq('user_id', userProfile.id)
-          .single();
-
-        if (error) {
-          // console.error removed
-          return;
-        }
-
-        setCurrentCompanyId(data.company_id);
-      } catch (error) {
-        // console.error removed
-      }
-    };
-
-    getCompanyId();
+    // Set company ID from userProfile if they have one
+    if (userProfile?.company_id) {
+      setCurrentCompanyId(userProfile.company_id);
+    } else {
+      setCurrentCompanyId(null);
+    }
   }, [userProfile]);
 
   // Load all data
@@ -87,16 +69,46 @@ const UserManagementTable = () => {
       // Load users from Supabase
       let profiles, error;
       
-      // For Capacity Admins, only show users from their company
-      if (userProfile?.role === 'Capacity Admin' && currentCompanyId) {
-        ({ data: profiles, error } = await getCompanyUsers(currentCompanyId));
-      } else if (userProfile?.role === 'NSight Admin') {
-        // NSight Admins see all users
-        ({ data: profiles, error } = await getAllUsers());
+      // Filter users based on company_id and role
+      if (isGlobalAdmin(userProfile?.role)) {
+        // NSight Admins see all users globally regardless of company_id
+        ({ data: profiles, error } = await getAllUsers({ applyCompanyFilter: false }));
+      } else if (isCompanyAdmin(userProfile?.role) && (currentCompanyId || userProfile?.company_id)) {
+        // Company Admins see their company's users PLUS all NSight Admins
+        const companyId = currentCompanyId || userProfile.company_id;
+        
+        // Get company users
+        const { data: companyUsers, error: companyError } = await getCompanyUsers(companyId);
+        if (companyError) {
+          throw companyError;
+        }
+        
+        // Get all NSight Admins (they should be visible to all company admins)
+        const { data: allUsers, error: allUsersError } = await getAllUsers({ applyCompanyFilter: false });
+        if (allUsersError) {
+          throw allUsersError;
+        }
+        
+        // Filter NSight Admins from all users
+        const nsightAdmins = allUsers.filter(user => isGlobalAdmin(user.role));
+        
+        // Combine company users with NSight Admins (remove duplicates by id)
+        const combinedUsers = [...companyUsers];
+        nsightAdmins.forEach(admin => {
+          if (!combinedUsers.find(user => user.id === admin.id)) {
+            combinedUsers.push(admin);
+          }
+        });
+        
+        profiles = combinedUsers;
+        error = null;
+      } else if (currentCompanyId || userProfile?.company_id) {
+        // Non-admin users with company_id see only their company's users
+        const companyId = currentCompanyId || userProfile.company_id;
+        ({ data: profiles, error } = await getCompanyUsers(companyId));
       } else {
-        // No access or still loading
-        setUsers([]);
-        return;
+        // Users without company_id (should be rare) see all users
+        ({ data: profiles, error } = await getAllUsers({ applyCompanyFilter: false }));
       }
       
       if (error) {

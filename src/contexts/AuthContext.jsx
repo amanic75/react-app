@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-// Removed: import { recordActivity, ACTIVITY_TYPES } from '../lib/loginActivity';
+import { 
+  isCompanyAdmin, 
+  isGlobalAdmin, 
+  isAnyAdmin, 
+  getDefaultAppAccess, 
+  getCompanyAdminRoleFromDomain,
+  GLOBAL_ADMIN_ROLE,
+  EMPLOYEE_ROLE 
+} from '../lib/roleUtils';
 
 const AuthContext = createContext();
 
@@ -26,247 +34,219 @@ export const AuthProvider = ({ children }) => {
     const emailName = email.split('@')[0];
     const domain = email.split('@')[1];
     
-    // Always default to Employee role - ignore session metadata role
-    // This prevents the brief Admin Dashboard flash for @capacity.com users
-    const role = 'Employee';
+    // Determine role based on email domain or user metadata
+    let role = EMPLOYEE_ROLE; // Default role
     
+    // Check user metadata first (set during admin creation)
+    if (authUser.user_metadata?.role) {
+      role = authUser.user_metadata.role;
+    }
+    // Check if user has admin in their name or email domain suggests admin role
+    else if (emailName.toLowerCase().includes('admin') || domain.includes('admin')) {
+      // Use dynamic role detection that can handle any company
+      const detectedRole = getCompanyAdminRoleFromDomain(domain);
+      if (detectedRole && detectedRole !== GLOBAL_ADMIN_ROLE) {
+        role = detectedRole;
+      } else if (detectedRole === GLOBAL_ADMIN_ROLE) {
+        role = GLOBAL_ADMIN_ROLE;
+      } else {
+        // Fallback for admin emails without clear company mapping
+        role = getCompanyAdminRoleFromDomain(domain) || EMPLOYEE_ROLE;
+      }
+    }
+    // Check for known admin domains (even without 'admin' in email name)
+    else {
+      const detectedRole = getCompanyAdminRoleFromDomain(domain);
+      if (detectedRole === GLOBAL_ADMIN_ROLE) {
+        role = GLOBAL_ADMIN_ROLE;
+      }
+      // Don't auto-assign company admin roles unless email indicates admin
+    }
+    
+    // Set app access based on role using utility function
+    const appAccess = getDefaultAppAccess(role);
+
     return {
       id: authUser.id,
       email: email,
       first_name: authUser.user_metadata?.first_name || emailName,
       last_name: authUser.user_metadata?.last_name || '',
-      role: role, // Always use Employee role, never fall back to session metadata
-      department: authUser.user_metadata?.department || '',
-      app_access: authUser.user_metadata?.app_access || [],
+      role: role,
+      company_id: null,
+      app_access: appAccess,
       created_at: authUser.created_at,
       updated_at: authUser.updated_at || new Date().toISOString()
     };
   };
 
-  // Get user profile from database with fallback
+  // Get user profile from database using new unified system
   const getUserProfile = async (userId, fallbackUser = null) => {
     try {
-
       
       // Check if this user was recently deleted (within last 10 minutes)
       const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
       if (recentlyDeleted) {
         const deleteTime = parseInt(recentlyDeleted);
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
-        // console.log removed
         if (deleteTime > tenMinutesAgo) {
-          // console.log removed
+          console.log('❌ User was recently deleted');
           return null;
         } else {
-          // Clean up expired deletion marker
-          // console.log removed
           localStorage.removeItem(`deleted_user_${userId}`);
         }
       }
       
-      // Add timeout to prevent hanging - increased to 3 seconds to allow database to respond
+      // Try direct query with timeout
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       );
       
-      const fetchPromise = supabase
-        .from('user_profiles')
+      const queryPromise = supabase
+        .from('users_unified')
         .select('*')
         .eq('id', userId)
+        .eq('status', 'Active')
         .single();
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-      if (error) {
-        // console.error removed
+      if (!error && profile) {
+
         
-        // If no profile exists, try to create one (unless recently deleted)
-        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
-          // console.log removed
-          
-          // Double-check deletion marker before creating
-          const stillDeleted = localStorage.getItem(`deleted_user_${userId}`);
-          if (stillDeleted) {
-            // console.log removed
-            return null;
-          }
-          
-          // console.log removed
-          try {
-            return await createUserProfile(userId);
-          } catch (createError) {
-            // console.error removed
-            // console.log removed
-            
-            // Use fallbackUser if provided, otherwise try to get user
-            if (fallbackUser) {
-              return createProfileFromAuth(fallbackUser);
+        return {
+          id: profile.id,
+          email: profile.email,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          role: profile.role,
+          company_id: profile.company_id,
+          app_access: (() => {
+            try {
+              let parsedAccess = [];
+              if (Array.isArray(profile.app_access)) {
+                parsedAccess = profile.app_access;
+              } else if (typeof profile.app_access === 'string') {
+                parsedAccess = JSON.parse(profile.app_access);
+              }
+              
+              // If empty or null, use role-based defaults
+              if (!parsedAccess || parsedAccess.length === 0) {
+                return getDefaultAppAccess(profile.role);
+              }
+              
+              return parsedAccess;
+            } catch (e) {
+              console.warn('Failed to parse app_access, using role-based default:', e);
+              return getDefaultAppAccess(profile.role);
             }
-            
-            const { data: { user } } = await supabase.auth.getUser();
-            return createProfileFromAuth(user);
-          }
-        }
-        
-        // For other errors, fall back to auth-based profile
-        // console.log removed
-        
-        // Use fallbackUser if provided, otherwise try to get user
-        if (fallbackUser) {
-          return createProfileFromAuth(fallbackUser);
-        }
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        return createProfileFromAuth(user);
+          })(),
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        };
       }
-      
 
-      return data;
+      // If query failed, throw error to trigger fallback
+      throw new Error(error?.message || 'Profile not found');
     } catch (error) {
       // Check if it's a timeout - this is expected sometimes
       if (error.message === 'Profile fetch timeout') {
-        // console.warn removed
+        console.warn('⏰ Profile fetch timed out, using fallback');
       } else {
-        // console.error removed
+        console.error('❌ Error in getUserProfile:', error);
       }
       
       // Always fall back to auth-based profile
-      // console.log removed
       try {
-        // Use fallbackUser if provided, otherwise try to get user
         if (fallbackUser) {
+          console.log('🔄 Using fallback user data due to error');
           return createProfileFromAuth(fallbackUser);
         }
         
         const { data: { user } } = await supabase.auth.getUser();
         return createProfileFromAuth(user);
       } catch (authError) {
-        // console.error removed
+        console.error('❌ Error getting auth user:', authError);
         return null;
       }
-    }
-  };
-
-  // Auto-link user to company if they are a company admin
-  const autoLinkToCompany = async (userProfile) => {
-    try {
-      // console.log removed
-      
-      // Find any company where this user is the admin
-      const response = await fetch('/api/admin/companies');
-      if (!response.ok) {
-        // console.log removed
-        return;
-      }
-      
-      const { companies } = await response.json();
-      const matchingCompany = companies.find(company => 
-        company.adminUserEmail === userProfile.email
-      );
-      
-      if (!matchingCompany) {
-        // console.log removed
-        return;
-      }
-      
-      // console.log removed
-      
-      // Check if link already exists
-      const { data: existingLink, error: linkError } = await supabase
-        .from('company_users')
-        .select('id')
-        .eq('company_id', matchingCompany.id)
-        .eq('user_id', userProfile.id)
-        .single();
-      
-      if (existingLink) {
-        // console.log removed
-        return;
-      }
-      
-      // Create the missing link
-      const { error: insertError } = await supabase
-        .from('company_users')
-        .insert({
-          company_id: matchingCompany.id,
-          user_id: userProfile.id,
-          role: 'Admin',
-          status: 'Active',
-          added_at: new Date().toISOString()
-        });
-      
-      if (insertError) {
-        // console.error removed
-      } else {
-        // console.log removed
-      }
-      
-    } catch (error) {
-      // console.error removed
-      // Don't throw - this is a bonus feature, not critical
     }
   };
 
   // Create user profile in database with fallback
   const createUserProfile = async (userId) => {
     try {
-      // console.log removed
+      console.log('📝 Creating user profile for:', userId);
       
-      // Check one more time if user was recently deleted (within last 10 minutes)
+      // Check one more time if user was recently deleted
       const recentlyDeleted = localStorage.getItem(`deleted_user_${userId}`);
       if (recentlyDeleted) {
         const deleteTime = parseInt(recentlyDeleted);
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
         if (deleteTime > tenMinutesAgo) {
-          // console.log removed
+          console.log('❌ User was recently deleted, not creating profile');
           throw new Error('User was recently deleted');
         } else {
-          // Clean up expired deletion marker
-          // console.log removed
           localStorage.removeItem(`deleted_user_${userId}`);
         }
       }
       
-      // Add timeout for profile creation - increased to 10 seconds
+      // Add timeout for profile creation
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile creation timeout')), 10000)
       );
       
       // Get user info from auth
+      console.log('🔍 Getting user info from auth...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
+        console.error('❌ Could not get user info from auth:', userError);
         throw new Error('Could not get user info');
       }
 
-      // console.log removed
+      console.log('✅ Got user info from auth:', user.email);
 
       // Extract name from email if no metadata exists
       const email = user.email;
       const emailName = email.split('@')[0];
+      const domain = email.split('@')[1];
       const firstName = user.user_metadata?.first_name || emailName;
       const lastName = user.user_metadata?.last_name || '';
       
-      // Default to Employee role - let database determine actual role
-      const role = 'Employee';
+      // Determine role based on email domain or user metadata
+      let role = 'Employee'; // Default role
       
-      // Prioritize role from user_metadata (set during admin creation) over domain-based detection
-      const finalRole = user.user_metadata?.role || role;
+      // Check user metadata first (set during admin creation)
+      if (user.user_metadata?.role) {
+        role = user.user_metadata.role;
+      }
+      // Check email domain for admin users
+      else if (domain === 'capacity.com') {
+        role = 'Capacity Admin';
+      }
+      else if (domain === 'nsight.com') {
+        role = 'NSight Admin';
+      }
+      // Check if user has admin in their name
+      else if (emailName.toLowerCase().includes('admin')) {
+        role = 'Admin';
+      }
       
-      // console.log removed
-      // console.log removed
-      // console.log removed
-      // console.log removed
+      console.log('📝 Creating profile with data:', { email, firstName, lastName, role });
+      
+      // Insert into users_unified table (the correct table)
+      console.log('📝 Inserting into users_unified table...');
       
       const insertPromise = supabase
-        .from('user_profiles')
+        .from('users_unified')
         .insert([
           {
             id: userId,
             email: email,
             first_name: firstName,
             last_name: lastName,
-            role: finalRole,
+            role: role,
+            company_id: user.user_metadata?.company_id || null,
             department: user.user_metadata?.department || '',
+            status: 'Active',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
@@ -277,19 +257,15 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
       if (error) {
-        // console.error removed
+        console.error('❌ Error creating user profile:', error);
         throw error;
       }
 
-      // console.log removed
-      
-      // CRITICAL: Auto-link to company if this user is a company admin
-      await autoLinkToCompany(data);
-      
+      console.log('✅ Successfully created user profile:', data);
       return data;
     } catch (error) {
-      // console.error removed
-      throw error; // Let caller handle fallback
+      console.error('❌ Error in createUserProfile:', error);
+      throw error;
     }
   };
 
@@ -300,13 +276,12 @@ export const AuthProvider = ({ children }) => {
     // Get initial session
     const getInitialSession = async () => {
       try {
-        // console.log removed
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (error) {
-          // console.error removed
+          console.error('❌ Error getting session:', error);
           if (mounted) {
             setLoading(false);
           }
@@ -321,7 +296,7 @@ export const AuthProvider = ({ children }) => {
             const deleteTime = parseInt(recentlyDeleted);
             const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
             if (deleteTime > tenMinutesAgo) {
-              // console.log removed
+              console.log('❌ User was recently deleted, clearing session');
               if (mounted) {
                 setUser(null);
                 setUserProfile(null);
@@ -329,7 +304,6 @@ export const AuthProvider = ({ children }) => {
               }
               return;
             } else {
-              // console.log removed
               localStorage.removeItem(`deleted_user_${session.user.id}`);
             }
           }
@@ -340,33 +314,33 @@ export const AuthProvider = ({ children }) => {
           try {
             const profile = await getUserProfile(session.user.id, session.user);
             if (mounted) {
-
               setUserProfile(profile);
             }
           } catch (profileError) {
-            // console.error removed
+            console.error('❌ Error loading profile, using fallback:', profileError);
             // Final fallback to auth data using session user
             if (mounted) {
               const fallbackProfile = createProfileFromAuth(session.user);
+              console.log('🔄 Using fallback profile:', fallbackProfile);
               setUserProfile(fallbackProfile);
             }
           }
         } else {
-          // console.log removed
+          console.log('ℹ️ No session found');
           if (mounted) {
             setUser(null);
             setUserProfile(null);
           }
         }
       } catch (error) {
-        // console.error removed
+        console.error('❌ Error in getInitialSession:', error);
         if (mounted) {
           setUser(null);
           setUserProfile(null);
         }
       } finally {
         if (mounted) {
-  
+          console.log('✅ Initial session loading complete');
           setLoading(false);
         }
       }
@@ -381,22 +355,18 @@ export const AuthProvider = ({ children }) => {
 
         try {
           if (session?.user) {
-            
             // Check if this user was recently deleted
             const recentlyDeleted = localStorage.getItem(`deleted_user_${session.user.id}`);
             if (recentlyDeleted) {
               const deleteTime = parseInt(recentlyDeleted);
               const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
               if (deleteTime > tenMinutesAgo) {
-                // console.log removed
-                // Don't set user or profile for recently deleted users
                 if (mounted) {
                   setUser(null);
                   setUserProfile(null);
                 }
                 return;
               } else {
-                // console.log removed
                 localStorage.removeItem(`deleted_user_${session.user.id}`);
               }
             }
@@ -404,10 +374,7 @@ export const AuthProvider = ({ children }) => {
             setUser(session.user);
             
             // Skip profile refetch for USER_UPDATED events if we already have a profile
-            // This prevents unnecessary database calls after password changes
             if (event === 'USER_UPDATED' && userProfile && userProfile.id === session.user.id) {
-              // console.log removed
-              // Keep the existing profile, just update user object
               if (mounted) {
                 setLoading(false);
               }
@@ -430,7 +397,7 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(null);
           }
         } catch (error) {
-          // console.error removed
+          console.error('Error in auth state change:', error);
           if (mounted) {
             setUser(null);
             setUserProfile(null);
@@ -443,13 +410,12 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    // Safety timeout - reduced since we have faster individual timeouts
+    // Safety timeout
     const timeout = setTimeout(() => {
       if (mounted) {
-        // console.log removed
         setLoading(false);
       }
-    }, 15000); // Increased from 5000ms to 15000ms to allow profile fetch to complete
+    }, 15000);
 
     return () => {
       mounted = false;
@@ -469,7 +435,6 @@ export const AuthProvider = ({ children }) => {
           data: {
             first_name: userData.firstName || '',
             last_name: userData.lastName || '',
-            department: userData.department || '',
             role: userData.role || 'Employee'
           }
         }
@@ -481,19 +446,17 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in signUp:', error);
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
     }
   };
 
-  // Admin-only user creation using service role key (doesn't affect current session)
+  // Admin-only user creation using service role key
   const adminCreateUser = async (email, password, userData = {}) => {
     try {
       setIsSigningIn(true);
-      // console.log removed
-      // console.log removed
       
       const requestBody = {
         email,
@@ -501,13 +464,10 @@ export const AuthProvider = ({ children }) => {
         userData: {
           first_name: userData.firstName || '',
           last_name: userData.lastName || '',
-          department: userData.department || '',
           role: userData.role || 'Employee',
-          app_access: userData.appAccess || []
+          company_id: userData.companyId || null
         }
       };
-      
-      // console.log removed
       
       // Use the consolidated API endpoint which uses service role key
       const response = await fetch('/api/admin/users?action=create', {
@@ -519,17 +479,14 @@ export const AuthProvider = ({ children }) => {
       });
 
       const result = await response.json();
-      
-      // console.log removed
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create user');
       }
 
-      // console.log removed
       return { data: result.user, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in adminCreateUser:', error);
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
@@ -549,32 +506,32 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
 
-
-
       // Check if this account was recently deleted
       if (data.user) {
-        // console.log removed
         const recentlyDeleted = localStorage.getItem(`deleted_user_${data.user.id}`);
         if (recentlyDeleted) {
           const deleteTime = parseInt(recentlyDeleted);
           const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
           if (deleteTime > tenMinutesAgo) {
-            // console.log removed
-            
             // Sign them out immediately
             await supabase.auth.signOut();
             
             // Return a clear error message
             throw new Error('This account has been deleted and is no longer available. Please contact your administrator if you believe this is an error.');
           } else {
-            // Clean up expired deletion marker
-            // console.log removed
             localStorage.removeItem(`deleted_user_${data.user.id}`);
           }
         }
 
-        // Record successful login activity (both localStorage and database)
-        const profile = await getUserProfile(data.user.id, data.user);
+        // Record successful login activity - with emergency fallback
+        let profile;
+        try {
+          profile = await getUserProfile(data.user.id, data.user);
+        } catch (profileError) {
+          console.warn('Profile fetch failed during login, using auth fallback:', profileError);
+          profile = createProfileFromAuth(data.user);
+        }
+        
         const userData = {
           name: profile?.first_name && profile?.last_name 
             ? `${profile.first_name} ${profile.last_name}` 
@@ -582,9 +539,6 @@ export const AuthProvider = ({ children }) => {
           role: profile?.role || 'Employee'
         };
 
-        // Store in localStorage for immediate UI updates
-        // recordActivity(ACTIVITY_TYPES.LOGIN, data.user.email, userData);
-        
         // Store in database for persistence and cross-session tracking
         try {
           const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
@@ -601,17 +555,14 @@ export const AuthProvider = ({ children }) => {
               eventType: 'login'
             })
           });
-          // console.log removed
         } catch (dbError) {
-          // console.warn removed
+          console.warn('Failed to log login event:', dbError);
         }
-        
-        // console.log removed
       }
 
       return { data, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in signIn:', error);
       return { data: null, error };
     } finally {
       setIsSigningIn(false);
@@ -621,7 +572,7 @@ export const AuthProvider = ({ children }) => {
   // Sign out
   const signOut = async () => {
     try {
-      // Record logout activity before signing out (both localStorage and database)
+      // Record logout activity before signing out
       if (user && userProfile) {
         const userData = {
           name: userProfile.first_name && userProfile.last_name 
@@ -630,9 +581,6 @@ export const AuthProvider = ({ children }) => {
           role: userProfile.role || 'Employee'
         };
 
-        // Store in localStorage for immediate UI updates
-        // recordActivity(ACTIVITY_TYPES.LOGOUT, user.email, userData);
-        
         // Store in database for persistence and cross-session tracking
         try {
           const apiUrl = import.meta.env.DEV || window.location.hostname === 'localhost'
@@ -649,12 +597,9 @@ export const AuthProvider = ({ children }) => {
               eventType: 'logout'
             })
           });
-          // console.log removed
         } catch (dbError) {
-          // console.warn removed
+          console.warn('Failed to log logout event:', dbError);
         }
-        
-        // console.log removed
       }
 
       const { error } = await supabase.auth.signOut();
@@ -662,18 +607,18 @@ export const AuthProvider = ({ children }) => {
         // If session is already missing, treat as successful logout
         if (error.message?.includes('Auth session missing') || 
             error.name === 'AuthSessionMissingError') {
-          // console.log removed
+          console.log('Session already missing, treating as successful logout');
         } else {
           throw error;
         }
       }
     } catch (error) {
-      // console.error removed
+      console.error('Error in signOut:', error);
       
       // If it's a session missing error, don't throw - just clear state
       if (error.message?.includes('Auth session missing') || 
           error.name === 'AuthSessionMissingError') {
-        // console.log removed
+        console.log('Session missing during logout, clearing state');
       } else {
         // For other errors, still clear state but re-throw
         setUser(null);
@@ -682,12 +627,10 @@ export const AuthProvider = ({ children }) => {
       }
     } finally {
       // Always clear local state regardless of Supabase response
-      // console.log removed
       setUser(null);
       setUserProfile(null);
       
       // Always redirect to auth page after logout
-      // This ensures users are properly redirected regardless of current page
       if (typeof window !== 'undefined') {
         window.location.href = '/auth';
       }
@@ -699,20 +642,25 @@ export const AuthProvider = ({ children }) => {
     try {
       if (!user) throw new Error('No user logged in');
 
-      // Try database update first
+      // Try database update first using new unified table
       try {
-        const { data, error } = await supabase
-          .from('user_profiles')
+        let { data, error } = await supabase
+          .from('users_unified')
           .update({
             first_name: updates.first_name,
             last_name: updates.last_name,
             role: updates.role,
-            department: updates.department,
             updated_at: new Date().toISOString()
           })
           .eq('id', user.id)
           .select()
           .single();
+
+        // users_unified table should exist, but if not, show error
+        if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+          console.error('users_unified table not available - database setup incomplete');
+          throw new Error('Database setup incomplete - users_unified table missing');
+        }
 
         if (error) {
           throw error;
@@ -721,15 +669,14 @@ export const AuthProvider = ({ children }) => {
         setUserProfile(data);
         return { data, error: null };
       } catch (dbError) {
-        // console.error removed
+        console.error('Database update failed, falling back to auth metadata:', dbError);
         
         // Fallback to auth metadata update
         const { data, error } = await supabase.auth.updateUser({
           data: {
             first_name: updates.first_name,
             last_name: updates.last_name,
-            role: updates.role,
-            department: updates.department
+            role: updates.role
           }
         });
 
@@ -742,7 +689,7 @@ export const AuthProvider = ({ children }) => {
         return { data: updatedProfile, error: null };
       }
     } catch (error) {
-      // console.error removed
+      console.error('Error in updateProfile:', error);
       return { data: null, error };
     }
   };
@@ -760,7 +707,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in changePassword:', error);
       return { data: null, error };
     }
   };
@@ -778,36 +725,62 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in resetPassword:', error);
       return { data: null, error };
     }
   };
 
-  // Get all users (with fallback) - Excludes soft-deleted users
-  const getAllUsers = async () => {
+  // Get all users (with optional filtering to prevent data flashing)
+  const getAllUsers = async (options = {}) => {
     try {
-      // console.log removed
-      
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Get users timeout')), 10000)
       );
       
-      const fetchPromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let fetchPromise;
+      
+      // Check if we should apply company filtering (to prevent data flashing)
+      const applyCompanyFilter = options.applyCompanyFilter !== false; // Default to true
+      
+      // NSight Admins always see ALL users
+      if (isGlobalAdmin(userProfile?.role)) {
+        fetchPromise = supabase
+          .from('users_unified')
+          .select('*')
+          .order('created_at', { ascending: false });
+      } else if (isAnyAdmin(userProfile?.role) && !applyCompanyFilter) {
+        // Admin users see all users when explicitly requested (User Management)
+        fetchPromise = supabase
+          .from('users_unified')
+          .select('*')
+          .order('created_at', { ascending: false });
+      } else if (userProfile?.company_id) {
+        // Other cases: filter by company to prevent flashing
+        fetchPromise = supabase
+          .from('users_unified')
+          .select('*')
+          .eq('company_id', userProfile.company_id)
+          .order('created_at', { ascending: false });
+      } else {
+        // No company_id = no access
+        return { data: [], error: null };
+      }
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      let { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+      // users_unified table should exist, but if not, return empty array
+      if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+        console.error('users_unified table not available - database setup incomplete');
+        return { data: [], error: new Error('Database setup incomplete') };
+      }
 
       if (error) {
         throw error;
       }
 
-      // console.log removed
       return { data, error: null };
     } catch (error) {
-      // console.error removed
-      // console.log removed
+      console.error('Error in getAllUsers:', error);
       return { 
         data: userProfile ? [userProfile] : [], 
         error: null 
@@ -818,67 +791,40 @@ export const AuthProvider = ({ children }) => {
   // Get users filtered by company (for multi-tenant isolation)
   const getCompanyUsers = async (companyId) => {
     try {
-
-      
       if (!companyId) {
-        // console.warn removed
+        console.warn('No company ID provided to getCompanyUsers');
         return { data: [], error: null };
       }
+      
+
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Get company users timeout')), 10000)
       );
       
-      // First get the company_users associations
-      const fetchPromise = supabase
-        .from('company_users')
-        .select(`
-          user_id,
-          role,
-          status,
-          added_at
-        `)
+      // Try users_unified first with company filtering
+      let fetchPromise = supabase
+        .from('users_unified')
+        .select('*')
         .eq('company_id', companyId)
-        .order('added_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      const { data: companyUsersData, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      let { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+      // users_unified table should exist, but if not, return empty array
+      if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+        console.error('users_unified table not available - database setup incomplete');
+        return { data: [], error: new Error('Database setup incomplete') };
+      }
 
       if (error) {
         throw error;
       }
 
-      if (!companyUsersData || companyUsersData.length === 0) {
-        // console.log removed
-        return { data: [], error: null };
-      }
 
-      // Get the user IDs
-      const userIds = companyUsersData.map(cu => cu.user_id);
-      
-      // Now fetch the user profiles for these user IDs
-      const { data: userProfiles, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .in('id', userIds);
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      // Combine the data
-      const users = userProfiles.map(profile => {
-        const companyUser = companyUsersData.find(cu => cu.user_id === profile.id);
-        return {
-          ...profile,
-          company_role: companyUser?.role || 'Employee',  // Role within this company
-          company_status: companyUser?.status || 'Active'  // Status within this company
-        };
-      });
-
-
-      return { data: users, error: null };
+      return { data: data || [], error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in getCompanyUsers:', error);
       return { 
         data: [], 
         error 
@@ -886,11 +832,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Get all companies (for dynamic role creation)
+  const getAllCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, company_name, website')
+        .eq('status', 'Active')
+        .order('company_name', { ascending: true });
+      
+      return { data: data || [], error };
+    } catch (error) {
+      console.error('Error getting companies:', error);
+      return { data: [], error };
+    }
+  };
+
   // Update user profile (for admins)
   const updateUserProfile = async (userId, updates) => {
     try {
-      // console.log removed
-      
       // Use the backend API that has proper admin permissions
       const response = await fetch('/api/admin/users?action=update', {
         method: 'POST',
@@ -909,61 +869,54 @@ export const AuthProvider = ({ children }) => {
       }
 
       const result = await response.json();
-      // console.log removed
       return { data: result.user, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in updateUserProfile:', error);
       return { data: null, error };
     }
   };
 
-  // Delete user profile (for admins) - Simple delete from database
+  // Delete user profile (for admins)
   const deleteUserProfile = async (userId) => {
     try {
-      // console.log removed
-      
       // CRITICAL: Set deletion marker BEFORE deleting from database
-      // This prevents race conditions where auth listeners recreate the user
       localStorage.setItem(`deleted_user_${userId}`, Date.now().toString());
-      // console.log removed
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Delete timeout')), 10000)
       );
       
-      // Delete from user_profiles table
-      // console.log removed
-      const deletePromise = supabase
-        .from('user_profiles')
+      // Try to delete from users_unified table first
+      let deletePromise = supabase
+        .from('users_unified')
         .delete()
         .eq('id', userId);
 
-      const { error } = await Promise.race([deletePromise, timeoutPromise]);
+      let { error } = await Promise.race([deletePromise, timeoutPromise]);
+
+      // users_unified table should exist, but if not, still mark as deleted
+      if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
+        console.error('users_unified table not available - database setup incomplete');
+        // Keep deletion marker even if table doesn't exist
+        return { data: null, error: new Error('Database setup incomplete - user marked as deleted locally') };
+      }
 
       if (error) {
-        // console.error removed
         // Keep the deletion marker even if database deletion fails
-        // This prevents auto-recreation attempts
-        // console.log removed
         return { data: null, error: error };
       }
 
-      // console.log removed
-      // console.log removed
       return { data: true, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in deleteUserProfile:', error);
       
       // Check if it's a timeout or other error
       if (error.message === 'Delete timeout') {
-        // console.log removed
-        // console.log removed
         return { data: null, error: new Error('Delete operation timed out. Please try again.') };
       }
       
       // For other errors, return the actual error
       // Keep deletion marker to prevent auto-recreation
-      // console.log removed
       return { data: null, error: error };
     }
   };
@@ -990,7 +943,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null };
     } catch (error) {
-      // console.error removed
+      console.error('Error in assignUser:', error);
       return { data: null, error };
     }
   };
@@ -1009,32 +962,31 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     getAllUsers,
     getCompanyUsers,
+    getAllCompanies,
     updateUserProfile,
     deleteUserProfile,
     assignUser,
     // Helper functions
     isAuthenticated: !!user,
-    isCapacityAdmin: userProfile?.role === 'Capacity Admin',
-    isNSightAdmin: userProfile?.role === 'NSight Admin',
-    isEmployee: userProfile?.role === 'Employee',
+    isCapacityAdmin: userProfile?.role === 'Capacity Admin', // Keep for backward compatibility
+    isNSightAdmin: isGlobalAdmin(userProfile?.role),
+    isEmployee: userProfile?.role === EMPLOYEE_ROLE,
+    isCompanyAdmin: isCompanyAdmin(userProfile?.role),
+    isAnyAdmin: isAnyAdmin(userProfile?.role),
     // Get dashboard route based on role
     getDashboardRoute: () => {
       if (!userProfile) return '/dashboard';
-      switch (userProfile.role) {
-        case 'Capacity Admin':
-          return '/dashboard'; // AdminDashboard
-        case 'NSight Admin':
-          return '/dashboard'; // NsightAdminDashboard  
-        case 'Employee':
-          return '/dashboard'; // EmployeeDashboard
-        default:
-          return '/dashboard';
+      if (isGlobalAdmin(userProfile.role)) {
+        return '/dashboard'; // NsightAdminDashboard
+      } else if (isCompanyAdmin(userProfile.role)) {
+        return '/dashboard'; // AdminDashboard  
+      } else {
+        return '/dashboard'; // EmployeeDashboard
       }
     },
     canEdit: (item) => {
       if (!user || !userProfile) return false;
-      if (userProfile.role === 'Capacity Admin') return true;
-      if (userProfile.role === 'NSight Admin') return true;
+      if (isAnyAdmin(userProfile.role)) return true;
       // Handle both single UUID and array formats for assigned_to
       const isAssignedTo = Array.isArray(item?.assigned_to) 
         ? item.assigned_to.includes(user.id)
@@ -1043,7 +995,7 @@ export const AuthProvider = ({ children }) => {
     },
     canDelete: (item) => {
       if (!user || !userProfile) return false;
-      if (userProfile.role === 'Capacity Admin') return true;
+      if (isAnyAdmin(userProfile.role)) return true;
       return item?.created_by === user.id;
     }
   };

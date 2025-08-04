@@ -4,6 +4,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import AdminDashboard from '../components/shared/AdminDashboard';
 import EmployeeDashboard from '../components/shared/EmployeeDashboard';
 import NsightAdminDashboard from '../components/shared/NsightAdminDashboard';
+import { isCompanyAdmin, isGlobalAdmin, isEmployee } from '../lib/roleUtils';
 
 const DashboardPage = () => {
   const { user, userProfile, loading } = useAuth();
@@ -96,15 +97,13 @@ const DashboardPage = () => {
       // Normalize the role value (trim whitespace and handle case)
       const role = userProfile?.role?.trim() || 'Employee';
       
-      switch (role) {
-        case 'Capacity Admin':
-          return <AdminDashboard userData={userProfile} />;
-        case 'NSight Admin':
-          return <NsightAdminDashboard userData={userProfile} />;
-        case 'Employee':
-          return <EmployeeDashboard userData={userProfile} />;
-        default:
-          return <EmployeeDashboard userData={userProfile} />;
+      // Use role utility functions to determine dashboard type
+      if (isGlobalAdmin(role)) {
+        return <NsightAdminDashboard userData={userProfile} />;
+      } else if (isCompanyAdmin(role)) {
+        return <AdminDashboard userData={userProfile} />;
+      } else {
+        return <EmployeeDashboard userData={userProfile} />;
       }
     } catch (error) {
       // console.error removed

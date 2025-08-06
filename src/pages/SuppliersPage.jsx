@@ -7,6 +7,7 @@ import DropboxUploadModal from '../components/shared/DropboxUploadModal';
 import EditSupplierModal from '../components/shared/EditSupplierModal';
 import AddSupplierModal from '../components/shared/AddSupplierModal';
 import { getAllSuppliers } from '../lib/suppliers';
+import { useAuth } from '../contexts/AuthContext';
 
 // Chemformation Logo Component
 const ChemformationLogo = ({ className = "w-6 h-6" }) => (
@@ -19,6 +20,7 @@ const ChemformationLogo = ({ className = "w-6 h-6" }) => (
 
 const SuppliersPage = () => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -50,7 +52,7 @@ const SuppliersPage = () => {
     const loadSuppliers = async () => {
       try {
         setLoading(true);
-        const { data } = await getAllSuppliers();
+        const { data } = await getAllSuppliers({ userProfile });
         setSuppliers(data || []);
         setError(null);
       } catch (err) {
@@ -62,7 +64,7 @@ const SuppliersPage = () => {
     };
 
     loadSuppliers();
-  }, []);
+  }, [userProfile]); // Reload when userProfile changes
 
   // Close filter dropdown when clicking outside
   useEffect(() => {

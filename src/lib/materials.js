@@ -3,15 +3,34 @@ import { supabase } from './supabase';
 import { generateSlug } from './utils';
 
 /**
- * Fetch all materials from the backend.
+ * Fetch all materials from the backend with company filtering to prevent data flashing.
+ * @param {Object} options - Options including userProfile for filtering
  * @returns {Promise<{data: Array, error: any}>}
  */
-export const getAllMaterials = async () => {
+export const getAllMaterials = async (options = {}) => {
   try {
-    const { data, error } = await supabase
-      .from('raw_materials')
-      .select('*')
-      .order('id', { ascending: true });
+    let query = supabase.from('raw_materials').select('*');
+    
+    // Apply company filtering to prevent data flashing for non-NSight users
+    if (options.userProfile) {
+      if (options.userProfile.role === 'NSight Admin') {
+        // NSight Admins see all materials
+        query = query.order('id', { ascending: true });
+      } else if (options.userProfile.company_id) {
+        // Other users only see their company's materials
+        query = query
+          .eq('company_id', options.userProfile.company_id)
+          .order('id', { ascending: true });
+      } else {
+        // No company_id = no access
+        return { data: [], error: null };
+      }
+    } else {
+      // Fallback to basic query (will rely on RLS)
+      query = query.order('id', { ascending: true });
+    }
+    
+    const { data, error } = await query;
     if (error) throw error;
     return { data: data.map(material => ({
       id: material.id,

@@ -67,7 +67,7 @@ const RawMaterialsPage = () => {
   const loadMaterials = async () => {
     try {
       setLoading(true);
-      const { data } = await getAllMaterials();
+              const { data } = await getAllMaterials({ userProfile });
       setRawMaterials(data || []);
       setError(null);
     } catch (err) {
@@ -80,7 +80,7 @@ const RawMaterialsPage = () => {
 
   useEffect(() => {
     loadMaterials();
-  }, []);
+  }, [userProfile]); // Reload when userProfile changes
 
   // Callback to refresh materials when added via chat
   const handleMaterialAdded = (materialData) => {

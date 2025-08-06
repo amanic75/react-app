@@ -54,7 +54,7 @@ const FormulasPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await getAllFormulas();
+        const { data } = await getAllFormulas({ userProfile });
         setFormulas(data || []);
       } catch (err) {
         // console.error removed
@@ -65,7 +65,7 @@ const FormulasPage = () => {
     };
 
     loadData();
-  }, []);
+  }, [userProfile]); // Reload when userProfile changes
 
   // Handle adding new formula
   const handleAddFormula = async (formulaData) => {
@@ -79,7 +79,7 @@ const FormulasPage = () => {
       const newFormula = await addFormula(formulaWithUser);
       if (newFormula) {
         // Refresh the formulas list
-        const updatedFormulas = await getAllFormulas();
+        const updatedFormulas = await getAllFormulas({ userProfile });
         setFormulas(updatedFormulas);
       }
     } catch (error) {
@@ -618,6 +618,7 @@ const FormulasPage = () => {
           isOpen={isAddFormulaModalOpen}
           onClose={() => setIsAddFormulaModalOpen(false)}
           onSave={handleAddFormula}
+          userProfile={userProfile}
         />
       </div>
     </DashboardLayout>
